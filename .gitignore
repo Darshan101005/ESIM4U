@@ -1,0 +1,47 @@
+# Dependencies
+node_modules
+.pnp
+.pnp.js
+pnpm-lock.yaml
+
+# Testing
+coverage
+
+# Next.js
+.next
+out
+dist
+
+# Expo
+.expo
+.expo-shared
+dist-ssr
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+web-build
+
+# React Native
+android
+ios
+.env.local
+.env.*.local
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Turborepo
+.turbo

@@ -1,0 +1,18 @@
+{
+  "expo": {
+    "name": "eSIM4U",
+    "slug": "esim4u-mobile",
+    "version": "1.0.0",
+    "sdkVersion": "54.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "bundleIdentifier": "com.esim4u.mobile"
+    },
+    "android": {
+      "package": "com.esim4u.mobile"
+    },
+    "scheme": "esim4u"
+  }
+}
