@@ -72,10 +72,10 @@ export default function Home() {
             <span className="text-[#FF561E] text-[13px] font-semibold tracking-wide">Global Travel eSIM</span>
           </div>
           
-          <h1 className="text-[54px] lg:text-[70px] leading-[1.12] font-bold text-[#1A1D20] tracking-[-0.02em] mb-6">
+          <h1 className="text-[54px] lg:text-[70px] leading-[1.12] font-medium text-[#1A1D20] tracking-[-0.02em] mb-6">
             Stay Connected<br />
             <span className="whitespace-nowrap">
-              Across Borders, <span className="text-[#FF561E] font-serif italic font-normal tracking-normal pr-4">Anytime.</span>
+              Everywhere, <span className="text-[#FF561E] font-serif italic font-normal tracking-normal pr-4">Anytime.</span>
             </span>
           </h1>
           
