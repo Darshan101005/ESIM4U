@@ -6,20 +6,25 @@ import { Globe, QrCode, Plane, Tag, Zap, ShieldCheck, Headphones, Smartphone } f
 import { useEffect, useRef, useState } from 'react';
 
 export default function Landing() {
-  const sectionRef = useRef<HTMLElement>(null);
-  const [isVisible, setIsVisible] = useState(false);
+  const howRef = useRef<HTMLDivElement>(null);
+  const whyRef = useRef<HTMLDivElement>(null);
+  const [howVisible, setHowVisible] = useState(false);
+  const [whyVisible, setWhyVisible] = useState(false);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setIsVisible(true);
-          observer.disconnect();
-        }
+      (entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            if (entry.target === howRef.current) setHowVisible(true);
+            if (entry.target === whyRef.current) setWhyVisible(true);
+          }
+        });
       },
       { threshold: 0.1 }
     );
-    if (sectionRef.current) observer.observe(sectionRef.current);
+    if (howRef.current) observer.observe(howRef.current);
+    if (whyRef.current) observer.observe(whyRef.current);
     return () => observer.disconnect();
   }, []);
 
@@ -116,15 +121,14 @@ export default function Landing() {
       </div>
 
       <section
-        ref={sectionRef}
         className="min-h-screen shrink-0 w-full px-8 md:px-12 xl:px-16 mt-20 md:mt-32 pb-24 bg-white flex flex-col items-center justify-center relative"
       >
         <div className="w-full max-w-[1400px] flex flex-col gap-20 xl:gap-24">
           
-          <div className="flex flex-col lg:flex-row gap-10 lg:gap-6 items-center lg:items-start w-full relative">
+          <div ref={howRef} className="flex flex-col lg:flex-row gap-10 lg:gap-6 items-center lg:items-start w-full relative">
             <div 
               className={`w-full lg:w-[40%] flex flex-col justify-center pt-2 md:pt-4 xl:pt-8 pr-0 lg:pr-8 transition-all duration-[800ms] ease-out ${
-                isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
+                howVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
               }`}
             >
               <div className="inline-flex items-center px-4 py-1.5 rounded-full bg-orange-50 border border-orange-100 mb-6 w-max">
@@ -162,16 +166,18 @@ export default function Landing() {
               ].map((item, index) => (
                 <div 
                   key={index} 
-                  className={`group flex-1 mt-2 sm:mt-0 relative flex flex-col items-center transition-all duration-[800ms] ease-out ${
-                    isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
-                  }`}
-                  style={{ transitionDelay: `${(index + 1) * 200}ms` }}
+                  className="group flex-1 mt-2 sm:mt-0 relative flex flex-col items-center"
                 >
                   {index < 2 && (
-                    <div className="hidden sm:block absolute top-[-45px] left-[calc(50%+32px)] w-[calc(100%-54px)] h-[44px] pointer-events-none z-10 overflow-visible">
+                    <div 
+                      className={`hidden sm:block absolute top-[-45px] left-[calc(50%+32px)] w-[calc(100%-54px)] h-[44px] pointer-events-none z-10 overflow-visible transition-all duration-[800ms] ease-out ${
+                        howVisible ? 'opacity-100' : 'opacity-0'
+                      }`}
+                      style={{ transitionDelay: `${(index * 400) + 400}ms` }}
+                    >
                       <svg width="100%" height="100%" viewBox="0 0 100 40" preserveAspectRatio="none" className="overflow-visible">
                         <path 
-                          d="M 0,34 Q 50,-15 100,34" 
+                          d="M 5,34 Q 50,-15 95,34" 
                           fill="none" 
                           stroke="#FF561E" 
                           strokeWidth="1.5"
@@ -188,16 +194,23 @@ export default function Landing() {
                     </div>
                   )}
 
-                  <div className="absolute -top-7 sm:-top-9 bg-white w-14 h-14 rounded-full flex items-center justify-center shadow-[0_4px_20px_rgba(0,0,0,0.06)] border border-orange-50 z-20 transition-all duration-300 group-hover:-translate-y-1 group-hover:bg-[#FF561E] group-hover:border-[#FF561E]">
-                    <span className="text-[#FF561E] font-bold text-[19px] transition-colors duration-300 group-hover:text-white">{item.step}</span>
-                  </div>
-
-                  <div className="w-full bg-white rounded-[24px] p-6 lg:p-7 pt-10 sm:pt-12 shadow-[0px_8px_30px_rgba(0,0,0,0.03)] border border-gray-100 flex flex-col items-center text-center relative z-10 transition-transform duration-300 group-hover:-translate-y-2 cursor-pointer">
-                    <div className="w-[80px] h-[80px] aspect-square rounded-[24px] bg-[#FFF4F0] flex items-center justify-center mb-6 shrink-0 transition-colors duration-300 group-hover:bg-[#ffece4]">
-                      {item.icon}
+                  <div 
+                    className={`w-full relative transition-all duration-[800ms] ease-out ${
+                      howVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
+                    }`}
+                    style={{ transitionDelay: `${(index * 400) + 100}ms` }}
+                  >
+                    <div className="absolute left-1/2 -translate-x-1/2 -top-7 sm:-top-9 bg-white w-14 h-14 rounded-full flex items-center justify-center shadow-[0_4px_20px_rgba(0,0,0,0.06)] border border-orange-50 z-20 transition-all duration-300 group-hover:-translate-y-1 group-hover:bg-[#FF561E] group-hover:border-[#FF561E]">
+                      <span className="text-[#FF561E] font-bold text-[19px] transition-colors duration-300 group-hover:text-white">{item.step}</span>
                     </div>
-                    <h3 className="text-[17px] font-bold text-[#1A1D20] mb-3">{item.title}</h3>
-                    <p className="text-[14px] leading-[1.6] text-[#6B7280] font-medium leading-relaxed">{item.desc}</p>
+
+                    <div className="w-full bg-white rounded-[24px] p-6 lg:p-7 pt-10 sm:pt-12 shadow-[0px_8px_30px_rgba(0,0,0,0.03)] border border-gray-100 flex flex-col items-center text-center relative z-10 transition-transform duration-300 group-hover:-translate-y-2 cursor-pointer">
+                      <div className="w-[80px] h-[80px] aspect-square rounded-[24px] bg-[#FFF4F0] flex items-center justify-center mb-6 shrink-0 transition-colors duration-300 group-hover:bg-[#ffece4]">
+                        {item.icon}
+                      </div>
+                      <h3 className="text-[17px] font-bold text-[#1A1D20] mb-3">{item.title}</h3>
+                      <p className="text-[14px] leading-[1.6] text-[#6B7280] font-medium leading-relaxed">{item.desc}</p>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -205,10 +218,10 @@ export default function Landing() {
           </div>
 
           <div 
+            ref={whyRef}
             className={`w-full bg-[#FFF4F0] rounded-[40px] px-8 py-12 md:py-16 md:px-16 text-center shadow-sm transition-all duration-[1000ms] ease-out ${
-              isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
+              whyVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
             }`}
-            style={{ transitionDelay: '800ms' }}
           >
             <h2 className="text-[32px] md:text-[36px] font-semibold text-[#1A1D20] mb-14 tracking-tight">
               Why Travelers Choose <span className="text-[#FF561E]">eSIM4U</span>
@@ -226,9 +239,9 @@ export default function Landing() {
                 <div 
                   key={index} 
                   className={`flex flex-col items-center transition-all duration-[600ms] ease-out ${
-                    isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+                    whyVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
                   }`}
-                  style={{ transitionDelay: `${1000 + (index * 150)}ms` }}
+                  style={{ transitionDelay: `${200 + (index * 150)}ms` }}
                 >
                   <div className="w-[68px] h-[68px] rounded-full bg-white shadow-sm border border-orange-50 flex items-center justify-center mb-5 hover:scale-105 transition-transform cursor-default">
                     {feature.icon}
