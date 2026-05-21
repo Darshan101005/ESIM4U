@@ -45,3 +45,6 @@ ios
 
 # Turborepo
 .turbo
+
+#AI Exclude
+.aiexclude
