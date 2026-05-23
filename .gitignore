@@ -48,3 +48,6 @@ ios
 
 #AI Exclude
 .aiexclude
+
+# TypeScript incremental build info
+*.tsbuildinfo
