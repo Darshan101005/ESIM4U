@@ -31,9 +31,10 @@ export default function Landing() {
   const [whyVisible, setWhyVisible] = useState(false);
   const [coverageVisible, setCoverageVisible] = useState(false);
   const carouselRef = useRef<HTMLDivElement | null>(null);
+  const carouselViewportRef = useRef<HTMLDivElement | null>(null);
   const animationRef = useRef<number | null>(null);
   const resumeTimeoutRef = useRef<number | null>(null);
-  const isUserHovering = useRef(false);
+  const isPointerInsideCarousel = useRef(false);
   const isCarouselFocused = useRef(false);
   const isUserInteracting = useRef(false);
 
@@ -75,12 +76,18 @@ export default function Landing() {
     }
   }, []);
 
+  const releaseCarouselFocus = useCallback(() => {
+    const activeElement = document.activeElement;
+    if (activeElement instanceof HTMLElement) activeElement.blur();
+    isCarouselFocused.current = false;
+  }, []);
+
   const startAutoScroll = useCallback(() => {
     if (animationRef.current) return;
     const animate = () => {
       const el = carouselRef.current;
-      if (el && !isUserHovering.current && !isCarouselFocused.current && !isUserInteracting.current) {
-        el.scrollLeft += 0.75;
+      if (el && !isPointerInsideCarousel.current && !isCarouselFocused.current && !isUserInteracting.current) {
+        el.scrollLeft += 0.55;
         normalizeCarouselPosition();
       }
       animationRef.current = window.requestAnimationFrame(animate);
@@ -99,8 +106,8 @@ export default function Landing() {
     clearResumeTimeout();
     resumeTimeoutRef.current = window.setTimeout(() => {
       isUserInteracting.current = false;
-      if (!isUserHovering.current && !isCarouselFocused.current) startAutoScroll();
-    }, 1800);
+      if (!isPointerInsideCarousel.current && !isCarouselFocused.current) startAutoScroll();
+    }, 1200);
   }, [clearResumeTimeout, startAutoScroll]);
 
   const pauseForUserAction = useCallback(() => {
@@ -113,22 +120,41 @@ export default function Landing() {
     const el = carouselRef.current;
     if (!el) return;
     pauseForUserAction();
+    releaseCarouselFocus();
     normalizeCarouselPosition();
     const { step } = getCarouselMetrics();
     if (step) el.scrollBy({ left: step, behavior: 'smooth' });
-  }, [getCarouselMetrics, normalizeCarouselPosition, pauseForUserAction]);
+  }, [getCarouselMetrics, normalizeCarouselPosition, pauseForUserAction, releaseCarouselFocus]);
 
   const scrollPrev = useCallback(() => {
     const el = carouselRef.current;
     if (!el) return;
     pauseForUserAction();
+    releaseCarouselFocus();
     normalizeCarouselPosition();
     const { step, setWidth } = getCarouselMetrics();
     if (setWidth && el.scrollLeft <= step) {
       el.scrollTo({ left: el.scrollLeft + setWidth, behavior: 'auto' });
     }
     if (step) el.scrollBy({ left: -step, behavior: 'smooth' });
-  }, [getCarouselMetrics, normalizeCarouselPosition, pauseForUserAction]);
+  }, [getCarouselMetrics, normalizeCarouselPosition, pauseForUserAction, releaseCarouselFocus]);
+
+  const handleCarouselPointerEnter = useCallback(() => {
+    isPointerInsideCarousel.current = true;
+    clearResumeTimeout();
+    stopAutoScroll();
+  }, [clearResumeTimeout, stopAutoScroll]);
+
+  const handleCarouselPointerLeave = useCallback(() => {
+    isPointerInsideCarousel.current = false;
+    if (!isUserInteracting.current && !isCarouselFocused.current) {
+      resumeTimeoutRef.current = window.setTimeout(() => {
+        if (!isPointerInsideCarousel.current && !isCarouselFocused.current) startAutoScroll();
+      }, 1200);
+    } else {
+      resumeAfterUserAction();
+    }
+  }, [resumeAfterUserAction, startAutoScroll]);
 
   useEffect(() => {
     const handleResize = () => jumpToCarouselSet();
@@ -358,7 +384,7 @@ export default function Landing() {
             }`}
           >
             <h2 className="text-[32px] md:text-[36px] font-semibold text-[#1A1D20] mb-14 tracking-tight">
-              Why Travelers Choose <span className="text-[#FF561E]">eSIM4U</span>
+              Why Travelers Choose <span className="text-[#FF561E] font-serif italic font-medium lining-nums tracking-normal">eSIM4U</span>
             </h2>
             
             <div className="grid grid-cols-2 lg:grid-cols-6 gap-x-8 gap-y-12">
@@ -390,7 +416,7 @@ export default function Landing() {
         </div>
       </section>
 
-      <section className="w-full px-8 md:px-12 xl:px-16 pt-4 pb-16 md:pt-8 md:pb-24 bg-white flex flex-col items-center justify-center relative">
+      <section className="w-full px-8 md:px-12 xl:px-16 pt-4 pb-8 md:pt-6 md:pb-12 bg-white flex flex-col items-center justify-center relative">
         <div ref={coverageRef} className="w-full max-w-[1400px] flex flex-col lg:flex-row gap-16 lg:gap-4 items-center justify-between lg:justify-center">
           
           <div 
@@ -456,48 +482,50 @@ export default function Landing() {
         </div>
       </section>
 
-      <section className="w-full px-8 md:px-12 xl:px-16 pt-0 pb-8 md:pt-0 md:pb-10 bg-white flex flex-col items-center justify-center relative">
+      <section className="w-full px-4 md:px-6 xl:px-8 pt-0 pb-4 md:pt-0 md:pb-6 bg-white flex flex-col items-center justify-center relative">
         <div className="w-full max-w-[1400px] flex flex-col items-center">
           <h2 className="text-[40px] md:text-[46px] xl:text-[54px] leading-[1.12] font-semibold text-[#1A1D20] mb-5 tracking-tight text-center">
             Browse Popular <span className="text-[#FF561E] font-serif italic font-medium pr-1">Destinations</span>
           </h2>
-          <p className="text-[16px] text-[#6B7280] font-medium mb-8 text-center">
+          <p className="text-[16px] text-[#6B7280] font-medium mb-3 text-center">
             Choose from our most popular travel destinations and get connected instantly.
           </p>
 
           <div
-            className="w-full max-w-[1260px] relative flex items-center"
+            className="w-full max-w-[1380px] relative flex items-center"
             onFocusCapture={() => { isCarouselFocused.current = true; stopAutoScroll(); }}
-            onBlurCapture={() => { isCarouselFocused.current = false; isUserInteracting.current = false; if (!isUserHovering.current) startAutoScroll(); }}
+            onBlurCapture={() => { isCarouselFocused.current = false; isUserInteracting.current = false; if (!isPointerInsideCarousel.current) resumeAfterUserAction(); }}
+            onPointerEnter={handleCarouselPointerEnter}
+            onPointerLeave={handleCarouselPointerLeave}
           >
-            <button onClick={scrollPrev} className="absolute left-0 lg:-left-6 w-10 h-10 rounded-full bg-white border border-gray-100 shadow-sm flex items-center justify-center z-10 hover:bg-gray-50 transition-colors">
+            <button onClick={scrollPrev} className="absolute left-0 lg:left-1 w-10 h-10 rounded-full bg-white border border-gray-100 shadow-sm flex items-center justify-center z-10 hover:bg-gray-50 transition-colors">
               <ChevronLeft className="w-5 h-5 text-[#FF561E]" />
             </button>
 
-            <div
-              ref={carouselRef}
-              onMouseEnter={() => { isUserHovering.current = true; stopAutoScroll(); }}
-              onMouseLeave={() => { isUserHovering.current = false; isUserInteracting.current = false; if (!isCarouselFocused.current) startAutoScroll(); }}
-              onScroll={normalizeCarouselPosition}
-              className="w-full overflow-x-auto hide-scrollbar flex gap-6 py-3"
-            >
-              {loopedCarouselItems.map((dest, i) => (
-                <div key={`${dest.name}-${i}`} className="dest-card flex-shrink-0 w-[calc((100%_-_24px)/2)] sm:w-[calc((100%_-_48px)/3)] md:w-[calc((100%_-_72px)/4)] lg:w-[calc((100%_-_120px)/6)] bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col group cursor-pointer transition-transform duration-300 hover:translate-y-[-6px] hover:scale-[1.03]">
-                  <div className="relative w-full aspect-square bg-[#FFF4F0] flex items-center justify-center">
-                    <Image src={`/assets/Locations/${dest.image}`} alt={dest.name} fill className="object-contain" />
-                  </div>
-                  <div className="p-4 flex flex-col">
-                    <h3 className="text-[16px] font-bold text-[#1A1D20] mb-1">{dest.name}</h3>
-                    <div className="flex items-center justify-between mt-1">
-                      <span className="text-[13px] text-[#FF561E] font-semibold">From ${dest.price}</span>
-                      <ArrowRight className="w-4 h-4 text-[#FF561E]" />
+            <div ref={carouselViewportRef} className="w-full overflow-hidden px-12 md:px-14">
+              <div
+                ref={carouselRef}
+                onScroll={normalizeCarouselPosition}
+                className="w-full overflow-x-auto hide-scrollbar flex gap-6 py-2"
+              >
+                {loopedCarouselItems.map((dest, i) => (
+                  <div key={`${dest.name}-${i}`} className="dest-card flex-shrink-0 w-[calc((100%_-_24px)/2)] sm:w-[calc((100%_-_48px)/3)] md:w-[calc((100%_-_72px)/4)] lg:w-[calc((100%_-_120px)/6)] bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col group cursor-pointer transition-transform duration-300 hover:translate-y-[-6px] hover:scale-[1.03]">
+                    <div className="relative w-full aspect-square bg-[#FFF4F0] flex items-center justify-center">
+                      <Image src={`/assets/Locations/${dest.image}`} alt={dest.name} fill className="object-contain" />
+                    </div>
+                    <div className="p-4 flex flex-col">
+                      <h3 className="text-[16px] font-bold text-[#1A1D20] mb-1">{dest.name}</h3>
+                      <div className="flex items-center justify-between mt-1">
+                        <span className="text-[13px] text-[#FF561E] font-semibold">From ${dest.price}</span>
+                        <ArrowRight className="w-4 h-4 text-[#FF561E]" />
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
 
-            <button onClick={scrollNext} className="absolute right-0 lg:-right-6 w-10 h-10 rounded-full bg-white border border-gray-100 shadow-sm flex items-center justify-center z-10 hover:bg-gray-50 transition-colors">
+            <button onClick={scrollNext} className="absolute right-0 lg:right-1 w-10 h-10 rounded-full bg-white border border-gray-100 shadow-sm flex items-center justify-center z-10 hover:bg-gray-50 transition-colors">
               <ChevronRight className="w-5 h-5 text-[#FF561E]" />
             </button>
           </div>
