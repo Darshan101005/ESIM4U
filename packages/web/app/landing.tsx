@@ -2,8 +2,26 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { Globe, QrCode, Plane, Tag, Zap, ShieldCheck, Headphones, Smartphone, RadioTower } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { Globe, QrCode, Plane, Tag, Zap, ShieldCheck, Headphones, Smartphone, RadioTower, Search, ChevronRight, ChevronLeft, ArrowRight } from 'lucide-react';
+import dynamic from 'next/dynamic';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+
+const Flag = dynamic<any>(() => import('react-flagpack').then(m => m.default || m), { ssr: false });
+
+const carouselItems = [
+  { name: 'Australia', image: 'australia.png', price: '3.99' },
+  { name: 'Brazil', image: 'brazil.png', price: '3.49' },
+  { name: 'Canada', image: 'canada.png', price: '3.99' },
+  { name: 'England', image: 'england.png', price: '3.99' },
+  { name: 'France', image: 'france.png', price: '3.49' },
+  { name: 'Japan', image: 'japan.png', price: '3.49' },
+  { name: 'Malaysia', image: 'malaysia.png', price: '3.49' },
+  { name: 'Singapore', image: 'singapore.png', price: '2.99' },
+  { name: 'Switzerland', image: 'switzerland.png', price: '4.49' },
+  { name: 'Turkey', image: 'turkey.png', price: '3.99' },
+  { name: 'UAE', image: 'uae.png', price: '3.99' },
+  { name: 'United States', image: 'usa.png', price: '4.49' },
+];
 
 export default function Landing() {
   const howRef = useRef<HTMLDivElement>(null);
@@ -12,6 +30,118 @@ export default function Landing() {
   const [howVisible, setHowVisible] = useState(false);
   const [whyVisible, setWhyVisible] = useState(false);
   const [coverageVisible, setCoverageVisible] = useState(false);
+  const carouselRef = useRef<HTMLDivElement | null>(null);
+  const animationRef = useRef<number | null>(null);
+  const resumeTimeoutRef = useRef<number | null>(null);
+  const isUserHovering = useRef(false);
+  const isCarouselFocused = useRef(false);
+  const isUserInteracting = useRef(false);
+
+  const loopedCarouselItems = useMemo(
+    () => [...carouselItems, ...carouselItems],
+    []
+  );
+
+  const getCarouselMetrics = useCallback(() => {
+    const el = carouselRef.current;
+    if (!el) return { step: 0, setWidth: 0 };
+    const cards = el.querySelectorAll<HTMLElement>('.dest-card');
+    const step = cards.length > 1 ? cards[1].offsetLeft - cards[0].offsetLeft : cards[0]?.offsetWidth ?? 0;
+    return { step, setWidth: step * carouselItems.length };
+  }, []);
+
+  const jumpToCarouselSet = useCallback((setIndex = 1) => {
+    const el = carouselRef.current;
+    const { setWidth } = getCarouselMetrics();
+    if (!el || !setWidth) return;
+    el.scrollTo({ left: setWidth * setIndex, behavior: 'auto' });
+  }, [getCarouselMetrics]);
+
+  const normalizeCarouselPosition = useCallback(() => {
+    const el = carouselRef.current;
+    const { setWidth } = getCarouselMetrics();
+    if (!el || !setWidth) return;
+    if (el.scrollLeft >= setWidth) {
+      el.scrollTo({ left: el.scrollLeft - setWidth, behavior: 'auto' });
+    } else if (el.scrollLeft < 0) {
+      el.scrollTo({ left: el.scrollLeft + setWidth, behavior: 'auto' });
+    }
+  }, [getCarouselMetrics]);
+
+  const clearResumeTimeout = useCallback(() => {
+    if (resumeTimeoutRef.current) {
+      window.clearTimeout(resumeTimeoutRef.current);
+      resumeTimeoutRef.current = null;
+    }
+  }, []);
+
+  const startAutoScroll = useCallback(() => {
+    if (animationRef.current) return;
+    const animate = () => {
+      const el = carouselRef.current;
+      if (el && !isUserHovering.current && !isCarouselFocused.current && !isUserInteracting.current) {
+        el.scrollLeft += 0.75;
+        normalizeCarouselPosition();
+      }
+      animationRef.current = window.requestAnimationFrame(animate);
+    };
+    animationRef.current = window.requestAnimationFrame(animate);
+  }, [normalizeCarouselPosition]);
+
+  const stopAutoScroll = useCallback(() => {
+    if (animationRef.current) {
+      window.cancelAnimationFrame(animationRef.current);
+      animationRef.current = null;
+    }
+  }, []);
+
+  const resumeAfterUserAction = useCallback(() => {
+    clearResumeTimeout();
+    resumeTimeoutRef.current = window.setTimeout(() => {
+      isUserInteracting.current = false;
+      if (!isUserHovering.current && !isCarouselFocused.current) startAutoScroll();
+    }, 1800);
+  }, [clearResumeTimeout, startAutoScroll]);
+
+  const pauseForUserAction = useCallback(() => {
+    isUserInteracting.current = true;
+    stopAutoScroll();
+    resumeAfterUserAction();
+  }, [resumeAfterUserAction, stopAutoScroll]);
+
+  const scrollNext = useCallback(() => {
+    const el = carouselRef.current;
+    if (!el) return;
+    pauseForUserAction();
+    normalizeCarouselPosition();
+    const { step } = getCarouselMetrics();
+    if (step) el.scrollBy({ left: step, behavior: 'smooth' });
+  }, [getCarouselMetrics, normalizeCarouselPosition, pauseForUserAction]);
+
+  const scrollPrev = useCallback(() => {
+    const el = carouselRef.current;
+    if (!el) return;
+    pauseForUserAction();
+    normalizeCarouselPosition();
+    const { step, setWidth } = getCarouselMetrics();
+    if (setWidth && el.scrollLeft <= step) {
+      el.scrollTo({ left: el.scrollLeft + setWidth, behavior: 'auto' });
+    }
+    if (step) el.scrollBy({ left: -step, behavior: 'smooth' });
+  }, [getCarouselMetrics, normalizeCarouselPosition, pauseForUserAction]);
+
+  useEffect(() => {
+    const handleResize = () => jumpToCarouselSet();
+    const frame = window.requestAnimationFrame(() => jumpToCarouselSet());
+    startAutoScroll();
+    window.addEventListener('resize', handleResize);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener('resize', handleResize);
+      clearResumeTimeout();
+      stopAutoScroll();
+    };
+  }, [clearResumeTimeout, jumpToCarouselSet, startAutoScroll, stopAutoScroll]);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -323,6 +453,122 @@ export default function Landing() {
             </div>
           </div>
 
+        </div>
+      </section>
+
+      <section className="w-full px-8 md:px-12 xl:px-16 pt-0 pb-8 md:pt-0 md:pb-10 bg-white flex flex-col items-center justify-center relative">
+        <div className="w-full max-w-[1400px] flex flex-col items-center">
+          <h2 className="text-[40px] md:text-[46px] xl:text-[54px] leading-[1.12] font-semibold text-[#1A1D20] mb-5 tracking-tight text-center">
+            Browse Popular <span className="text-[#FF561E] font-serif italic font-medium pr-1">Destinations</span>
+          </h2>
+          <p className="text-[16px] text-[#6B7280] font-medium mb-8 text-center">
+            Choose from our most popular travel destinations and get connected instantly.
+          </p>
+
+          <div
+            className="w-full max-w-[1260px] relative flex items-center"
+            onFocusCapture={() => { isCarouselFocused.current = true; stopAutoScroll(); }}
+            onBlurCapture={() => { isCarouselFocused.current = false; isUserInteracting.current = false; if (!isUserHovering.current) startAutoScroll(); }}
+          >
+            <button onClick={scrollPrev} className="absolute left-0 lg:-left-6 w-10 h-10 rounded-full bg-white border border-gray-100 shadow-sm flex items-center justify-center z-10 hover:bg-gray-50 transition-colors">
+              <ChevronLeft className="w-5 h-5 text-[#FF561E]" />
+            </button>
+
+            <div
+              ref={carouselRef}
+              onMouseEnter={() => { isUserHovering.current = true; stopAutoScroll(); }}
+              onMouseLeave={() => { isUserHovering.current = false; isUserInteracting.current = false; if (!isCarouselFocused.current) startAutoScroll(); }}
+              onScroll={normalizeCarouselPosition}
+              className="w-full overflow-x-auto hide-scrollbar flex gap-6 py-3"
+            >
+              {loopedCarouselItems.map((dest, i) => (
+                <div key={`${dest.name}-${i}`} className="dest-card flex-shrink-0 w-[calc((100%_-_24px)/2)] sm:w-[calc((100%_-_48px)/3)] md:w-[calc((100%_-_72px)/4)] lg:w-[calc((100%_-_120px)/6)] bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col group cursor-pointer transition-transform duration-300 hover:translate-y-[-6px] hover:scale-[1.03]">
+                  <div className="relative w-full aspect-square bg-[#FFF4F0] flex items-center justify-center">
+                    <Image src={`/assets/Locations/${dest.image}`} alt={dest.name} fill className="object-contain" />
+                  </div>
+                  <div className="p-4 flex flex-col">
+                    <h3 className="text-[16px] font-bold text-[#1A1D20] mb-1">{dest.name}</h3>
+                    <div className="flex items-center justify-between mt-1">
+                      <span className="text-[13px] text-[#FF561E] font-semibold">From ${dest.price}</span>
+                      <ArrowRight className="w-4 h-4 text-[#FF561E]" />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <button onClick={scrollNext} className="absolute right-0 lg:-right-6 w-10 h-10 rounded-full bg-white border border-gray-100 shadow-sm flex items-center justify-center z-10 hover:bg-gray-50 transition-colors">
+              <ChevronRight className="w-5 h-5 text-[#FF561E]" />
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section className="w-full px-8 md:px-12 xl:px-16 pb-24 flex flex-col items-center justify-center relative">
+        <div className="w-full max-w-[1400px] bg-[#FFF4F0] rounded-[40px] px-8 py-12 md:py-16 md:px-12 flex flex-col items-center">
+          <h2 className="text-[32px] md:text-[36px] font-semibold text-[#1A1D20] mb-3 tracking-tight text-center">
+            Where are you traveling <span className="text-[#FF561E] font-serif italic font-medium pr-1">next?</span>
+          </h2>
+          <p className="text-[16px] text-[#6B7280] font-medium mb-10 text-center">
+            Choose your destination first, then a data plan according to your needs.
+          </p>
+
+          <div className="w-full max-w-[1000px] flex flex-col md:flex-row items-center justify-between gap-6 mb-10">
+            <div className="flex items-center bg-white rounded-full p-1.5 shadow-sm border border-orange-50 w-full md:w-auto overflow-x-auto hide-scrollbar">
+              <button className="px-6 py-2 rounded-full bg-[#FF561E] text-white font-semibold text-[14px] shadow-sm whitespace-nowrap">Countries</button>
+              <button className="px-6 py-2 rounded-full text-[#1A1D20] font-medium text-[14px] hover:bg-gray-50 transition-colors whitespace-nowrap">Regions</button>
+              <button className="px-6 py-2 rounded-full text-[#1A1D20] font-medium text-[14px] hover:bg-gray-50 transition-colors flex items-center gap-2 whitespace-nowrap">
+                Plans <span className="bg-orange-100 text-[#FF561E] text-[10px] px-2 py-0.5 rounded-full font-bold">New</span>
+              </button>
+            </div>
+
+            <div className="relative w-full md:w-[320px]">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input 
+                type="text" 
+                placeholder="Search countries" 
+                className="w-full pl-11 pr-4 py-3 rounded-full bg-white border border-gray-100 shadow-sm outline-none focus:border-[#FF561E] focus:ring-1 focus:ring-[#FF561E]/20 text-[14px] transition-all"
+              />
+            </div>
+          </div>
+
+          <div className="w-full max-w-[1000px] grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4 mb-12">
+            {[
+              { name: 'India', flag: 'IN', price: '3.99' },
+              { name: 'United Kingdom', flag: 'GBR', price: '4.49' },
+              { name: 'Greece', flag: 'GR', price: '4.49' },
+              { name: 'Turkey', flag: 'TR', price: '3.99' },
+              { name: 'Germany', flag: 'DE', price: '4.49' },
+              { name: 'Switzerland', flag: 'CH', price: '4.49' },
+              { name: 'France', flag: 'FR', price: '3.99' },
+              { name: 'Italy', flag: 'IT', price: '3.99' },
+              { name: 'Netherlands', flag: 'NL', price: '3.99' },
+              { name: 'Spain', flag: 'ES', price: '3.99' },
+              { name: 'Portugal', flag: 'PT', price: '3.99' },
+              { name: 'United States', flag: 'US', price: '4.49' },
+              { name: 'Thailand', flag: 'TH', price: '3.99' },
+              { name: 'Indonesia', flag: 'ID', price: '3.99' },
+              { name: 'South Korea', flag: 'KR', price: '4.49' },
+            ].map((country, i) => (
+              <div key={i} className="flex items-center justify-between p-4 rounded-2xl bg-white border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer group">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-9 rounded-md overflow-hidden border border-gray-100 shrink-0">
+                    <Flag code={country.flag} size="l" hasBorder={false} hasBorderRadius={false} className="country-flag" />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-[15px] font-bold text-[#1A1D20]">{country.name}</span>
+                    <span className="text-[13px] text-[#FF561E] font-medium">From US${country.price}</span>
+                  </div>
+                </div>
+                <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-[#FF561E] transition-colors" />
+              </div>
+            ))}
+          </div>
+
+          <button className="inline-flex items-center justify-center px-8 py-3.5 rounded-full bg-transparent border border-[#FF561E] text-[#FF561E] font-semibold text-[15px] hover:bg-[#FF561E] hover:text-white transition-all gap-2 group">
+            View all destinations
+            <ArrowRight className="w-4 h-4 transform transition-transform group-hover:translate-x-1" />
+          </button>
         </div>
       </section>
 

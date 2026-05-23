@@ -51,3 +51,6 @@ ios
 
 # TypeScript incremental build info
 *.tsbuildinfo
+
+#Screenshots
+screenshots
