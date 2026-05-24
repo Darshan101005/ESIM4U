@@ -23,6 +23,54 @@ const carouselItems = [
   { name: 'United States', image: 'usa.png', price: '4.49' },
 ];
 
+const telecomOrbits = [
+  {
+    radius: 520,
+    color: '#fbbf24',
+    duration: '120s',
+    direction: 'cw',
+    size: 76,
+    logos: [
+      { name: 'Telefonica', image: 'telefonica.png' },
+      { name: 'AT&T', image: 'at&t.png' },
+      { name: 'Vodafone', image: 'vodofone.png' },
+      { name: 'Orange', image: 'orange.png' },
+      { name: 'China Mobile', image: 'china mobile.png' },
+      { name: 'NTT Docomo', image: 'ntt-docomo.png' },
+      { name: 'Telstra', image: 'telstra.png' },
+      { name: 'O2', image: 'o2.png' },
+    ]
+  },
+  {
+    radius: 380,
+    color: '#f97316',
+    duration: '90s',
+    direction: 'ccw',
+    size: 76,
+    logos: [
+      { name: 'Airtel', image: 'airtel.png' },
+      { name: 'Jazz', image: 'jazz.png' },
+      { name: 'T-Mobile', image: 't-mobile.png' },
+      { name: 'Singtel', image: 'singtel.png' },
+      { name: 'Vi', image: 'vi.png' },
+      { name: 'Jio', image: 'jio.png' },
+    ]
+  },
+  {
+    radius: 240,
+    color: '#f43f5e',
+    duration: '70s',
+    direction: 'cw',
+    size: 76,
+    logos: [
+      { name: 'Cricket', image: 'cricket wireless.png' },
+      { name: 'Telenor', image: 'telenor.png' },
+      { name: 'EE', image: 'ee.png' },
+      { name: 'SoftBank', image: 'softbank.png' },
+    ]
+  }
+];
+
 export default function Landing() {
   const howRef = useRef<HTMLDivElement>(null);
   const whyRef = useRef<HTMLDivElement>(null);
@@ -533,7 +581,7 @@ export default function Landing() {
         </div>
       </section>
 
-      <section className="w-full px-8 md:px-12 xl:px-16 pb-24 flex flex-col items-center justify-center relative">
+      <section className="w-full px-8 md:px-12 xl:px-16 pb-8 flex flex-col items-center justify-center relative">
         <div className="w-full max-w-[1400px] bg-[#FFF4F0] rounded-[40px] px-8 py-12 md:py-16 md:px-12 flex flex-col items-center">
           <h2 className="text-[32px] md:text-[36px] font-semibold text-[#1A1D20] mb-3 tracking-tight text-center">
             Where are you traveling <span className="text-[#FF561E] font-serif italic font-medium pr-1">next?</span>
@@ -631,6 +679,115 @@ export default function Landing() {
         </div>
       </section>
 
+      <section className="w-full bg-white overflow-hidden min-h-[880px] relative flex flex-col items-center pt-10 mt-6 pb-40">
+        <div className="z-10 flex flex-col items-center mb-24 px-4">
+          <h2 className="text-[40px] md:text-[54px] xl:text-[60px] leading-[1.05] font-semibold text-[#05070A] tracking-tight text-center mb-4">
+            Global eSIM <span className="text-[#FF561E] font-serif italic font-normal tracking-normal">Connectivity</span>
+          </h2>
+          <p className="text-[16px] md:text-[18px] text-[#5E6673] font-medium text-center max-w-[600px]">
+            Seamlessly connect to top telecom providers around the world.
+          </p>
+        </div>
+
+        <div className="absolute bottom-[-70px] left-1/2 -translate-x-1/2 w-[920px] h-[360px] bg-[#fb923c]/20 blur-[90px] rounded-full pointer-events-none z-0"></div>
+
+        <div className="absolute bottom-[40px] left-1/2 w-0 h-0 z-10">
+          <svg className="absolute left-[-600px] bottom-[-600px] w-[1200px] h-[1200px] overflow-visible pointer-events-none">
+            {telecomOrbits.map((orbit) => (
+              <circle
+                key={orbit.radius}
+                cx="600"
+                cy="600"
+                r={orbit.radius}
+                stroke={orbit.color}
+                strokeDasharray="6 8"
+                strokeWidth="1.2"
+                fill="none"
+                opacity="0.5"
+              />
+            ))}
+          </svg>
+
+          {telecomOrbits.map((orbit, orbitIndex) => {
+            const totalElements = orbit.logos.length * 2;
+            const elements = [];
+            for (let i = 0; i < totalElements; i++) {
+              const angle = (i * (Math.PI * 2)) / totalElements - Math.PI / 2;
+              const x = orbit.radius * Math.cos(angle);
+              const y = orbit.radius * Math.sin(angle);
+              const isDot = i % 2 !== 0;
+              const logoIndex = Math.floor(i / 2);
+              const logo = orbit.logos[logoIndex];
+
+              elements.push(
+                <div 
+                  key={i}
+                  className="absolute"
+                  style={{
+                    left: `${x}px`,
+                    top: `${y}px`,
+                    transform: 'translate(-50%, -50%)'
+                  }}
+                >
+                  {isDot ? (
+                    <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: orbit.color }}></div>
+                  ) : (
+                    <div
+                      className={`orbit-item-counter-${orbit.direction} flex flex-col items-center gap-2.5`}
+                      style={{ animationDuration: orbit.duration }}
+                    >
+                      <div
+                        className="rounded-full bg-white shadow-[0_8px_24px_rgba(16,24,40,0.08)] border border-gray-100 flex items-center justify-center overflow-hidden shrink-0 aspect-square"
+                        style={{ width: `${orbit.size}px`, height: `${orbit.size}px`, minWidth: `${orbit.size}px`, minHeight: `${orbit.size}px`, borderRadius: '9999px' }}
+                      >
+                        <div className="relative w-[52px] h-[52px]">
+                          <Image src={`/assets/Providers/${logo.image}`} alt={logo.name} fill className="object-contain" unoptimized />
+                        </div>
+                      </div>
+                      <span className="text-[13px] md:text-[14px] leading-none font-bold text-[#303846] whitespace-nowrap drop-shadow-[0_1px_0_rgba(255,255,255,0.9)]">
+                        {logo.name}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              );
+            }
+
+            return (
+              <div 
+                key={orbitIndex} 
+                className={`absolute left-0 top-0 w-0 h-0 animate-spin-${orbit.direction}`}
+                style={{ animationDuration: orbit.duration }}
+              >
+                {elements}
+              </div>
+            );
+          })}
+        </div>
+
+        <style jsx global>{`
+          @keyframes spin-cw {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+          }
+          @keyframes spin-ccw {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(-360deg); }
+          }
+          .animate-spin-cw {
+            animation: spin-cw linear infinite;
+          }
+          .animate-spin-ccw {
+            animation: spin-ccw linear infinite;
+          }
+          .orbit-item-counter-cw {
+            animation: spin-ccw linear infinite;
+          }
+          .orbit-item-counter-ccw {
+            animation: spin-cw linear infinite;
+          }
+        `}</style>
+      </section>
     </div>
   );
 }
