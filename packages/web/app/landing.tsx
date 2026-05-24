@@ -30,6 +30,7 @@ export default function Landing() {
   const [howVisible, setHowVisible] = useState(false);
   const [whyVisible, setWhyVisible] = useState(false);
   const [coverageVisible, setCoverageVisible] = useState(false);
+  const [activeTab, setActiveTab] = useState<'Countries' | 'Regions' | 'Plans'>('Countries');
   const carouselRef = useRef<HTMLDivElement | null>(null);
   const carouselViewportRef = useRef<HTMLDivElement | null>(null);
   const animationRef = useRef<number | null>(null);
@@ -543,10 +544,10 @@ export default function Landing() {
 
           <div className="w-full max-w-[1000px] flex flex-col md:flex-row items-center justify-between gap-6 mb-10">
             <div className="flex items-center bg-white rounded-full p-1.5 shadow-sm border border-orange-50 w-full md:w-auto overflow-x-auto hide-scrollbar">
-              <button className="px-6 py-2 rounded-full bg-[#FF561E] text-white font-semibold text-[14px] shadow-sm whitespace-nowrap">Countries</button>
-              <button className="px-6 py-2 rounded-full text-[#1A1D20] font-medium text-[14px] hover:bg-gray-50 transition-colors whitespace-nowrap">Regions</button>
-              <button className="px-6 py-2 rounded-full text-[#1A1D20] font-medium text-[14px] hover:bg-gray-50 transition-colors flex items-center gap-2 whitespace-nowrap">
-                Plans <span className="bg-orange-100 text-[#FF561E] text-[10px] px-2 py-0.5 rounded-full font-bold">New</span>
+              <button onClick={() => setActiveTab('Countries')} className={`px-6 py-2 rounded-full font-semibold text-[14px] shadow-sm whitespace-nowrap transition-colors ${activeTab === 'Countries' ? 'bg-[#FF561E] text-white' : 'text-[#1A1D20] hover:bg-gray-50'}`}>Countries</button>
+              <button onClick={() => setActiveTab('Regions')} className={`px-6 py-2 rounded-full font-medium text-[14px] whitespace-nowrap transition-colors ${activeTab === 'Regions' ? 'bg-[#FF561E] text-white shadow-sm' : 'text-[#1A1D20] hover:bg-gray-50'}`}>Regions</button>
+              <button onClick={() => setActiveTab('Plans')} className={`px-6 py-2 rounded-full font-medium text-[14px] flex items-center gap-2 whitespace-nowrap transition-colors ${activeTab === 'Plans' ? 'bg-[#FF561E] text-white shadow-sm' : 'text-[#1A1D20] hover:bg-gray-50'}`}>
+                Plans <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${activeTab === 'Plans' ? 'bg-white text-[#FF561E]' : 'bg-orange-100 text-[#FF561E]'}`}>New</span>
               </button>
             </div>
 
@@ -554,14 +555,14 @@ export default function Landing() {
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input 
                 type="text" 
-                placeholder="Search countries" 
+                placeholder={`Search ${activeTab.toLowerCase()}`} 
                 className="w-full pl-11 pr-4 py-3 rounded-full bg-white border border-gray-100 shadow-sm outline-none focus:border-[#FF561E] focus:ring-1 focus:ring-[#FF561E]/20 text-[14px] transition-all"
               />
             </div>
           </div>
 
           <div className="w-full max-w-[1000px] grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4 mb-12">
-            {[
+            {activeTab === 'Countries' && [
               { name: 'India', flag: 'IN', price: '3.99' },
               { name: 'United Kingdom', flag: 'GBR', price: '4.49' },
               { name: 'Greece', flag: 'GR', price: '4.49' },
@@ -580,7 +581,7 @@ export default function Landing() {
             ].map((country, i) => (
               <div key={i} className="flex items-center justify-between p-4 rounded-2xl bg-white border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer group">
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-9 rounded-md overflow-hidden border border-gray-100 shrink-0">
+                  <div className="w-12 h-9 rounded-md overflow-hidden border border-gray-100 shrink-0 relative">
                     <Flag code={country.flag} size="l" hasBorder={false} hasBorderRadius={false} className="country-flag" />
                   </div>
                   <div className="flex flex-col">
@@ -591,6 +592,36 @@ export default function Landing() {
                 <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-[#FF561E] transition-colors" />
               </div>
             ))}
+            
+            {activeTab === 'Regions' && [
+              { name: 'North America', image: 'north america_map.png', price: '4.49' },
+              { name: 'Europe', image: 'europe_map.png', price: '4.49' },
+              { name: 'Asia', image: 'asia_map.png', price: '4.49' },
+              { name: 'Africa', image: 'africa_map.png', price: '3.99' },
+              { name: 'Middle East & North Africa', image: 'middle east &north africa_map.png', price: '3.99' },
+              { name: 'The Caribbean', image: 'caribbean_map.png', price: '4.49' },
+              { name: 'South America', image: 'southamerica_map.png', price: '4.49' },
+              { name: 'Globe', image: 'world_map.png', price: '6.99' },
+            ].map((region, i) => (
+              <div key={i} className="flex items-center justify-between p-4 rounded-2xl bg-white border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer group">
+                <div className="flex items-center gap-4">
+                  <div className="w-[54px] h-[36px] rounded-md overflow-hidden border border-gray-100 shrink-0 relative bg-[#FFF4F0]">
+                    <Image src={`/assets/Regions/${region.image}`} alt={region.name} fill className="object-cover" />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-[15px] font-bold text-[#1A1D20]">{region.name}</span>
+                    <span className="text-[13px] text-[#FF561E] font-medium">From US${region.price}</span>
+                  </div>
+                </div>
+                <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-[#FF561E] transition-colors" />
+              </div>
+            ))}
+
+            {activeTab === 'Plans' && (
+              <div className="col-span-full py-8 text-center text-[#6B7280]">
+                Plans are coming soon!
+              </div>
+            )}
           </div>
 
           <button className="inline-flex items-center justify-center px-8 py-3.5 rounded-full bg-transparent border border-[#FF561E] text-[#FF561E] font-semibold text-[15px] hover:bg-[#FF561E] hover:text-white transition-all gap-2 group">
