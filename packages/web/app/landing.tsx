@@ -2,9 +2,9 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { Globe, QrCode, Plane, Tag, Zap, ShieldCheck, Headphones, Smartphone, RadioTower, Search, ChevronRight, ChevronLeft, ArrowRight } from 'lucide-react';
+import { Globe, QrCode, Plane, Tag, Zap, ShieldCheck, Headphones, Smartphone, RadioTower, Search, ChevronRight, ChevronLeft, ArrowRight, X, Info, Wifi, Gift, CheckCircle2, XCircle } from 'lucide-react';
 import dynamic from 'next/dynamic';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 const Flag = dynamic<any>(() => import('react-flagpack').then(m => m.default || m), { ssr: false });
 
@@ -68,6 +68,59 @@ const telecomOrbits = [
       { name: 'EE', image: 'ee.png' },
       { name: 'SoftBank', image: 'softbank.png' },
     ]
+  }
+];
+
+const plansComparison = [
+  {
+    feature: 'Global Coverage',
+    subFeature: 'Countries & Regions',
+    icon: <Globe className="w-6 h-6 text-[#FF561E]" strokeWidth={1.5} />,
+    tooltip: true,
+    esim4u: { primary: '200+', secondary: 'Countries', type: 'check' },
+    airalo: { primary: '200+', secondary: 'Countries', type: 'check' },
+    holafly: { primary: '160+', secondary: 'Countries', type: 'check' },
+    saily: { primary: '150+', secondary: 'Countries', type: 'check' }
+  },
+  {
+    feature: '24/7 Customer Support',
+    subFeature: 'Live Chat Support',
+    icon: <Headphones className="w-6 h-6 text-[#FF561E]" strokeWidth={1.5} />,
+    tooltip: true,
+    esim4u: { primary: '24/7', secondary: 'Live Chat', type: 'check' },
+    airalo: { primary: '24/7', secondary: 'Live Chat', type: 'check' },
+    holafly: { primary: '24/7', secondary: 'Live Chat', type: 'check' },
+    saily: { primary: '24/7', secondary: 'Live Chat', type: 'check' }
+  },
+  {
+    feature: 'Money Back Guarantee',
+    subFeature: 'Hassle-free Refunds',
+    icon: <ShieldCheck className="w-6 h-6 text-[#FF561E]" strokeWidth={1.5} />,
+    tooltip: true,
+    esim4u: { primary: '30 Days', secondary: 'Money Back Guarantee', type: 'check' },
+    airalo: { primary: '7 Days', secondary: 'Money Back', type: 'check' },
+    holafly: { primary: '7 Days', secondary: 'Money Back', type: 'check' },
+    saily: { primary: '7 Days', secondary: 'Money Back', type: 'check' }
+  },
+  {
+    feature: 'Share Your Connection',
+    subFeature: 'Use eSIM on Hotspot',
+    icon: <Wifi className="w-6 h-6 text-[#FF561E]" strokeWidth={1.5} />,
+    tooltip: true,
+    esim4u: { primary: 'Yes', secondary: 'Share Hotspot\nwith Others', type: 'check' },
+    airalo: { primary: 'Yes', secondary: 'Share Hotspot\nwith Others', type: 'check' },
+    holafly: { primary: 'Yes', secondary: 'Share Hotspot\nwith Others', type: 'check' },
+    saily: { primary: 'No', secondary: 'Hotspot not\nsupported', type: 'cross' }
+  },
+  {
+    feature: 'Free VPN Access',
+    subFeature: 'For Users Facing Restrictions\n(e.g. WhatsApp Calls)',
+    icon: <Gift className="w-6 h-6 text-[#FF561E]" strokeWidth={1.5} />,
+    tooltip: false,
+    esim4u: { primary: 'Yes', secondary: 'Free VPN for users who\nhave trouble making\nWhatsApp calls', type: 'check' },
+    airalo: { primary: 'No', secondary: 'VPN not\nincluded', type: 'cross' },
+    holafly: { primary: 'No', secondary: 'VPN not\nincluded', type: 'cross' },
+    saily: { primary: 'No', secondary: 'VPN not\nincluded', type: 'cross' }
   }
 ];
 
@@ -679,7 +732,7 @@ export default function Landing() {
         </div>
       </section>
 
-      <section className="w-full bg-white overflow-hidden min-h-[880px] relative flex flex-col items-center pt-10 mt-6 pb-40">
+      <section className="w-full bg-white overflow-hidden min-h-[820px] relative flex flex-col items-center pt-10 mt-6 pb-20">
         <div className="z-10 flex flex-col items-center mb-24 px-4">
           <h2 className="text-[40px] md:text-[54px] xl:text-[60px] leading-[1.05] font-semibold text-[#05070A] tracking-tight text-center mb-4">
             Global eSIM <span className="text-[#FF561E] font-serif italic font-normal tracking-normal">Connectivity</span>
@@ -689,7 +742,7 @@ export default function Landing() {
           </p>
         </div>
 
-        <div className="absolute bottom-[-70px] left-1/2 -translate-x-1/2 w-[920px] h-[360px] bg-[#fb923c]/20 blur-[90px] rounded-full pointer-events-none z-0"></div>
+        <div className="absolute bottom-[20px] left-1/2 -translate-x-1/2 w-[980px] h-[400px] pointer-events-none z-0" style={{ background: 'radial-gradient(50% 50% at 50% 50%, rgba(251, 146, 60, 0.32) 0%, rgba(251, 146, 60, 0) 100%)' }}></div>
 
         <div className="absolute bottom-[40px] left-1/2 w-0 h-0 z-10">
           <svg className="absolute left-[-600px] bottom-[-600px] w-[1200px] h-[1200px] overflow-visible pointer-events-none">
@@ -765,6 +818,8 @@ export default function Landing() {
           })}
         </div>
 
+        <div className="absolute bottom-0 left-0 w-full h-[60px] bg-gradient-to-t from-white to-transparent z-20 pointer-events-none"></div>
+
         <style jsx global>{`
           @keyframes spin-cw {
             from { transform: rotate(0deg); }
@@ -787,6 +842,107 @@ export default function Landing() {
             animation: spin-cw linear infinite;
           }
         `}</style>
+      </section>
+      <section className="w-full px-8 md:px-12 xl:px-16 pt-12 pb-24 bg-white flex flex-col items-center justify-center relative z-10 text-[#1A1D20]">
+        <div className="w-full max-w-[1200px] flex flex-col items-center">
+          <h2 className="text-[40px] md:text-[46px] xl:text-[54px] font-semibold mb-3 text-center tracking-tight">
+            eSIM4U vs. Other <span className="text-[#FF561E] font-serif italic font-medium tracking-normal">eSIM Services</span>
+          </h2>
+          <p className="text-[16px] text-[#6B7280] font-medium mb-12 text-center max-w-[600px]">
+            We focus on what matters most – better connection, better support, and a better travel experience.
+          </p>
+
+          <div className="w-full relative shadow-[0_8px_30px_rgba(0,0,0,0.04)] rounded-[24px] border border-gray-100 bg-white grid grid-cols-[1.5fr_1.2fr_1fr_1fr_1fr] overflow-x-auto min-w-[900px]">
+            <div className="pt-8 pb-5 px-6 flex items-center justify-center border-b border-gray-100">
+              <span className="text-[#FF561E] font-bold text-[20px] text-center">Features</span>
+            </div>
+            <div className="relative flex flex-col items-center justify-center border-b border-gray-100">
+              <div className="absolute inset-x-0 bottom-0 top-3 bg-[#FFF4F0] rounded-t-[24px] z-0"></div>
+              <div className="pt-8 pb-5 px-6 relative z-10 w-full flex justify-center">
+                <Image src="/assets/esim4u-logo.png" alt="eSIM4U" width={140} height={42} className="object-contain" />
+              </div>
+            </div>
+            <div className="pt-8 pb-5 px-6 flex flex-col items-center justify-center border-b border-gray-100">
+              <Image src="/assets/Providers/airalo.png" alt="Airalo" width={110} height={34} className="object-contain" />
+            </div>
+            <div className="pt-8 pb-5 px-6 flex flex-col items-center justify-center border-b border-gray-100">
+              <Image src="/assets/Providers/holafly.png" alt="Holafly" width={110} height={34} className="object-contain" />
+            </div>
+            <div className="pt-8 pb-5 px-6 flex flex-col items-center justify-center border-b border-gray-100 rounded-tr-[24px]">
+              <Image src="/assets/Providers/saily.png" alt="Saily" width={110} height={34} className="object-contain" />
+            </div>
+            {plansComparison.map((row, i) => (
+              <Fragment key={i}>
+                <div className={`py-4 px-6 flex items-center gap-4 border-b border-gray-100 ${i === plansComparison.length - 1 ? 'border-b-0 pb-5' : ''}`}>
+                  <div className="flex-shrink-0">{row.icon}</div>
+                  <div className="flex flex-col">
+                    <span className="font-bold text-[16px]">{row.feature}</span>
+                    <div className="flex items-center gap-1.5 mt-0.5 text-[13px] text-[#6B7280]">
+                      <span className="whitespace-pre-line">{row.subFeature}</span>
+                      {row.tooltip && <Info className="w-4 h-4 text-gray-400" strokeWidth={2} />}
+                    </div>
+                  </div>
+                </div>
+                <div className={`py-4 px-4 bg-[#FFF4F0] flex flex-col items-center justify-center text-center border-b border-gray-100 ${i === plansComparison.length - 1 ? 'border-b-0 pb-5' : ''}`}>
+                  <div className="flex items-center gap-2 mb-1.5">
+                    {row.esim4u.type === 'check' ? (
+                      <CheckCircle2 className="w-5 h-5 text-[#FF561E] shrink-0" strokeWidth={2} />
+                    ) : (
+                      <XCircle className="w-5 h-5 text-gray-400 shrink-0" strokeWidth={2} />
+                    )}
+                    <span className={`font-bold text-[16px] ${row.esim4u.type === 'check' ? 'text-[#FF561E]' : ''}`}>{row.esim4u.primary}</span>
+                  </div>
+                  <span className="text-[13px] text-[#6B7280] leading-[1.4] whitespace-pre-line">{row.esim4u.secondary}</span>
+                </div>
+                <div className={`py-4 px-4 flex flex-col items-center justify-center text-center border-b border-gray-100 ${i === plansComparison.length - 1 ? 'border-b-0 pb-5' : ''}`}>
+                  <div className="flex items-center gap-2 mb-1.5">
+                    {row.airalo.type === 'check' ? (
+                      <CheckCircle2 className="w-5 h-5 text-gray-400 shrink-0" strokeWidth={2} />
+                    ) : (
+                      <X className="w-5 h-5 text-gray-400 shrink-0" strokeWidth={2} />
+                    )}
+                    <span className="font-bold text-[15px] text-gray-800">{row.airalo.primary}</span>
+                  </div>
+                  <span className="text-[13px] text-[#6B7280] leading-[1.4] whitespace-pre-line">{row.airalo.secondary}</span>
+                </div>
+                <div className={`py-4 px-4 flex flex-col items-center justify-center text-center border-b border-gray-100 ${i === plansComparison.length - 1 ? 'border-b-0 pb-5' : ''}`}>
+                  <div className="flex items-center gap-2 mb-1.5">
+                    {row.holafly.type === 'check' ? (
+                      <CheckCircle2 className="w-5 h-5 text-gray-400 shrink-0" strokeWidth={2} />
+                    ) : (
+                      <X className="w-5 h-5 text-gray-400 shrink-0" strokeWidth={2} />
+                    )}
+                    <span className="font-bold text-[15px] text-gray-800">{row.holafly.primary}</span>
+                  </div>
+                  <span className="text-[13px] text-[#6B7280] leading-[1.4] whitespace-pre-line">{row.holafly.secondary}</span>
+                </div>
+                <div className={`py-4 px-4 flex flex-col items-center justify-center text-center border-b border-gray-100 ${i === plansComparison.length - 1 ? 'border-b-0 pb-5' : ''}`}>
+                  <div className="flex items-center gap-2 mb-1.5">
+                    {row.saily.type === 'check' ? (
+                      <CheckCircle2 className="w-5 h-5 text-gray-400 shrink-0" strokeWidth={2} />
+                    ) : (
+                      <X className="w-5 h-5 text-gray-400 shrink-0" strokeWidth={2} />
+                    )}
+                    <span className="font-bold text-[15px] text-gray-800">{row.saily.primary}</span>
+                  </div>
+                  <span className="text-[13px] text-[#6B7280] leading-[1.4] whitespace-pre-line">{row.saily.secondary}</span>
+                </div>
+              </Fragment>
+            ))}
+            <div className="pt-5 pb-8 px-6 bg-white rounded-bl-[24px]"></div>
+            <div className="relative flex justify-center border-t-0">
+              <div className="absolute inset-x-0 top-0 bottom-4 bg-[#FFF4F0] rounded-b-[24px] z-0"></div>
+              <div className="pt-5 pb-8 px-4 relative z-10 w-full flex justify-center">
+                <Link href="/plans" className="inline-flex items-center justify-center px-8 py-3.5 rounded-full bg-[#FF561E] text-white font-semibold text-[15px] hover:bg-[#e04b19] transition-all shadow-md shadow-orange-500/20 gap-2 shrink-0">
+                  View Plans <ArrowRight className="w-4 h-4 ml-1 transform transition-transform hover:translate-x-1" />
+                </Link>
+              </div>
+            </div>
+            <div className="pt-5 pb-8 px-4 flex items-center justify-center text-gray-300 font-bold text-xl"></div>
+            <div className="pt-5 pb-8 px-4 flex items-center justify-center text-gray-300 font-bold text-xl"></div>
+            <div className="pt-5 pb-8 px-4 flex items-center justify-center text-gray-300 font-bold text-xl rounded-br-[24px]"></div>
+          </div>
+        </div>
       </section>
     </div>
   );
