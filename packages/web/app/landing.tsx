@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { Globe, QrCode, Plane, Tag, Zap, ShieldCheck, Headphones, Smartphone, RadioTower, Search, ChevronRight, ChevronLeft, ArrowRight, X, Info, Wifi, Gift, CheckCircle2, XCircle, Shield, MessageCircle, PhoneCall, Rocket, MapPin, Unlock, BrickWallFire } from 'lucide-react';
+import { Globe, QrCode, Plane, Tag, Zap, ShieldCheck, Headphones, Smartphone, RadioTower, Search, ChevronRight, ChevronLeft, ArrowRight, X, Info, Wifi, Gift, CheckCircle2, XCircle, PhoneCall, Rocket, MapPin, BrickWallFire, Users } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
@@ -956,7 +956,6 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* Free VPN Access Section */}
       <section className="w-full px-8 md:px-12 xl:px-16 pb-8 flex flex-col items-center justify-center relative z-10 text-[#1A1D20]">
         <div className="w-full max-w-[1400px] bg-[#FFF4F0] rounded-[40px] px-8 py-12 md:py-16 md:px-12 flex flex-col items-center shadow-sm relative overflow-hidden">
           
@@ -1026,6 +1025,116 @@ export default function Landing() {
               </div>
             ))}
           </div>
+        </div>
+      </section>
+
+      <section className="w-full px-8 md:px-12 xl:px-16 pt-0 pb-12 bg-white flex flex-col items-center justify-center relative z-10 text-[#1A1D20]">
+        <div className="w-full max-w-[1400px] flex flex-col items-center">
+          
+          <div className="w-full flex flex-col md:flex-row items-center justify-between gap-8 md:gap-4 mb-10 mt-4">
+            <div className="w-full md:w-[42%] flex flex-col items-center md:items-start text-center md:text-left pt-6">
+              
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-orange-50 border border-orange-100 mb-6 w-max">
+                <Gift className="w-[16px] h-[16px] text-[#FF561E]" strokeWidth={2} />
+                <span className="text-[#FF561E] text-[13px] font-semibold tracking-wide">Refer & Earn</span>
+              </div>
+
+              <h2 className="text-[46px] md:text-[56px] xl:text-[62px] leading-[1.12] font-semibold text-[#1A1D20] tracking-[-0.02em] mb-4">
+                Refer Friends,<br /> <span className="text-[#FF561E] font-serif italic font-medium lining-nums tracking-normal">Earn $3 Each</span>
+              </h2>
+
+              <p className="text-[17px] text-[#6B7280] font-medium max-w-[500px]">
+                Share eSIM4U with your friends and you'll both get <span className="text-[#FF561E] font-bold">$3 in credit</span>.
+              </p>
+            </div>
+
+            <div className="w-full md:w-[58%] flex justify-center md:justify-end relative">
+              <Image 
+                src="/assets/Refer&Earn/credit.png" 
+                alt="You get $3 Credit, Your friend gets $3 Credit" 
+                width={590}
+                height={221}
+                className="object-contain"
+                priority
+              />
+            </div>
+          </div>
+
+          <div className="w-full relative flex flex-col items-center mb-16">
+            
+            <div className="absolute left-[24px] md:left-1/2 top-4 bottom-4 w-[2px] bg-[#FF561E]/30 md:-translate-x-1/2 z-0"></div>
+
+            <div className="w-full flex flex-row items-center justify-start md:justify-center mb-8 md:mb-10 relative z-10">
+              <div className="w-1/2 flex justify-end pr-16 hidden md:flex"></div>
+              <div className="absolute left-0 md:left-1/2 md:-translate-x-1/2 w-12 h-12 bg-[#FF561E] rounded-full border-[5px] border-white shadow-sm flex items-center justify-center text-white font-bold text-[20px] z-10">1</div>
+              <div className="w-full pl-16 md:pl-0 md:w-1/2 flex justify-start md:pl-16">
+                <div className="bg-white rounded-[24px] p-6 shadow-[0_8px_30px_rgba(0,0,0,0.04)] border border-gray-100 flex flex-col sm:flex-row items-center sm:items-start md:items-center gap-6 w-full max-w-[480px]">
+                  <Image src="/assets/Refer&Earn/step1.png" alt="Step 1" width={100} height={100} className="object-contain shrink-0" />
+                  <div className="flex flex-col text-center sm:text-left">
+                    <h3 className="text-[18px] font-bold text-[#1A1D20] mb-2 leading-tight">Share Your<br />Referral Code</h3>
+                    <p className="text-[14px] text-[#6B7280] font-medium leading-[1.5]">Share your unique referral link or code with friends anywhere in the world.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="w-full flex flex-row items-center justify-start md:justify-center mb-8 md:mb-10 relative z-10">
+              <div className="w-full pl-16 md:pl-0 md:w-1/2 flex justify-start md:justify-end md:pr-16 order-2 md:order-1">
+                <div className="bg-white rounded-[24px] p-6 shadow-[0_8px_30px_rgba(0,0,0,0.04)] border border-gray-100 flex flex-col sm:flex-row items-center sm:items-start md:items-center gap-6 w-full max-w-[480px]">
+                  <Image src="/assets/Refer&Earn/step2.png" alt="Step 2" width={120} height={100} className="object-contain shrink-0" />
+                  <div className="flex flex-col text-center sm:text-left">
+                    <h3 className="text-[18px] font-bold text-[#1A1D20] mb-2 leading-tight">They Join<br />eSIM4U</h3>
+                    <p className="text-[14px] text-[#6B7280] font-medium leading-[1.5]">Your friend signs up and purchases their first eSIM using your referral code.</p>
+                  </div>
+                </div>
+              </div>
+              <div className="absolute left-0 md:left-1/2 md:-translate-x-1/2 w-12 h-12 bg-[#FF561E] rounded-full border-[5px] border-white shadow-sm flex items-center justify-center text-white font-bold text-[20px] z-10 order-1 md:order-2">2</div>
+              <div className="w-1/2 flex justify-start pl-16 hidden md:flex order-3"></div>
+            </div>
+
+            <div className="w-full flex flex-row items-center justify-start md:justify-center relative z-10">
+              <div className="w-1/2 flex justify-end pr-16 hidden md:flex"></div>
+              <div className="absolute left-0 md:left-1/2 md:-translate-x-1/2 w-12 h-12 bg-[#FF561E] rounded-full border-[5px] border-white shadow-sm flex items-center justify-center text-white font-bold text-[20px] z-10">3</div>
+              <div className="w-full pl-16 md:pl-0 md:w-1/2 flex justify-start md:pl-16">
+                <div className="bg-white rounded-[24px] p-6 shadow-[0_8px_30px_rgba(0,0,0,0.04)] border border-gray-100 flex flex-col sm:flex-row items-center sm:items-start md:items-center gap-6 w-full max-w-[480px]">
+                  <Image src="/assets/Refer&Earn/step3.png" alt="Step 3" width={120} height={100} className="object-contain shrink-0" />
+                  <div className="flex flex-col text-center sm:text-left">
+                    <h3 className="text-[18px] font-bold text-[#1A1D20] mb-2 leading-tight">You Both Earn $3</h3>
+                    <p className="text-[14px] text-[#6B7280] font-medium leading-[1.5]">
+                      You get <span className="text-[#FF561E] font-bold">$3 in credit</span> and your friend gets <span className="text-[#FF561E] font-bold">$3 off</span> too — automatically!
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="w-full border border-gray-100 rounded-[24px] shadow-[0_4px_20px_rgba(0,0,0,0.02)] p-8 md:p-10 mb-8 bg-white">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-0 lg:divide-x divide-gray-100">
+              {[
+                { title: 'Instant Credits', desc: "Credits are added instantly after your friend's first purchase.", icon: <Zap className="w-[30px] h-[30px] text-[#FF561E]" strokeWidth={1.5} /> },
+                { title: 'Unlimited Referrals', desc: "Invite as many friends as you want and keep earning.", icon: <Users className="w-[30px] h-[30px] text-[#FF561E]" strokeWidth={1.5} /> },
+                { title: 'Use Anywhere', desc: "Use your $3 credit on any country or regional eSIM plan.", icon: <Globe className="w-[30px] h-[30px] text-[#FF561E]" strokeWidth={1.5} /> },
+                { title: 'No Extra Steps', desc: "Rewards are automatic. No forms, no waiting.", icon: <ShieldCheck className="w-[30px] h-[30px] text-[#FF561E]" strokeWidth={1.5} /> }
+              ].map((ft, i) => (
+                <div key={i} className="flex flex-col items-center text-center px-4">
+                  <div className="w-[60px] h-[60px] rounded-full bg-white border border-gray-100 flex items-center justify-center mb-4 shrink-0 shadow-[0_2px_10px_rgba(0,0,0,0.02)]">
+                    {ft.icon}
+                  </div>
+                  <h4 className="text-[15px] font-bold text-[#1A1D20] mb-2">{ft.title}</h4>
+                  <p className="text-[13px] text-[#6B7280] font-medium leading-[1.6]">
+                    {ft.desc}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex items-center justify-center gap-2">
+            <CheckCircle2 className="w-[18px] h-[18px] text-[#FF561E]" strokeWidth={2.5} />
+            <span className="text-[13px] text-[#1A1D20] font-semibold">No hidden conditions. Rewards are automatically applied after eligible purchases.</span>
+          </div>
+
         </div>
       </section>
     </div>
