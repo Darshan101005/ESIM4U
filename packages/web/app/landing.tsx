@@ -132,6 +132,7 @@ export default function Landing() {
   const [whyVisible, setWhyVisible] = useState(false);
   const [coverageVisible, setCoverageVisible] = useState(false);
   const [activeTab, setActiveTab] = useState<'Countries' | 'Regions' | 'Plans'>('Countries');
+  const [locationsFolder, setLocationsFolder] = useState('Locations');
   const carouselRef = useRef<HTMLDivElement | null>(null);
   const carouselViewportRef = useRef<HTMLDivElement | null>(null);
   const animationRef = useRef<number | null>(null);
@@ -288,6 +289,16 @@ export default function Landing() {
     if (whyRef.current) observer.observe(whyRef.current);
     if (coverageRef.current) observer.observe(coverageRef.current);
     return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.altKey && e.key.toLowerCase() === 'o') {
+        setLocationsFolder(prev => prev === 'Locations' ? 'Locations1' : 'Locations');
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
   return (
@@ -613,7 +624,7 @@ export default function Landing() {
                 {loopedCarouselItems.map((dest, i) => (
                   <div key={`${dest.name}-${i}`} className="dest-card flex-shrink-0 w-[calc((100%_-_24px)/2)] sm:w-[calc((100%_-_48px)/3)] md:w-[calc((100%_-_72px)/4)] lg:w-[calc((100%_-_120px)/6)] bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col group cursor-pointer transition-transform duration-300 hover:translate-y-[-6px] hover:scale-[1.03]">
                     <div className="relative w-full aspect-square bg-[#FFF4F0] flex items-center justify-center">
-                      <Image src={`/assets/Locations/${dest.image}`} alt={dest.name} fill className="object-contain" />
+                      <Image src={`/assets/${locationsFolder}/${dest.image}`} alt={dest.name} fill className="object-contain" />
                     </div>
                     <div className="p-4 flex flex-col">
                       <h3 className="text-[16px] font-bold text-[#1A1D20] mb-1">{dest.name}</h3>
