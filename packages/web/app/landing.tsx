@@ -961,7 +961,7 @@ export default function Landing() {
         <div className="w-full max-w-[1400px] bg-[#FFF4F0] rounded-[40px] px-8 py-12 md:py-16 md:px-12 flex flex-col items-center shadow-sm relative overflow-hidden">
           
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-[0.03] pointer-events-none flex items-center justify-center">
-            <Shield className="text-[#FF561E] w-[400px] h-[400px] md:w-[600px] md:h-[600px]" strokeWidth={0.8} />
+            <ShieldCheck className="text-[#FF561E] w-[400px] h-[400px] md:w-[600px] md:h-[600px]" strokeWidth={0.8} />
           </div>
 
           <h2 className="text-[32px] md:text-[36px] font-semibold text-[#1A1D20] mb-5 tracking-tight z-10 relative text-center">
