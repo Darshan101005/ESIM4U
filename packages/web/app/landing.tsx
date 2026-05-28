@@ -350,7 +350,7 @@ export default function Landing() {
               <Link href="/login" className="px-6 py-2.5 rounded-full bg-white/80 backdrop-blur-sm border border-gray-100 text-[#FF561E] font-semibold text-[14px] hover:bg-white hover:scale-105 hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(255,86,30,0.15)] hover:border-orange-100 transition-all duration-300 shadow-sm">
                 Log in
               </Link>
-              <Link href="/signup" className="px-6 py-2.5 rounded-full bg-[#FF561E] text-white font-semibold text-[14px] hover:bg-[#e04b19] hover:scale-105 hover:-translate-y-0.5 hover:shadow-[0_12px_32px_rgba(255,86,30,0.35)] transition-all duration-300 shadow-lg shadow-orange-500/20">
+              <Link href="/signup" className="px-6 py-2.5 rounded-full bg-[#FF561E] text-white font-semibold text-[14px]  hover:scale-105 hover:-translate-y-0.5 hover:shadow-[0_12px_32px_rgba(255,86,30,0.35)] transition-all duration-300 shadow-lg shadow-orange-500/20">
                 Sign up
               </Link>
             </div>
@@ -376,7 +376,7 @@ export default function Landing() {
             </p>
             
             <div className="flex items-center gap-4">
-              <Link href="/get-started" className="inline-flex items-center justify-center px-9 py-4 rounded-full bg-[#FF561E] text-white font-semibold text-[16px] hover:bg-[#e04b19] transition-all shadow-xl shadow-orange-500/25 gap-2 group">
+              <Link href="/get-started" className="inline-flex items-center justify-center px-9 py-4 rounded-full bg-[#FF561E] text-white font-semibold text-[16px]  transition-all shadow-xl shadow-orange-500/25 gap-2 group">
                 Get Started
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="transform transition-transform group-hover:translate-x-1">
                   <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
@@ -944,7 +944,7 @@ export default function Landing() {
             <div className="relative flex justify-center border-t-0">
               <div className="absolute inset-x-0 top-0 bottom-4 bg-[#FFF4F0] rounded-b-[24px] z-0"></div>
               <div className="pt-5 pb-8 px-4 relative z-10 w-full flex justify-center">
-                <Link href="/plans" className="inline-flex items-center justify-center px-8 py-3.5 rounded-full bg-[#FF561E] text-white font-semibold text-[15px] hover:bg-[#e04b19] transition-all shadow-md shadow-orange-500/20 gap-2 shrink-0">
+                <Link href="/plans" className="inline-flex items-center justify-center px-8 py-3.5 rounded-full bg-[#FF561E] text-white font-semibold text-[15px]  transition-all shadow-md shadow-orange-500/20 gap-2 shrink-0">
                   View Plans <ArrowRight className="w-4 h-4 ml-1 transform transition-transform hover:translate-x-1" />
                 </Link>
               </div>
@@ -1230,7 +1230,7 @@ export default function Landing() {
                 </p>
                 <div className="relative w-full">
                   <input type="email" placeholder="Enter your email" className="w-full pl-4 pr-12 py-[10px] rounded-full text-[14px] text-[#1A1D20] bg-white outline-none placeholder:text-gray-400 focus:ring-2 focus:ring-white/50 shadow-sm" />
-                  <button className="absolute right-1 top-1 bottom-1 w-9 bg-[#FF561E] text-white flex items-center justify-center rounded-full hover:bg-[#e04b19] transition-colors shadow-sm" aria-label="Send">
+                  <button className="absolute right-1 top-1 bottom-1 w-9 bg-[#FF561E] text-white flex items-center justify-center rounded-full  transition-colors shadow-sm" aria-label="Send">
                     <ArrowRight className="w-4 h-4 text-white" strokeWidth={2.5} />
                   </button>
                 </div>
