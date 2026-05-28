@@ -23,29 +23,26 @@ export default function SignupPage() {
       <div className="absolute bottom-[-25%] right-[-12%] w-[650px] h-[650px] rounded-full bg-white/[0.04]"></div>
       <div className="absolute bottom-[20%] left-[10%] w-[200px] h-[200px] rounded-full bg-white/[0.03]"></div>
 
-      <div
-        className={`hidden lg:block absolute z-20 pointer-events-none transition-all duration-1000 ease-out ${
+      <div className={`absolute inset-0 flex items-center justify-center transition-all duration-1000 ease-out ${
           mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
-        }`}
-        style={{ bottom: "5%", right: "calc(50% - 380px)" }}
-      >
-        <div className="relative w-[220px] h-[310px]">
-          <Image
-            src="/assets/Signup&Login/Boy-with-laptop.png"
-            alt="Boy with laptop"
-            fill
-            className="object-contain object-bottom drop-shadow-[0_8px_24px_rgba(0,0,0,0.15)]"
-            priority
-          />
+      }`}>
+        <div
+          className="hidden lg:block absolute z-20 pointer-events-none"
+          style={{ bottom: "5%", right: "calc(50% - 380px)" }}
+        >
+          <div className="relative w-[220px] h-[310px]">
+            <Image
+              src="/assets/Signup&Login/Boy-with-laptop.png"
+              alt="Boy with laptop"
+              fill
+              className="object-contain object-bottom drop-shadow-[0_8px_24px_rgba(0,0,0,0.15)]"
+              priority
+            />
+          </div>
         </div>
-      </div>
 
-      <div
-        className={`relative z-10 transition-all duration-1000 ease-out ${
-          mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
-        }`}
-      >
-        <div className="bg-white rounded-[28px] p-5 md:p-6 w-[430px] max-w-[92vw] shadow-[0_20px_60px_rgba(0,0,0,0.12)]">
+        <div className="relative z-10">
+          <div className="bg-white rounded-[28px] p-5 md:p-6 w-[430px] max-w-[92vw] shadow-[0_20px_60px_rgba(0,0,0,0.12)]">
           <div className="flex flex-col items-center mb-3">
             <Link href="/" className="transition-transform duration-300 hover:scale-105">
               <Image
@@ -189,14 +186,15 @@ export default function SignupPage() {
             </button>
           </div>
 
-          <p className="text-center text-[16px] text-[#6B7280] font-medium mt-4">
+          <p className="text-center text-[12px] text-[#6B7280] font-medium mt-4">
             Already have an account?{" "}
-            <Link href="/login" className="text-[#FF561E] font-bold hover:text-[#e04b19] hover:underline transition-all">
+            <Link href="/login" className="text-[#FF561E] font-bold hover:underline transition-all">
               Log in
             </Link>
           </p>
         </div>
       </div>
+     </div>
     </div>
   );
 }
