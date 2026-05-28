@@ -22,7 +22,9 @@ export default function LoginPage() {
       <div className="absolute top-[30%] right-[15%] w-[200px] h-[200px] rounded-full bg-white/[0.03]"></div>
 
       <div
-        className="hidden lg:block absolute z-20 pointer-events-none"
+        className={`hidden lg:block absolute z-20 pointer-events-none transition-all duration-1000 ease-out ${
+          mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
+        }`}
         style={{ bottom: "5%", left: "calc(50% - 360px)" }}
       >
         <div className="relative w-[210px] h-[300px]">
@@ -37,7 +39,7 @@ export default function LoginPage() {
       </div>
 
       <div
-        className={`relative z-10 transition-all duration-700 ease-out ${
+        className={`relative z-10 transition-all duration-1000 ease-out ${
           mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
         }`}
       >

@@ -24,7 +24,9 @@ export default function SignupPage() {
       <div className="absolute bottom-[20%] left-[10%] w-[200px] h-[200px] rounded-full bg-white/[0.03]"></div>
 
       <div
-        className="hidden lg:block absolute z-20 pointer-events-none"
+        className={`hidden lg:block absolute z-20 pointer-events-none transition-all duration-1000 ease-out ${
+          mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
+        }`}
         style={{ bottom: "5%", right: "calc(50% - 380px)" }}
       >
         <div className="relative w-[220px] h-[310px]">
@@ -39,7 +41,7 @@ export default function SignupPage() {
       </div>
 
       <div
-        className={`relative z-10 transition-all duration-700 ease-out ${
+        className={`relative z-10 transition-all duration-1000 ease-out ${
           mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
         }`}
       >
