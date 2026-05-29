@@ -4,16 +4,67 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { Mail, Lock, Eye, EyeOff } from "lucide-react";
+import toast from "react-hot-toast";
+import { useRouter } from "next/navigation";
+import { signIn } from "@/lib/auth-client";
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [mounted, setMounted] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!email.trim()) {
+      toast.error("Please enter your email address");
+      return;
+    }
+
+    if (!password.trim()) {
+      toast.error("Please enter your password");
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const { error } = await signIn.email({ email, password });
+
+      if (error) {
+        if (
+          error.status === 403 ||
+          (error.message && error.message.includes("email") && error.message.includes("verif"))
+        ) {
+          toast.error("Please verify your email before logging in");
+          fetch("/api/auth/send-otp", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email }),
+          }).catch(() => {});
+          router.push(`/verify-email?email=${encodeURIComponent(email)}`);
+          return;
+        }
+
+        toast.error(error.message || "Invalid email or password");
+        return;
+      }
+
+      toast.success("Welcome back!");
+      router.push("/home");
+    } catch {
+      toast.error("Something went wrong. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="h-screen w-full bg-[#FF561E] flex items-center justify-center relative overflow-hidden">
@@ -60,7 +111,7 @@ export default function LoginPage() {
             </p>
           </div>
 
-          <form className="flex flex-col gap-3.5" onSubmit={(e) => e.preventDefault()}>
+          <form className="flex flex-col gap-3.5" onSubmit={handleSubmit}>
             <div className="flex flex-col gap-1">
               <label htmlFor="login-email" className="text-[13px] font-bold text-[#1A1D20]">
                 Email address
@@ -113,9 +164,19 @@ export default function LoginPage() {
 
             <button
               type="submit"
-              className="w-full py-2.5 rounded-xl bg-[#FF561E] text-white font-bold text-[15px]  hover:shadow-lg hover:shadow-orange-500/25 transition-all duration-300 active:scale-[0.98] mt-0.5"
+              disabled={isLoading}
+              className={`w-full py-2.5 rounded-xl bg-[#FF561E] text-white font-bold text-[15px] hover:shadow-lg hover:shadow-orange-500/25 transition-all duration-300 active:scale-[0.98] mt-0.5 ${
+                isLoading ? "opacity-70 cursor-not-allowed" : ""
+              }`}
             >
-              Log In
+              {isLoading ? (
+                <span className="flex items-center justify-center gap-2">
+                  <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  Logging in...
+                </span>
+              ) : (
+                "Log In"
+              )}
             </button>
           </form>
 
@@ -156,8 +217,8 @@ export default function LoginPage() {
             </Link>
           </p>
         </div>
+       </div>
       </div>
-    </div>
     </div>
   );
 }

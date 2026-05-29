@@ -3,7 +3,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import { Mail, Lock, Eye, EyeOff, User } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, User, Check } from "lucide-react";
+import toast from "react-hot-toast";
+import { useRouter } from "next/navigation";
+import { signUp } from "@/lib/auth-client";
 
 export default function SignupPage() {
   const [showPassword, setShowPassword] = useState(false);
@@ -12,10 +15,89 @@ export default function SignupPage() {
   const [password, setPassword] = useState("");
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [passwordFocused, setPasswordFocused] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  const hasUppercase = /[A-Z]/.test(password);
+  const hasLowercase = /[a-z]/.test(password);
+  const hasNumber = /[0-9]/.test(password);
+  const hasSpecial = /[^a-zA-Z0-9]/.test(password);
+  const hasMinLength = password.length >= 8;
+  const allRequirementsMet =
+    hasUppercase && hasLowercase && hasNumber && hasSpecial && hasMinLength;
+  const showRequirements =
+    password.length > 0 && (passwordFocused || !allRequirementsMet);
+
+  const requirements = [
+    { met: hasMinLength, label: "At least 8 characters" },
+    { met: hasUppercase, label: "One uppercase letter" },
+    { met: hasLowercase, label: "One lowercase letter" },
+    { met: hasNumber, label: "One number" },
+    { met: hasSpecial, label: "One special character" },
+  ];
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!fullName.trim()) {
+      toast.error("Full name is required");
+      return;
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      toast.error("Please enter a valid email address");
+      return;
+    }
+
+    if (!allRequirementsMet) {
+      toast.error("Please meet all password requirements");
+      return;
+    }
+
+    if (!agreedToTerms) {
+      toast.error("Please agree to the Terms of Service");
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const { error } = await signUp.email({
+        email,
+        password,
+        name: fullName,
+      });
+
+      if (error) {
+        if (error.message?.includes("already")) {
+          toast.error("An account with this email already exists");
+        } else {
+          toast.error(
+            error.message || "Failed to create account. Please try again."
+          );
+        }
+        return;
+      }
+
+      await fetch("/api/auth/send-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+
+      toast.success("Account created! Please verify your email.");
+      router.push(`/verify-email?email=${encodeURIComponent(email)}`);
+    } catch {
+      toast.error("Something went wrong. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="h-screen w-full bg-[#FF561E] flex items-center justify-center relative overflow-hidden">
@@ -62,7 +144,7 @@ export default function SignupPage() {
             </p>
           </div>
 
-          <form className="flex flex-col gap-3" onSubmit={(e) => e.preventDefault()}>
+          <form className="flex flex-col gap-3" onSubmit={handleSubmit}>
             <div className="flex flex-col gap-1">
               <label htmlFor="signup-name" className="text-[13px] font-bold text-[#1A1D20]">
                 Full name
@@ -109,6 +191,8 @@ export default function SignupPage() {
                   placeholder="Create a password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  onFocus={() => setPasswordFocused(true)}
+                  onBlur={() => setPasswordFocused(false)}
                   className="w-full pl-10 pr-11 py-2.5 rounded-xl bg-[#F9FAFB] border border-gray-200 text-[13px] text-[#1A1D20] placeholder:text-[#9CA3AF] outline-none focus:border-[#FF561E] focus:ring-2 focus:ring-[#FF561E]/10 transition-all font-medium"
                 />
                 <button
@@ -123,9 +207,35 @@ export default function SignupPage() {
                   )}
                 </button>
               </div>
-              <p className="text-[11px] text-[#9CA3AF] font-medium mt-0.5">
-                Use 8+ characters with a mix of letters, numbers & symbols
-              </p>
+              <div
+                className="overflow-hidden transition-all duration-300 ease-out"
+                style={{
+                  maxHeight: showRequirements ? "160px" : "0px",
+                  opacity: showRequirements ? 1 : 0,
+                  marginTop: showRequirements ? "6px" : "0px",
+                }}
+              >
+                <div className="flex flex-col gap-1.5">
+                  {requirements.map((req) => (
+                    <div key={req.label} className="flex items-center gap-2">
+                      <div
+                        className={`w-3.5 h-3.5 rounded-full flex items-center justify-center transition-colors duration-300 ${
+                          req.met ? "bg-[#22C55E]" : "bg-gray-200"
+                        }`}
+                      >
+                        {req.met && <Check className="w-2 h-2 text-white" strokeWidth={3} />}
+                      </div>
+                      <span
+                        className={`text-[11px] font-medium transition-colors duration-300 ${
+                          req.met ? "text-[#22C55E]" : "text-[#9CA3AF]"
+                        }`}
+                      >
+                        {req.label}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
 
             <label htmlFor="signup-terms" className="flex items-start gap-2.5 cursor-pointer select-none">
@@ -150,9 +260,19 @@ export default function SignupPage() {
 
             <button
               type="submit"
-              className="w-full py-2.5 rounded-xl bg-[#FF561E] text-white font-bold text-[15px]  hover:shadow-lg hover:shadow-orange-500/25 transition-all duration-300 active:scale-[0.98]"
+              disabled={isLoading}
+              className={`w-full py-2.5 rounded-xl bg-[#FF561E] text-white font-bold text-[15px] hover:shadow-lg hover:shadow-orange-500/25 transition-all duration-300 active:scale-[0.98] ${
+                isLoading ? "opacity-70 cursor-not-allowed" : ""
+              }`}
             >
-              Sign Up
+              {isLoading ? (
+                <span className="flex items-center justify-center gap-2">
+                  <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  Creating account...
+                </span>
+              ) : (
+                "Sign Up"
+              )}
             </button>
           </form>
 
@@ -193,8 +313,8 @@ export default function SignupPage() {
             </Link>
           </p>
         </div>
+       </div>
       </div>
-     </div>
     </div>
   );
 }

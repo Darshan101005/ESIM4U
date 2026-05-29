@@ -9,21 +9,28 @@
     "start": "next start",
     "lint": "next lint",
     "type-check": "tsc --noEmit",
-    "postinstall": "react-flagpack"
+    "postinstall": "react-flagpack",
+    "db:migrate": "npx @better-auth/cli@latest migrate",
+    "db:generate": "npx @better-auth/cli@latest generate"
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.2.4",
+    "better-auth": "^1.6.0",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.0.0",
     "lucide-react": "^1.16.0",
     "next": "^14.0.0",
+    "pg": "^8.13.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-flagpack": "^2.0.6",
+    "react-hot-toast": "^2.4.1",
+    "resend": "^4.0.0",
     "tailwind-merge": "^2.2.0"
   },
   "devDependencies": {
     "@types/node": "^20.10.0",
+    "@types/pg": "^8.11.0",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
     "autoprefixer": "^10.4.0",
