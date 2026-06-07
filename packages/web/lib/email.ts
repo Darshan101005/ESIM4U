@@ -26,12 +26,14 @@ export async function sendOTPEmail(
 
 export async function sendVerificationSuccessEmail(
   email: string,
-  name: string
+  name: string,
+  dateTime?: string,
+  deviceName?: string
 ) {
   await resend.emails.send({
     from: process.env.EMAIL_FROM || "eSIM4U <onboarding@resend.dev>",
     to: [email],
-    subject: "Email verified successfully - eSIM4U",
-    html: getVerificationSuccessTemplate(name),
+    subject: "Login Successful - eSIM4U",
+    html: getVerificationSuccessTemplate(name, dateTime, deviceName),
   });
 }
