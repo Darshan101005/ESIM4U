@@ -1,11 +1,11 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useSession, signOut } from "@/lib/auth-client";
+import { useCachedSession, signOutAndClear } from "@/lib/auth-client";
 import { useEffect, useState } from "react";
 
 export default function HomePage() {
-  const { data: session, isPending } = useSession();
+  const { data: session, isPending } = useCachedSession();
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
 
@@ -29,8 +29,38 @@ export default function HomePage() {
 
   if (!session) return null;
 
+  const user = session.user as { name?: string; id?: string; email?: string } | undefined;
+
   const handleSignOut = async () => {
-    await signOut();
+    let clientIpv4 = null;
+    let clientIpv6 = null;
+    try {
+      const [v4Res, v6Res] = await Promise.allSettled([
+        fetch("https://api4.ipify.org?format=json", { signal: AbortSignal.timeout(5000) }),
+        fetch("https://api64.ipify.org?format=json", { signal: AbortSignal.timeout(5000) }),
+      ]);
+      if (v4Res.status === "fulfilled" && v4Res.value.ok) {
+        const d = await v4Res.value.json();
+        if (d.ip && !d.ip.includes(":")) clientIpv4 = d.ip;
+      }
+      if (v6Res.status === "fulfilled" && v6Res.value.ok) {
+        const d = await v6Res.value.json();
+        if (d.ip && d.ip.includes(":")) clientIpv6 = d.ip;
+      }
+    } catch {}
+
+    fetch("/api/auth/activity", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userId: user?.id || null,
+        email: user?.email || null,
+        eventType: "logout",
+        clientIpv4,
+        clientIpv6,
+      }),
+    }).catch(() => {});
+    await signOutAndClear();
     router.push("/login");
   };
 
@@ -47,7 +77,7 @@ export default function HomePage() {
           <span className="text-white text-2xl font-bold">e</span>
         </div>
         <h1 className="text-3xl md:text-4xl font-bold text-[#1A1D20] tracking-tight">
-          Welcome, {session.user.name}!
+          Welcome, {user?.name || "User"}!
         </h1>
         <p className="text-[#6B7280] text-[15px] font-medium">
           You are successfully logged in.

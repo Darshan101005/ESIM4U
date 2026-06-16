@@ -67,7 +67,7 @@ export default function SignupPage() {
     setIsLoading(true);
 
     try {
-      const { error } = await signUp.email({
+      const { error, data } = await signUp.email({
         email,
         password,
         name: fullName,
@@ -89,6 +89,37 @@ export default function SignupPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
       });
+
+      if (data?.user?.id) {
+        let clientIpv4 = null;
+        let clientIpv6 = null;
+        try {
+          const [v4Res, v6Res] = await Promise.allSettled([
+            fetch("https://api4.ipify.org?format=json", { signal: AbortSignal.timeout(5000) }),
+            fetch("https://api64.ipify.org?format=json", { signal: AbortSignal.timeout(5000) }),
+          ]);
+          if (v4Res.status === "fulfilled" && v4Res.value.ok) {
+            const d = await v4Res.value.json();
+            if (d.ip && !d.ip.includes(":")) clientIpv4 = d.ip;
+          }
+          if (v6Res.status === "fulfilled" && v6Res.value.ok) {
+            const d = await v6Res.value.json();
+            if (d.ip && d.ip.includes(":")) clientIpv6 = d.ip;
+          }
+        } catch {}
+
+        fetch("/api/auth/activity", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            userId: data.user.id,
+            email,
+            eventType: "signup",
+            clientIpv4,
+            clientIpv6,
+          }),
+        }).catch(() => {});
+      }
 
       toast.success("Account created! Please verify your email.");
       router.push(`/verify-email?email=${encodeURIComponent(email)}`);

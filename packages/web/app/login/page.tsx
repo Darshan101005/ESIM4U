@@ -6,7 +6,7 @@ import { useState, useEffect } from "react";
 import { Mail, Lock, Eye, EyeOff } from "lucide-react";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
-import { signIn } from "@/lib/auth-client";
+import { signIn, clearSessionCache } from "@/lib/auth-client";
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
@@ -19,6 +19,37 @@ export default function LoginPage() {
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  const logActivity = async (eventType: string, userId?: string) => {
+    let clientIpv4 = null;
+    let clientIpv6 = null;
+    try {
+      const [v4Res, v6Res] = await Promise.allSettled([
+        fetch("https://api4.ipify.org?format=json", { signal: AbortSignal.timeout(5000) }),
+        fetch("https://api64.ipify.org?format=json", { signal: AbortSignal.timeout(5000) }),
+      ]);
+      if (v4Res.status === "fulfilled" && v4Res.value.ok) {
+        const d = await v4Res.value.json();
+        if (d.ip && !d.ip.includes(":")) clientIpv4 = d.ip;
+      }
+      if (v6Res.status === "fulfilled" && v6Res.value.ok) {
+        const d = await v6Res.value.json();
+        if (d.ip && d.ip.includes(":")) clientIpv6 = d.ip;
+      }
+    } catch {}
+
+    fetch("/api/auth/activity", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userId: userId || null,
+        email,
+        eventType,
+        clientIpv4,
+        clientIpv6,
+      }),
+    }).catch(() => {});
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,11 +65,14 @@ export default function LoginPage() {
     }
 
     setIsLoading(true);
+    clearSessionCache();
 
     try {
-      const { error } = await signIn.email({ email, password });
+      const { error, data } = await signIn.email({ email, password });
 
       if (error) {
+        logActivity("login_failed");
+
         if (
           error.status === 403 ||
           (error.message && error.message.includes("email") && error.message.includes("verif"))
@@ -56,6 +90,9 @@ export default function LoginPage() {
         toast.error(error.message || "Invalid email or password");
         return;
       }
+
+      const userId = (data as { user?: { id?: string } })?.user?.id;
+      logActivity("login", userId || undefined);
 
       toast.success("Welcome back!");
       router.push("/home");
