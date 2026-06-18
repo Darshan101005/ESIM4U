@@ -54,3 +54,11 @@ ios
 
 #Screenshots
 screenshots
+
+#Integrations
+
+Integrations/
+
+# Ignore all Markdown files except README.md
+*.md
+!README.md

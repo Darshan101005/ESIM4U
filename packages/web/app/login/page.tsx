@@ -95,7 +95,7 @@ export default function LoginPage() {
       logActivity("login", userId || undefined);
 
       toast.success("Welcome back!");
-      router.push("/home");
+      router.push("/dashboard");
     } catch {
       toast.error("Something went wrong. Please try again.");
     } finally {

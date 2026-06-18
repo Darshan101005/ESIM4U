@@ -970,7 +970,7 @@ export default function Landing() {
           <p className="text-[16px] text-[#6B7280] font-medium text-center max-w-[850px] leading-[1.6] mb-12 lg:mb-16 z-10 relative">
             In certain countries, including parts of the Middle East, voice and video calls on apps<br className="hidden lg:block" />
             like WhatsApp, FaceTime, Skype and other VoIP services may not work.<br className="hidden lg:block" />
-            That's why we include free VPN access with every plan so you can <span className="font-bold text-[#FF561E]">connect freely, everywhere.</span>
+            That&apos;s why we include free VPN access with every plan so you can <span className="font-bold text-[#FF561E]">connect freely, everywhere.</span>
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 w-full relative z-10 gap-y-10 lg:gap-y-0">
@@ -1044,7 +1044,7 @@ export default function Landing() {
               </h2>
 
               <p className="text-[17px] text-[#6B7280] font-medium max-w-[500px]">
-                Share eSIM4U with your friends and you'll both get <span className="text-[#FF561E] font-bold">$3 in credit</span>.
+                Share eSIM4U with your friends and you&apos;ll both get <span className="text-[#FF561E] font-bold">$3 in credit</span>.
               </p>
             </div>
 
