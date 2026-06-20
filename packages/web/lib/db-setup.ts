@@ -114,6 +114,11 @@ export async function initializeDatabase() {
   await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS matching_id TEXT`);
   await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS activation_otp TEXT`);
   await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS bundle_expiry_date TEXT`);
+  await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS display_currency VARCHAR(10) DEFAULT 'USD'`);
+  await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS display_rate DECIMAL(16,6)`);
+  await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS discount_amount DECIMAL(10,2) DEFAULT 0`);
+  await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS promo_code VARCHAR(50)`);
+  await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS affiliate_code VARCHAR(50)`);
 
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_orders_user_id ON orders(user_id)`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_orders_user_email ON orders(user_email)`);
@@ -124,7 +129,7 @@ export async function initializeDatabase() {
     CREATE TABLE IF NOT EXISTS pricing_rules (
       id SERIAL PRIMARY KEY,
       scope_type VARCHAR(20) NOT NULL,
-      scope_code VARCHAR(20) NOT NULL,
+      scope_code VARCHAR(120) NOT NULL,
       markup_type VARCHAR(10) NOT NULL DEFAULT 'percent',
       markup_value DECIMAL(10,2) NOT NULL DEFAULT 0,
       updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -132,6 +137,7 @@ export async function initializeDatabase() {
     )
   `);
 
+  await pool.query(`ALTER TABLE pricing_rules ALTER COLUMN scope_code TYPE VARCHAR(120)`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_pricing_rules_scope ON pricing_rules(scope_type, scope_code)`);
 
   await pool.query(`
@@ -139,6 +145,56 @@ export async function initializeDatabase() {
     VALUES ('global', 'GLOBAL', 'percent', 0)
     ON CONFLICT (scope_type, scope_code) DO NOTHING
   `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS promo_codes (
+      id SERIAL PRIMARY KEY,
+      code VARCHAR(50) UNIQUE NOT NULL,
+      description VARCHAR(255),
+      discount_type VARCHAR(10) NOT NULL DEFAULT 'percent',
+      discount_value DECIMAL(10,2) NOT NULL DEFAULT 0,
+      max_discount DECIMAL(10,2),
+      usage_limit INTEGER,
+      used_count INTEGER NOT NULL DEFAULT 0,
+      expiry_date TIMESTAMP WITH TIME ZONE,
+      is_active BOOLEAN NOT NULL DEFAULT TRUE,
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    )
+  `);
+
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_promo_codes_code ON promo_codes(code)`);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS affiliates (
+      id SERIAL PRIMARY KEY,
+      code VARCHAR(50) UNIQUE NOT NULL,
+      name VARCHAR(150) NOT NULL,
+      platform VARCHAR(100),
+      contact VARCHAR(255),
+      commission_rate DECIMAL(10,2) NOT NULL DEFAULT 0,
+      customer_discount_type VARCHAR(10) NOT NULL DEFAULT 'percent',
+      customer_discount_value DECIMAL(10,2) NOT NULL DEFAULT 0,
+      is_active BOOLEAN NOT NULL DEFAULT TRUE,
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    )
+  `);
+
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_affiliates_code ON affiliates(code)`);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS affiliate_sales (
+      id SERIAL PRIMARY KEY,
+      affiliate_id INTEGER NOT NULL REFERENCES affiliates(id) ON DELETE CASCADE,
+      affiliate_code VARCHAR(50) NOT NULL,
+      order_id INTEGER,
+      order_reference VARCHAR(100),
+      sale_amount DECIMAL(10,2) NOT NULL DEFAULT 0,
+      commission_amount DECIMAL(10,2) NOT NULL DEFAULT 0,
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    )
+  `);
+
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_affiliate_sales_affiliate_id ON affiliate_sales(affiliate_id)`);
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS cart_items (

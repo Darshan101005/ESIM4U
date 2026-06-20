@@ -48,6 +48,7 @@ ios
 
 #AI Exclude
 .aiexclude
+.claude
 
 # TypeScript incremental build info
 *.tsbuildinfo

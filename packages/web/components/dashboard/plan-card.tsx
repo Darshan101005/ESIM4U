@@ -1,6 +1,7 @@
 "use client";
 
 import { ShoppingCart, Check, Loader2, Database, Clock, Wifi, Infinity as InfinityIcon } from "lucide-react";
+import { useCurrency } from "@/lib/currency-context";
 
 export interface PlanBundle {
   bundle_code: string;
@@ -21,6 +22,7 @@ interface PlanCardProps {
 }
 
 export default function PlanCard({ bundle, added, adding, onAdd }: PlanCardProps) {
+  const { format } = useCurrency();
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_12px_rgba(0,0,0,0.03)] overflow-hidden hover:border-orange-100 hover:shadow-md transition-all duration-200">
       <div className="bg-gradient-to-r from-[#FF561E] to-[#FF7A45] px-5 py-4">
@@ -67,7 +69,7 @@ export default function PlanCard({ bundle, added, adding, onAdd }: PlanCardProps
         <div className="flex items-center justify-between pt-4 border-t border-gray-100">
           <div>
             <p className="text-[12px] text-[#6B7280]">Price</p>
-            <p className="text-[22px] font-bold text-[#FF561E]">${bundle.price.toFixed(2)}</p>
+            <p className="text-[22px] font-bold text-[#FF561E]">{format(bundle.price)}</p>
           </div>
           <button
             onClick={() => onAdd(bundle)}

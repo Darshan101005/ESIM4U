@@ -4,16 +4,22 @@ import { headers } from "next/headers";
 import QRCode from "qrcode";
 import pool from "@/lib/db";
 import { assignBundle, fetchOrderById } from "@/lib/montyesim";
+import { validatePromoCode, incrementPromoUsage } from "@/lib/promo";
+import { validateAffiliateCode, recordAffiliateSale } from "@/lib/affiliate";
+import { getFxRates, SupportedCurrency, SUPPORTED_CURRENCIES } from "@/lib/fx";
 
 async function getSession() {
-  const session = await auth.api.getSession({ headers: await headers() });
-  return session;
+  return auth.api.getSession({ headers: await headers() });
 }
 
 function generateOrderReference(): string {
   const timestamp = Date.now().toString(36).toUpperCase();
   const random = Math.random().toString(36).substring(2, 8).toUpperCase();
   return `ESIM4U-${timestamp}-${random}`;
+}
+
+function round(value: number): number {
+  return Math.round(value * 100) / 100;
 }
 
 async function buildQrDataUrl(activationCode: string | null): Promise<string | null> {
@@ -33,7 +39,7 @@ export async function GET() {
     }
 
     const result = await pool.query(
-      `SELECT id, bundle_code, bundle_name, country, country_code, data_amount, validity, price, currency, order_reference, monty_order_id, iccid, qr_code_url, lpa_code, smdp_address, matching_id, bundle_expiry_date, status, created_at FROM orders WHERE user_id = $1 ORDER BY created_at DESC`,
+      `SELECT id, bundle_code, bundle_name, country, country_code, data_amount, validity, price, currency, order_reference, monty_order_id, iccid, qr_code_url, lpa_code, smdp_address, matching_id, bundle_expiry_date, display_currency, display_rate, discount_amount, promo_code, affiliate_code, status, created_at FROM orders WHERE user_id = $1 ORDER BY created_at DESC`,
       [session.user.id]
     );
 
@@ -53,14 +59,67 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const { items } = body;
+    const code = (body.code || "").trim();
+    const displayCurrency: SupportedCurrency = SUPPORTED_CURRENCIES.includes(body.display_currency)
+      ? body.display_currency
+      : "USD";
 
     if (!items || !Array.isArray(items) || items.length === 0) {
       return NextResponse.json({ error: "No items to checkout" }, { status: 400 });
     }
 
+    const subtotal = round(items.reduce((sum: number, i: { price: number }) => sum + Number(i.price), 0));
+
+    let totalDiscount = 0;
+    let promoCode: string | null = null;
+    let affiliateCode: string | null = null;
+    let affiliateId: number | null = null;
+    let commissionRate = 0;
+
+    if (code) {
+      const promo = await validatePromoCode(code, subtotal);
+      if (promo.valid) {
+        totalDiscount = promo.discountAmount;
+        promoCode = promo.code || code;
+      } else {
+        const affiliate = await validateAffiliateCode(code, subtotal);
+        if (affiliate.valid) {
+          totalDiscount = affiliate.discountAmount;
+          affiliateCode = affiliate.code || code;
+          affiliateId = affiliate.affiliateId ?? null;
+          commissionRate = affiliate.commissionRate;
+        } else {
+          return NextResponse.json({ error: promo.reason || "Invalid code" }, { status: 400 });
+        }
+      }
+    }
+
+    let displayRate = 1;
+    try {
+      const fx = await getFxRates();
+      displayRate = fx.rates[displayCurrency];
+    } catch {
+      if (displayCurrency !== "USD") {
+        return NextResponse.json({ error: "Pricing is temporarily unavailable. Please try again shortly." }, { status: 503 });
+      }
+    }
+
+    let allocatedDiscount = 0;
     const results = [];
 
-    for (const item of items) {
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      const itemPrice = Number(item.price);
+
+      let itemDiscount: number;
+      if (i === items.length - 1) {
+        itemDiscount = round(totalDiscount - allocatedDiscount);
+      } else {
+        itemDiscount = subtotal > 0 ? round(totalDiscount * (itemPrice / subtotal)) : 0;
+        allocatedDiscount = round(allocatedDiscount + itemDiscount);
+      }
+      const finalPrice = round(Math.max(0, itemPrice - itemDiscount));
+
       const orderReference = generateOrderReference();
 
       try {
@@ -96,8 +155,8 @@ export async function POST(request: NextRequest) {
         const qrCodeUrl = await buildQrDataUrl(activationCode);
 
         const orderData = await pool.query(
-          `INSERT INTO orders (user_id, user_email, bundle_code, bundle_name, country, country_code, data_amount, validity, price, currency, order_reference, monty_order_id, iccid, qr_code_url, lpa_code, cost_price, smdp_address, matching_id, activation_otp, bundle_expiry_date, status)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21) RETURNING *`,
+          `INSERT INTO orders (user_id, user_email, bundle_code, bundle_name, country, country_code, data_amount, validity, price, currency, order_reference, monty_order_id, iccid, qr_code_url, lpa_code, cost_price, smdp_address, matching_id, activation_otp, bundle_expiry_date, display_currency, display_rate, discount_amount, promo_code, affiliate_code, status)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26) RETURNING *`,
           [
             session.user.id,
             session.user.email,
@@ -107,8 +166,8 @@ export async function POST(request: NextRequest) {
             item.country_code || null,
             item.data_amount || null,
             item.validity || null,
-            item.price,
-            item.currency || "USD",
+            finalPrice,
+            "USD",
             orderReference,
             montyOrderId,
             iccid,
@@ -119,17 +178,36 @@ export async function POST(request: NextRequest) {
             matchingId,
             activationOtp,
             bundleExpiry,
+            displayCurrency,
+            displayRate,
+            itemDiscount,
+            promoCode,
+            affiliateCode,
             "completed",
           ]
         );
 
-        results.push(orderData.rows[0]);
+        const savedOrder = orderData.rows[0];
+        results.push(savedOrder);
+
+        if (affiliateId && affiliateCode) {
+          try {
+            await recordAffiliateSale({
+              affiliateId,
+              affiliateCode,
+              orderId: savedOrder.id,
+              orderReference,
+              saleAmount: finalPrice,
+              commissionRate,
+            });
+          } catch {}
+        }
       } catch (assignError: unknown) {
         const errorMsg = assignError instanceof Error ? assignError.message : "Assignment failed";
 
         await pool.query(
-          `INSERT INTO orders (user_id, user_email, bundle_code, bundle_name, country, country_code, data_amount, validity, price, currency, order_reference, cost_price, status)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING *`,
+          `INSERT INTO orders (user_id, user_email, bundle_code, bundle_name, country, country_code, data_amount, validity, price, currency, order_reference, cost_price, display_currency, display_rate, discount_amount, promo_code, affiliate_code, status)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)`,
           [
             session.user.id,
             session.user.email,
@@ -139,16 +217,28 @@ export async function POST(request: NextRequest) {
             item.country_code || null,
             item.data_amount || null,
             item.validity || null,
-            item.price,
-            item.currency || "USD",
+            finalPrice,
+            "USD",
             orderReference,
             item.cost_price ?? null,
+            displayCurrency,
+            displayRate,
+            itemDiscount,
+            promoCode,
+            affiliateCode,
             "failed",
           ]
         );
 
         results.push({ error: errorMsg, bundle_code: item.bundle_code, order_reference: orderReference, status: "failed" });
       }
+    }
+
+    const anySuccess = results.some((r) => r.status === "completed");
+    if (promoCode && anySuccess) {
+      try {
+        await incrementPromoUsage(promoCode);
+      } catch {}
     }
 
     await pool.query(`DELETE FROM cart_items WHERE user_id = $1`, [session.user.id]);

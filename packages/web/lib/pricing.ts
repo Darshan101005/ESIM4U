@@ -1,7 +1,7 @@
 import pool from "@/lib/db";
 
 export type MarkupType = "percent" | "fixed";
-export type ScopeType = "country" | "region" | "global";
+export type ScopeType = "bundle" | "country" | "region" | "global";
 
 export interface PricingRule {
   id: number;
@@ -48,8 +48,14 @@ export async function deletePricingRule(scopeType: ScopeType, scopeCode: string)
   await pool.query(`DELETE FROM pricing_rules WHERE scope_type = $1 AND scope_code = $2`, [scopeType, code]);
 }
 
+export interface PriceTarget {
+  bundleCode?: string;
+  countryCodes?: string[];
+  regionCode?: string;
+}
+
 export interface Pricer {
-  priceFor: (cost: number, target: { countryCodes?: string[]; regionCode?: string }) => number;
+  priceFor: (cost: number, target: PriceTarget) => number;
 }
 
 function applyRule(cost: number, rule: PricingRule | undefined): number {
@@ -65,18 +71,24 @@ function round(value: number): number {
 }
 
 export function buildPricer(rules: PricingRule[]): Pricer {
+  const bundleRules = new Map<string, PricingRule>();
   const countryRules = new Map<string, PricingRule>();
   const regionRules = new Map<string, PricingRule>();
   let globalRule: PricingRule | undefined;
 
   for (const rule of rules) {
-    if (rule.scope_type === "country") countryRules.set(rule.scope_code.toUpperCase(), rule);
+    if (rule.scope_type === "bundle") bundleRules.set(rule.scope_code, rule);
+    else if (rule.scope_type === "country") countryRules.set(rule.scope_code.toUpperCase(), rule);
     else if (rule.scope_type === "region") regionRules.set(rule.scope_code.toLowerCase(), rule);
     else if (rule.scope_type === "global") globalRule = rule;
   }
 
   return {
     priceFor(cost, target) {
+      if (target.bundleCode) {
+        const rule = bundleRules.get(target.bundleCode);
+        if (rule) return applyRule(cost, rule);
+      }
       for (const code of target.countryCodes || []) {
         const rule = countryRules.get(code.toUpperCase());
         if (rule) return applyRule(cost, rule);

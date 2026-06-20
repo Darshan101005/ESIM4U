@@ -13,6 +13,8 @@ export interface RawBundle {
   data_unit?: string;
   unlimited?: boolean;
   validity?: number;
+  bundle_price_final?: number;
+  subscriber_price?: number;
   reseller_retail_price?: number;
   currency_code_list?: string[];
   additional_currency_code?: string;
@@ -51,8 +53,13 @@ function dataLabel(raw: RawBundle): string {
 export function normalizeBundle(raw: RawBundle): NormalizedBundle {
   const countryCodes = Array.isArray(raw.country_code) ? raw.country_code : [];
   const countryNames = Array.isArray(raw.country_name) ? raw.country_name : [];
-  const cost = typeof raw.reseller_retail_price === "number" ? raw.reseller_retail_price : 0;
-  const currency = raw.additional_currency_code || (raw.currency_code_list && raw.currency_code_list[0]) || "USD";
+  const cost =
+    typeof raw.bundle_price_final === "number"
+      ? raw.bundle_price_final
+      : typeof raw.subscriber_price === "number"
+      ? raw.subscriber_price
+      : 0;
+  const currency = "USD";
 
   return {
     bundle_code: raw.bundle_code,
@@ -82,6 +89,7 @@ export async function normalizeAndPriceBundles(rawBundles: RawBundle[]): Promise
   return rawBundles.map((raw) => {
     const bundle = normalizeBundle(raw);
     bundle.price = pricer.priceFor(bundle.cost_price, {
+      bundleCode: bundle.bundle_code,
       countryCodes: bundle.country_codes,
       regionCode: bundle.region_code,
     });

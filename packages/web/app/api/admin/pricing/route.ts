@@ -8,7 +8,7 @@ function getAdmin(request: NextRequest) {
   return verifyAdminToken(token);
 }
 
-const VALID_SCOPES: ScopeType[] = ["country", "region", "global"];
+const VALID_SCOPES: ScopeType[] = ["bundle", "country", "region", "global"];
 const VALID_MARKUPS: MarkupType[] = ["percent", "fixed"];
 
 export async function GET(request: NextRequest) {

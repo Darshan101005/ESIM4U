@@ -7,12 +7,14 @@ import Link from "next/link";
 import { ShoppingCart, Loader2, ArrowRight } from "lucide-react";
 import toast from "react-hot-toast";
 import CartItem, { CartItemData } from "@/components/dashboard/cart-item";
+import { useCurrency } from "@/lib/currency-context";
 
 export default function CartPage() {
   const router = useRouter();
   const [items, setItems] = useState<CartItemData[]>([]);
   const [loading, setLoading] = useState(true);
   const [removingId, setRemovingId] = useState<number | null>(null);
+  const { format } = useCurrency();
 
   const load = useCallback(async () => {
     try {
@@ -80,12 +82,12 @@ export default function CartPage() {
                   </div>
                   <div className="flex items-center justify-between text-[14px]">
                     <span className="text-[#6B7280]">Subtotal</span>
-                    <span className="font-semibold text-[#1A1D20]">${total.toFixed(2)}</span>
+                    <span className="font-semibold text-[#1A1D20]">{format(total)}</span>
                   </div>
                 </div>
                 <div className="flex items-center justify-between pt-4 border-t border-gray-100 mb-5">
                   <span className="text-[15px] font-bold text-[#1A1D20]">Total</span>
-                  <span className="text-[20px] font-bold text-[#FF561E]">${total.toFixed(2)}</span>
+                  <span className="text-[20px] font-bold text-[#FF561E]">{format(total)}</span>
                 </div>
                 <button
                   onClick={() => router.push("/dashboard/checkout")}

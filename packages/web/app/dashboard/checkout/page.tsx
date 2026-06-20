@@ -4,8 +4,9 @@ import DashboardTopbar from "@/components/dashboard/topbar";
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Loader2, ShieldCheck, CreditCard, Lock, CheckCircle2 } from "lucide-react";
+import { Loader2, ShieldCheck, CreditCard, Lock, CheckCircle2, Tag, X } from "lucide-react";
 import toast from "react-hot-toast";
+import { useCurrency } from "@/lib/currency-context";
 
 interface CartItemData {
   id: number;
@@ -22,9 +23,15 @@ interface CartItemData {
 
 export default function CheckoutPage() {
   const router = useRouter();
+  const { currency, format } = useCurrency();
   const [items, setItems] = useState<CartItemData[]>([]);
   const [loading, setLoading] = useState(true);
   const [placing, setPlacing] = useState(false);
+
+  const [codeInput, setCodeInput] = useState("");
+  const [appliedCode, setAppliedCode] = useState<string | null>(null);
+  const [discountUsd, setDiscountUsd] = useState(0);
+  const [validating, setValidating] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -45,7 +52,36 @@ export default function CheckoutPage() {
     load();
   }, [load]);
 
-  const total = items.reduce((sum, i) => sum + parseFloat(i.price || "0"), 0);
+  const subtotal = items.reduce((sum, i) => sum + parseFloat(i.price || "0"), 0);
+  const finalTotal = Math.max(0, Math.round((subtotal - discountUsd) * 100) / 100);
+
+  const applyCode = async () => {
+    const code = codeInput.trim();
+    if (!code) return;
+    setValidating(true);
+    try {
+      const res = await fetch("/api/promo/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code, subtotal }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Invalid code");
+      setAppliedCode(data.code);
+      setDiscountUsd(data.discountAmount || 0);
+      toast.success(`Code applied: -${format(data.discountAmount || 0)}`);
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Invalid code");
+    } finally {
+      setValidating(false);
+    }
+  };
+
+  const removeCode = () => {
+    setAppliedCode(null);
+    setDiscountUsd(0);
+    setCodeInput("");
+  };
 
   const placeOrder = async () => {
     setPlacing(true);
@@ -54,6 +90,8 @@ export default function CheckoutPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          code: appliedCode || undefined,
+          display_currency: currency,
           items: items.map((i) => ({
             bundle_code: i.bundle_code,
             bundle_name: i.bundle_name,
@@ -63,7 +101,7 @@ export default function CheckoutPage() {
             validity: i.validity,
             price: parseFloat(i.price),
             cost_price: i.cost_price ? parseFloat(i.cost_price) : null,
-            currency: i.currency,
+            currency: "USD",
           })),
         }),
       });
@@ -113,10 +151,42 @@ export default function CheckoutPage() {
                           {item.validity ? ` · ${item.validity}` : ""}
                         </p>
                       </div>
-                      <span className="text-[14px] font-bold text-[#1A1D20]">${parseFloat(item.price).toFixed(2)}</span>
+                      <span className="text-[14px] font-bold text-[#1A1D20]">{format(parseFloat(item.price))}</span>
                     </div>
                   ))}
                 </div>
+              </div>
+
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-6">
+                <h3 className="text-[16px] font-bold text-[#1A1D20] mb-4">Promo / Affiliate Code</h3>
+                {appliedCode ? (
+                  <div className="flex items-center justify-between rounded-xl bg-emerald-50 border border-emerald-100 px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <Tag className="w-4 h-4 text-emerald-600" />
+                      <span className="text-[13px] font-semibold text-emerald-700 font-mono">{appliedCode}</span>
+                      <span className="text-[12px] text-emerald-600">(-{format(discountUsd)})</span>
+                    </div>
+                    <button onClick={removeCode} className="w-7 h-7 rounded-lg bg-white border border-emerald-100 flex items-center justify-center">
+                      <X className="w-3.5 h-3.5 text-emerald-600" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <input
+                      value={codeInput}
+                      onChange={(e) => setCodeInput(e.target.value.toUpperCase())}
+                      placeholder="Enter code"
+                      className="flex-1 px-4 py-2.5 rounded-xl bg-white border border-gray-200 outline-none focus:border-[#FF561E] focus:ring-2 focus:ring-[#FF561E]/10 text-[14px] font-mono transition-all"
+                    />
+                    <button
+                      onClick={applyCode}
+                      disabled={validating || !codeInput.trim()}
+                      className="px-5 py-2.5 rounded-xl bg-[#1A1D20] text-white text-[13px] font-bold hover:bg-black transition-colors disabled:opacity-50"
+                    >
+                      {validating ? <Loader2 className="w-4 h-4 animate-spin" /> : "Apply"}
+                    </button>
+                  </div>
+                )}
               </div>
 
               <div className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-6">
@@ -139,12 +209,18 @@ export default function CheckoutPage() {
               <div className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-6 sticky top-24">
                 <h3 className="text-[16px] font-bold text-[#1A1D20] mb-4">Summary</h3>
                 <div className="flex items-center justify-between text-[14px] mb-2">
-                  <span className="text-[#6B7280]">Items</span>
-                  <span className="font-semibold text-[#1A1D20]">{items.length}</span>
+                  <span className="text-[#6B7280]">Subtotal</span>
+                  <span className="font-semibold text-[#1A1D20]">{format(subtotal)}</span>
                 </div>
+                {discountUsd > 0 && (
+                  <div className="flex items-center justify-between text-[14px] mb-2">
+                    <span className="text-emerald-600">Discount</span>
+                    <span className="font-semibold text-emerald-600">-{format(discountUsd)}</span>
+                  </div>
+                )}
                 <div className="flex items-center justify-between pt-4 border-t border-gray-100 mb-5">
                   <span className="text-[15px] font-bold text-[#1A1D20]">Total</span>
-                  <span className="text-[20px] font-bold text-[#FF561E]">${total.toFixed(2)}</span>
+                  <span className="text-[20px] font-bold text-[#FF561E]">{format(finalTotal)}</span>
                 </div>
 
                 <button
@@ -167,6 +243,11 @@ export default function CheckoutPage() {
                   <ShieldCheck className="w-4 h-4 text-emerald-500" />
                   Instant eSIM delivery with QR code
                 </div>
+                {currency !== "USD" && (
+                  <p className="text-[11px] text-[#6B7280] mt-2">
+                    Prices shown in {currency} at today&apos;s rate. Billed amount is based on USD pricing.
+                  </p>
+                )}
                 <Link href="/dashboard/cart" className="block text-center text-[13px] text-[#6B7280] font-medium mt-4 hover:text-[#FF561E]">
                   Back to Cart
                 </Link>

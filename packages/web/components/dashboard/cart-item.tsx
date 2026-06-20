@@ -2,6 +2,7 @@
 
 import { Trash2, Loader2, Database, Clock } from "lucide-react";
 import Flag from "@/components/dashboard/flag";
+import { useCurrency } from "@/lib/currency-context";
 
 export interface CartItemData {
   id: number;
@@ -22,6 +23,7 @@ interface CartItemProps {
 }
 
 export default function CartItem({ item, removing, onRemove }: CartItemProps) {
+  const { format } = useCurrency();
   return (
     <div className="flex items-center justify-between gap-4 px-5 py-4 bg-white rounded-2xl border border-gray-100 shadow-[0_2px_12px_rgba(0,0,0,0.03)]">
       <div className="flex items-center gap-4 min-w-0">
@@ -45,7 +47,7 @@ export default function CartItem({ item, removing, onRemove }: CartItemProps) {
         </div>
       </div>
       <div className="flex items-center gap-4 shrink-0">
-        <span className="text-[15px] font-bold text-[#1A1D20]">${parseFloat(item.price).toFixed(2)}</span>
+        <span className="text-[15px] font-bold text-[#1A1D20]">{format(parseFloat(item.price))}</span>
         <button
           onClick={() => onRemove(item.id)}
           disabled={removing}
