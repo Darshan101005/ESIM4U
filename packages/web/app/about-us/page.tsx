@@ -99,7 +99,7 @@ export default function AboutUsPage() {
             </div>
             <div className="order-1 lg:order-2">
               <Image
-                src="/assets/about/connectivity.png"
+                src="/assets/about/Connectivity.png"
                 alt="Person using an eSIM-connected smartphone with global plans"
                 width={1382}
                 height={1138}
@@ -115,7 +115,7 @@ export default function AboutUsPage() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
               <div>
                 <Image
-                  src="/assets/about/Money back.png"
+                  src="/assets/about/Money_back.png"
                   alt="Satisfied customer covered by the money-back guarantee"
                   width={1434}
                   height={1097}
@@ -175,7 +175,7 @@ export default function AboutUsPage() {
             </div>
             <div className="order-1 lg:order-2">
               <Image
-                src="/assets/about/pricing.png"
+                src="/assets/about/Pricing.png"
                 alt="Customer browsing affordable eSIM data plans on a phone"
                 width={1413}
                 height={1113}

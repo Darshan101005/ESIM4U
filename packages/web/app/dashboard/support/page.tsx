@@ -1,16 +1,10 @@
 "use client";
 
+import Image from "next/image";
+import Link from "next/link";
 import DashboardTopbar from "@/components/dashboard/topbar";
 import { useState } from "react";
-import { Mail, MessageCircle, BookOpen, ChevronDown, Smartphone } from "lucide-react";
-
-const STEPS = [
-  "Open your order from My eSIMs and tap to view the QR code.",
-  "On your phone, go to Settings, then Cellular / Mobile Data.",
-  "Tap Add eSIM or Add Data Plan, then scan the QR code.",
-  "Follow the prompts to install. Label it (e.g. Travel).",
-  "On arrival in your destination, turn on the eSIM and enable Data Roaming for it.",
-];
+import { Mail, MessageCircle, BookOpen, ChevronDown, ChevronRight, Smartphone } from "lucide-react";
 
 const FAQS = [
   { q: "When does my plan start?", a: "Install the eSIM any time. The plan stays Pending and only activates — and the validity countdown begins — when your phone first connects to a supported network in your destination country." },
@@ -31,14 +25,37 @@ export default function SupportPage() {
             <BookOpen className="w-5 h-5 text-[#FF561E]" />
             <h3 className="text-[16px] font-bold text-[#1A1D20]">Installation Guide</h3>
           </div>
-          <ol className="space-y-3">
-            {STEPS.map((s, i) => (
-              <li key={i} className="flex items-start gap-3">
-                <span className="w-6 h-6 rounded-full bg-[#FFF4F0] text-[#FF561E] text-[12px] font-bold flex items-center justify-center shrink-0 mt-0.5">{i + 1}</span>
-                <span className="text-[13px] text-[#374151] leading-relaxed">{s}</span>
-              </li>
-            ))}
-          </ol>
+          <p className="text-[13px] text-[#6B7280] mb-4">
+            Choose your device to view step-by-step eSIM activation instructions.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Link
+              href="/dashboard/support/android"
+              className="group flex items-center gap-4 rounded-2xl border border-gray-200 p-4 hover:border-orange-200 hover:bg-[#FFF4F0] transition-all"
+            >
+              <div className="w-12 h-12 flex items-center justify-center shrink-0">
+                <Image src="/assets/Installation/Andriod/Andriod.png" alt="Android" width={40} height={40} className="w-10 h-10 object-contain" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[14px] font-bold text-[#1A1D20]">Android</p>
+                <p className="text-[12px] text-[#6B7280]">eSIM Activation on Android</p>
+              </div>
+              <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-[#FF561E] ml-auto shrink-0" />
+            </Link>
+            <Link
+              href="/dashboard/support/ios"
+              className="group flex items-center gap-4 rounded-2xl border border-gray-200 p-4 hover:border-orange-200 hover:bg-[#FFF4F0] transition-all"
+            >
+              <div className="w-12 h-12 flex items-center justify-center shrink-0">
+                <Image src="/assets/Installation/Ios/Apple.svg" alt="Apple" width={32} height={32} className="w-8 h-8 object-contain" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[14px] font-bold text-[#1A1D20]">Apple</p>
+                <p className="text-[12px] text-[#6B7280]">eSIM Activation on iOS</p>
+              </div>
+              <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-[#FF561E] ml-auto shrink-0" />
+            </Link>
+          </div>
           <div className="mt-4 flex items-center gap-2 rounded-xl bg-[#FFF4F0] border border-orange-100 px-4 py-3">
             <Smartphone className="w-4 h-4 text-[#FF561E] shrink-0" />
             <p className="text-[12px] text-[#6B7280]">Tip: install on home Wi-Fi before you travel; activation happens automatically on arrival.</p>
