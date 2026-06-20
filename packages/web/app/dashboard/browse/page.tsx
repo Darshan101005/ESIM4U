@@ -123,7 +123,7 @@ export default function BrowsePage() {
                 className="group bg-white rounded-2xl p-5 border border-gray-100 shadow-[0_2px_12px_rgba(0,0,0,0.03)] flex items-center justify-between hover:border-orange-100 hover:shadow-md transition-all duration-200"
               >
                 <div className="flex items-center gap-4 min-w-0">
-                  <div className="w-11 h-11 rounded-xl overflow-hidden border border-gray-100 shrink-0">
+                  <div className="w-12 h-9 rounded-md overflow-hidden border border-gray-100 shrink-0 relative">
                     <Flag code={country.iso3_code} className="w-full h-full" />
                   </div>
                   <p className="text-[15px] font-bold text-[#1A1D20] truncate">{country.country_name}</p>

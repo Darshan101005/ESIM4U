@@ -66,7 +66,7 @@ export default function EsimsPage() {
               >
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-11 h-11 rounded-xl overflow-hidden border border-gray-100 shrink-0">
+                    <div className="w-12 h-9 rounded-md overflow-hidden border border-gray-100 shrink-0 relative">
                       <Flag code={order.country_code} className="w-full h-full" />
                     </div>
                     <div className="min-w-0">

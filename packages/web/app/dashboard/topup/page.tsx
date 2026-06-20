@@ -11,7 +11,7 @@ export default function TopUpPage() {
   return (
     <>
       <DashboardTopbar title="Top Up" />
-      <main className="flex-1 px-4 lg:px-8 py-6 lg:py-8 max-w-3xl">
+      <main className="flex-1 px-4 lg:px-8 py-6 lg:py-8 max-w-3xl mx-auto w-full">
         <div className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_12px_rgba(0,0,0,0.03)] overflow-hidden mb-6">
           <div className="bg-gradient-to-r from-[#FF561E] to-[#FF7A45] p-6 text-white">
             <div className="flex items-center justify-between">

@@ -25,24 +25,7 @@ export default function SupportPage() {
   return (
     <>
       <DashboardTopbar title="Support" />
-      <main className="flex-1 px-4 lg:px-8 py-6 lg:py-8 max-w-3xl space-y-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <a href="mailto:support@esim4u.com" className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-5 hover:border-orange-100 transition-colors">
-            <div className="w-10 h-10 rounded-xl bg-[#FFF4F0] flex items-center justify-center mb-3">
-              <Mail className="w-5 h-5 text-[#FF561E]" strokeWidth={2} />
-            </div>
-            <p className="text-[14px] font-bold text-[#1A1D20]">Email us</p>
-            <p className="text-[12px] text-[#6B7280] mt-0.5">support@esim4u.com</p>
-          </a>
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-5">
-            <div className="w-10 h-10 rounded-xl bg-[#FFF4F0] flex items-center justify-center mb-3">
-              <MessageCircle className="w-5 h-5 text-[#FF561E]" strokeWidth={2} />
-            </div>
-            <p className="text-[14px] font-bold text-[#1A1D20]">24/7 Support</p>
-            <p className="text-[12px] text-[#6B7280] mt-0.5">We typically reply within a few hours.</p>
-          </div>
-        </div>
-
+      <main className="flex-1 px-4 lg:px-8 py-6 lg:py-8 max-w-3xl mx-auto w-full space-y-6">
         <div className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-6">
           <div className="flex items-center gap-2 mb-4">
             <BookOpen className="w-5 h-5 text-[#FF561E]" />
@@ -74,6 +57,23 @@ export default function SupportPage() {
                 {open === i && <p className="text-[13px] text-[#6B7280] leading-relaxed pb-3">{f.a}</p>}
               </div>
             ))}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <a href="mailto:support@esim4u.com" className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-5 hover:border-orange-100 transition-colors">
+            <div className="w-10 h-10 rounded-xl bg-[#FFF4F0] flex items-center justify-center mb-3">
+              <Mail className="w-5 h-5 text-[#FF561E]" strokeWidth={2} />
+            </div>
+            <p className="text-[14px] font-bold text-[#1A1D20]">Email us</p>
+            <p className="text-[12px] text-[#6B7280] mt-0.5">support@esim4u.com</p>
+          </a>
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-5">
+            <div className="w-10 h-10 rounded-xl bg-[#FFF4F0] flex items-center justify-center mb-3">
+              <MessageCircle className="w-5 h-5 text-[#FF561E]" strokeWidth={2} />
+            </div>
+            <p className="text-[14px] font-bold text-[#1A1D20]">24/7 Support</p>
+            <p className="text-[12px] text-[#6B7280] mt-0.5">We typically reply within a few hours.</p>
           </div>
         </div>
       </main>

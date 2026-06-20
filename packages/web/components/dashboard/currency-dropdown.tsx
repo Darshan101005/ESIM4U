@@ -26,7 +26,10 @@ export default function CurrencyDropdown() {
         className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white border border-gray-200 hover:border-orange-200 hover:bg-[#FFF4F0] transition-colors disabled:opacity-50"
         title={error ? "Live rates unavailable" : "Display currency"}
       >
-        <span className="text-[13px] font-bold text-[#1A1D20]">{currency}</span>
+        <span className="text-[13px] font-bold text-[#1A1D20]">
+          <span className="text-[#FF561E] mr-1">{CURRENCY_SYMBOLS[currency]}</span>
+          {currency}
+        </span>
         <ChevronDown className={`w-3.5 h-3.5 text-[#6B7280] transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
 

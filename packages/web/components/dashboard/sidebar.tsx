@@ -12,7 +12,7 @@ import {
   ArrowLeftRight,
   Gift,
   Settings,
-  LifeBuoy,
+  Headset,
   LogOut,
   Menu,
   X,
@@ -29,7 +29,7 @@ const navItems = [
   { label: "Top Up", href: "/dashboard/topup", icon: Wallet },
   { label: "Transactions", href: "/dashboard/transactions", icon: ArrowLeftRight },
   { label: "Referrals", href: "/dashboard/referrals", icon: Gift, badge: "New" },
-  { label: "Support", href: "/dashboard/support", icon: LifeBuoy },
+  { label: "Support", href: "/dashboard/support", icon: Headset },
 ];
 
 export default function DashboardSidebar() {
@@ -70,7 +70,7 @@ export default function DashboardSidebar() {
                 onClick={() => setMobileOpen(false)}
                 className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-[14px] font-medium transition-all duration-200 ${
                   active
-                    ? "bg-gradient-to-r from-[#FF561E] to-[#FF7A45] text-white shadow-lg shadow-orange-500/25"
+                    ? "bg-gradient-to-r from-[#FF561E] to-[#FF7A45] text-white"
                     : "text-[#6B7280] hover:bg-[#FFF4F0] hover:text-[#FF561E]"
                 }`}
               >
@@ -99,7 +99,7 @@ export default function DashboardSidebar() {
               <span className="text-[13px] font-bold text-[#1A1D20]">Refer &amp; Earn</span>
             </div>
             <p className="text-[11.5px] text-[#6B7280] leading-snug">
-              Invite friends and earn <span className="font-bold text-[#FF561E]">$5.00 credit</span>
+              Invite friends and earn <span className="font-bold text-[#FF561E]">$3.00 credit</span>
             </p>
             <Link
               href="/dashboard/referrals"

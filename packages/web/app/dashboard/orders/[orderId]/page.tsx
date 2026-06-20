@@ -109,7 +109,7 @@ export default function OrderDetailPage() {
             <ArrowLeft className="w-4 h-4 text-[#1A1D20]" />
           </button>
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-xl overflow-hidden border border-gray-100">
+            <div className="w-12 h-9 rounded-md overflow-hidden border border-gray-100 shrink-0 relative">
               <Flag code={order.country_code} className="w-full h-full" />
             </div>
             <div>

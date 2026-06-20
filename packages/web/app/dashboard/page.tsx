@@ -69,7 +69,7 @@ function DecoWave({ id, color }: { id: string; color: string }) {
           <stop offset="100%" stopColor={color} stopOpacity="0.015" />
         </linearGradient>
         <filter id={bid} x="-10%" y="-10%" width="120%" height="140%">
-          <feGaussianBlur stdDeviation="1.4" />
+          <feGaussianBlur stdDeviation="0.4" />
         </filter>
       </defs>
       <path
@@ -159,7 +159,10 @@ export default function DashboardPage() {
       <main className="flex-1 px-4 lg:px-8 py-6 lg:py-8">
         <div className="mb-8">
           <p className="text-[14px] text-[#6B7280] font-medium">Welcome back,</p>
-          <h2 className="text-[26px] lg:text-[30px] font-bold text-[#1A1D20] tracking-tight">{user?.name || "Traveller"}</h2>
+          <h2 className="text-[26px] lg:text-[30px] font-bold text-[#1A1D20] tracking-tight">
+            {user?.name || "Traveller"}
+            <span className="text-[#1A1D20]">,</span>
+          </h2>
           <p className="text-[14px] text-[#6B7280] font-medium mt-1">Here&apos;s what&apos;s happening with your eSIM activity today.</p>
         </div>
 
@@ -187,7 +190,7 @@ export default function DashboardPage() {
                         </div>
                         <span className="text-[13px] font-semibold text-[#6B7280]">{s.label}</span>
                       </div>
-                      <p className="text-[26px] font-bold text-[#1A1D20] leading-none">{s.value}</p>
+                      <p className="text-[26px] font-bold text-[#1A1D20] leading-none">&nbsp;{s.value}</p>
                       <p className="text-[12px] text-[#6B7280] mt-2">{s.hint}</p>
                     </div>
                   </>
@@ -224,7 +227,7 @@ export default function DashboardPage() {
                       Top Up
                     </Link>
                   </div>
-                  <p className="text-[26px] font-bold text-[#1A1D20] leading-none">{format(0)}</p>
+                  <p className="text-[26px] font-bold text-[#1A1D20] leading-none">&nbsp;{format(0)}</p>
                   <p className="text-[12px] text-[#6B7280] mt-2">Available balance</p>
                 </div>
               </>

@@ -338,7 +338,7 @@ export default function Landing() {
                 <span className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-5 h-[2.5px] bg-[#FF561E] rounded-full"></span>
               </Link>
               <Link href="/features" className="hover:text-[#FF561E] transition-colors">Features</Link>
-              <Link href="/pricing" className="hover:text-[#FF561E] transition-colors">Pricing</Link>
+              <Link href="/faq" className="hover:text-[#FF561E] transition-colors">FAQs</Link>
               <Link href="/destinations" className="hover:text-[#FF561E] transition-colors">Destinations</Link>
               <Link href="/how-it-works" className="hover:text-[#FF561E] transition-colors">How It Works</Link>
               <Link href="/about-us" className="hover:text-[#FF561E] transition-colors">About Us</Link>

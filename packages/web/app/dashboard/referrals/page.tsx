@@ -28,7 +28,7 @@ export default function ReferralsPage() {
   return (
     <>
       <DashboardTopbar title="Referrals" />
-      <main className="flex-1 px-4 lg:px-8 py-6 lg:py-8 max-w-3xl">
+      <main className="flex-1 px-4 lg:px-8 py-6 lg:py-8 max-w-3xl mx-auto w-full">
         <div className="rounded-2xl overflow-hidden bg-gradient-to-br from-[#FF561E] to-[#FF7A45] p-6 lg:p-8 text-white mb-6">
           <div className="w-12 h-12 rounded-2xl bg-white/15 flex items-center justify-center mb-4">
             <Gift className="w-6 h-6 text-white" strokeWidth={2} />
