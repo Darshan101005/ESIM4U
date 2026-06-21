@@ -1,49 +1,26 @@
 "use client";
 
 import DashboardTopbar from "@/components/dashboard/topbar";
-import { useEffect, useState, useCallback } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ShoppingCart, Loader2, ArrowRight } from "lucide-react";
 import toast from "react-hot-toast";
-import CartItem, { CartItemData } from "@/components/dashboard/cart-item";
+import CartItem from "@/components/dashboard/cart-item";
 import { useCurrency } from "@/lib/currency-context";
+import { useCart } from "@/lib/cart-context";
 
 export default function CartPage() {
   const router = useRouter();
-  const [items, setItems] = useState<CartItemData[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { items, loading, removeItem } = useCart();
   const [removingId, setRemovingId] = useState<number | null>(null);
   const { format } = useCurrency();
 
-  const load = useCallback(async () => {
-    try {
-      const res = await fetch("/api/cart");
-      if (!res.ok) throw new Error();
-      const data = await res.json();
-      setItems(data.items || []);
-    } catch {
-      toast.error("Failed to load cart");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    load();
-  }, [load]);
-
-  const removeItem = async (id: number) => {
+  const handleRemove = async (id: number) => {
     setRemovingId(id);
-    try {
-      const res = await fetch(`/api/cart?id=${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error();
-      setItems((prev) => prev.filter((i) => i.id !== id));
-    } catch {
-      toast.error("Failed to remove item");
-    } finally {
-      setRemovingId(null);
-    }
+    const ok = await removeItem(id);
+    if (!ok) toast.error("Failed to remove item");
+    setRemovingId(null);
   };
 
   const total = items.reduce((sum, i) => sum + parseFloat(i.price || "0"), 0);
@@ -68,7 +45,7 @@ export default function CartPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 space-y-3">
               {items.map((item) => (
-                <CartItem key={item.id} item={item} removing={removingId === item.id} onRemove={removeItem} />
+                <CartItem key={item.id} item={item} removing={removingId === item.id} onRemove={handleRemove} />
               ))}
             </div>
 

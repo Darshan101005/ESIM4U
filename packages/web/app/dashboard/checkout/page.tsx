@@ -1,31 +1,18 @@
 "use client";
 
 import DashboardTopbar from "@/components/dashboard/topbar";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Loader2, ShieldCheck, CreditCard, Lock, CheckCircle2, Tag, X } from "lucide-react";
 import toast from "react-hot-toast";
 import { useCurrency } from "@/lib/currency-context";
-
-interface CartItemData {
-  id: number;
-  bundle_code: string;
-  bundle_name?: string;
-  country?: string;
-  country_code?: string;
-  data_amount?: string;
-  validity?: string;
-  price: string;
-  cost_price?: string;
-  currency: string;
-}
+import { useCart } from "@/lib/cart-context";
 
 export default function CheckoutPage() {
   const router = useRouter();
   const { currency, format } = useCurrency();
-  const [items, setItems] = useState<CartItemData[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { items, loading, clearCart } = useCart();
   const [placing, setPlacing] = useState(false);
 
   const [codeInput, setCodeInput] = useState("");
@@ -33,24 +20,9 @@ export default function CheckoutPage() {
   const [discountUsd, setDiscountUsd] = useState(0);
   const [validating, setValidating] = useState(false);
 
-  const load = useCallback(async () => {
-    try {
-      const res = await fetch("/api/cart");
-      if (!res.ok) throw new Error();
-      const data = await res.json();
-      const cartItems = data.items || [];
-      setItems(cartItems);
-      if (cartItems.length === 0) router.replace("/dashboard/cart");
-    } catch {
-      toast.error("Failed to load checkout");
-    } finally {
-      setLoading(false);
-    }
-  }, [router]);
-
   useEffect(() => {
-    load();
-  }, [load]);
+    if (!loading && items.length === 0) router.replace("/dashboard/cart");
+  }, [loading, items, router]);
 
   const subtotal = items.reduce((sum, i) => sum + parseFloat(i.price || "0"), 0);
   const finalTotal = Math.max(0, Math.round((subtotal - discountUsd) * 100) / 100);
@@ -112,6 +84,8 @@ export default function CheckoutPage() {
       const orders = data.orders || [];
       const firstSuccess = orders.find((o: { id?: number; status?: string }) => o.id && o.status === "completed");
       const anyFailed = orders.some((o: { status?: string }) => o.status === "failed");
+
+      clearCart();
 
       if (firstSuccess) {
         toast.success("eSIM ready");

@@ -5,6 +5,7 @@ import toast from "react-hot-toast";
 import { Package, Search } from "lucide-react";
 import PlanCard, { PlanBundle } from "@/components/dashboard/plan-card";
 import { Skeleton } from "@/components/dashboard/skeleton";
+import { useCart } from "@/lib/cart-context";
 
 interface NormalizedBundle extends PlanBundle {
   primary_country_name: string;
@@ -47,6 +48,7 @@ function PlanCardSkeleton() {
 }
 
 export default function PlanGrid({ fetchUrl, emptyMessage = "No plans available for this destination", searchable = false, onLoaded }: PlanGridProps) {
+  const { addToCart: addToCartCtx } = useCart();
   const [bundles, setBundles] = useState<NormalizedBundle[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
@@ -92,37 +94,35 @@ export default function PlanGrid({ fetchUrl, emptyMessage = "No plans available 
     const full = bundles.find((b) => b.bundle_code === bundle.bundle_code);
     if (!full) return;
     setAddingCode(bundle.bundle_code);
-    try {
-      const res = await fetch("/api/cart", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          bundle_code: full.bundle_code,
-          bundle_name: full.marketing_name || full.bundle_name,
-          country: full.primary_country_name || full.region_name,
-          country_code: full.primary_country_code,
-          data_amount: full.data_label,
-          validity: `${full.validity_days} days`,
-          price: full.price,
-          cost_price: full.cost_price,
-          currency: full.currency || "USD",
-        }),
-      });
 
-      if (res.status === 409) {
-        toast.error("Already in cart");
-        setAdded((prev) => new Set(prev).add(bundle.bundle_code));
-        return;
-      }
-      if (!res.ok) throw new Error("Failed to add to cart");
+    const isRegional = full.category === "region" || full.category === "global" || full.category === "cruise";
+    const country = isRegional
+      ? full.region_name || full.marketing_name || "Multiple countries"
+      : full.primary_country_name;
+    const countryCode = isRegional ? "" : full.primary_country_code;
 
+    const result = await addToCartCtx({
+      bundle_code: full.bundle_code,
+      bundle_name: full.marketing_name || full.bundle_name,
+      country,
+      country_code: countryCode,
+      data_amount: full.data_label,
+      validity: `${full.validity_days} days`,
+      price: full.price,
+      cost_price: full.cost_price,
+      currency: full.currency || "USD",
+    });
+
+    if (result === "exists") {
+      toast.error("Already in cart");
+      setAdded((prev) => new Set(prev).add(bundle.bundle_code));
+    } else if (result === "added") {
       setAdded((prev) => new Set(prev).add(bundle.bundle_code));
       toast.success("Added to cart");
-    } catch {
+    } else {
       toast.error("Failed to add to cart");
-    } finally {
-      setAddingCode(null);
     }
+    setAddingCode(null);
   };
 
   const searchBar = searchable ? (

@@ -3,18 +3,9 @@
 import { Trash2, Loader2, Database, Clock } from "lucide-react";
 import Flag from "@/components/dashboard/flag";
 import { useCurrency } from "@/lib/currency-context";
+import type { CartItemData } from "@/lib/cart-context";
 
-export interface CartItemData {
-  id: number;
-  bundle_code: string;
-  bundle_name?: string;
-  country?: string;
-  country_code?: string;
-  data_amount?: string;
-  validity?: string;
-  price: string;
-  currency: string;
-}
+export type { CartItemData };
 
 interface CartItemProps {
   item: CartItemData;
