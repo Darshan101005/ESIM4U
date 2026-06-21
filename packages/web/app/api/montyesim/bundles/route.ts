@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { fetchBundles } from "@/lib/montyesim";
-import { normalizeAndPriceBundles, RawBundle } from "@/lib/bundles";
+import { normalizeAndPriceBundles, RawBundle, isWorldwideGlobal, inferRegionCode } from "@/lib/bundles";
 
 export async function GET(request: NextRequest) {
   try {
@@ -22,11 +22,22 @@ export async function GET(request: NextRequest) {
     });
 
     const rawBundles: RawBundle[] = data.bundles || [];
-    const bundles = await normalizeAndPriceBundles(rawBundles);
+    let bundles = await normalizeAndPriceBundles(rawBundles);
+
+    if (bundleCategory === "global") {
+      bundles = bundles.filter(isWorldwideGlobal);
+    } else if (bundleCategory === "region" && regionCode) {
+      const globalData = await fetchBundles({ bundleCategory: "global", pageSize: 100 });
+      const globalBundles = await normalizeAndPriceBundles(globalData.bundles || []);
+      const movedIntoRegion = globalBundles.filter(
+        (b) => !isWorldwideGlobal(b) && inferRegionCode(b) === regionCode.toLowerCase()
+      );
+      bundles = [...movedIntoRegion, ...bundles];
+    }
 
     return NextResponse.json({
       bundles,
-      total: data.total_bundles_count || bundles.length,
+      total: bundles.length,
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Failed to fetch bundles";

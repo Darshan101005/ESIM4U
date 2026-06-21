@@ -131,7 +131,7 @@ export default function Landing() {
   const [howVisible, setHowVisible] = useState(false);
   const [whyVisible, setWhyVisible] = useState(false);
   const [coverageVisible, setCoverageVisible] = useState(false);
-  const [activeTab, setActiveTab] = useState<'Countries' | 'Regions' | 'Plans'>('Countries');
+  const [activeTab, setActiveTab] = useState<'Countries' | 'Regions' | 'Global'>('Countries');
   const [locationsFolder, setLocationsFolder] = useState('Locations');
   const carouselRef = useRef<HTMLDivElement | null>(null);
   const carouselViewportRef = useRef<HTMLDivElement | null>(null);
@@ -658,9 +658,7 @@ export default function Landing() {
             <div className="flex items-center bg-white rounded-full p-1.5 shadow-sm border border-orange-50 w-full md:w-auto overflow-x-auto hide-scrollbar">
               <button onClick={() => setActiveTab('Countries')} className={`px-6 py-2 rounded-full font-semibold text-[14px] shadow-sm whitespace-nowrap transition-colors ${activeTab === 'Countries' ? 'bg-[#FF561E] text-white' : 'text-[#1A1D20] hover:bg-gray-50'}`}>Countries</button>
               <button onClick={() => setActiveTab('Regions')} className={`px-6 py-2 rounded-full font-medium text-[14px] whitespace-nowrap transition-colors ${activeTab === 'Regions' ? 'bg-[#FF561E] text-white shadow-sm' : 'text-[#1A1D20] hover:bg-gray-50'}`}>Regions</button>
-              <button onClick={() => setActiveTab('Plans')} className={`px-6 py-2 rounded-full font-medium text-[14px] flex items-center gap-2 whitespace-nowrap transition-colors ${activeTab === 'Plans' ? 'bg-[#FF561E] text-white shadow-sm' : 'text-[#1A1D20] hover:bg-gray-50'}`}>
-                Plans <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${activeTab === 'Plans' ? 'bg-white text-[#FF561E]' : 'bg-orange-100 text-[#FF561E]'}`}>New</span>
-              </button>
+              <button onClick={() => setActiveTab('Global')} className={`px-6 py-2 rounded-full font-medium text-[14px] whitespace-nowrap transition-colors ${activeTab === 'Global' ? 'bg-[#FF561E] text-white shadow-sm' : 'text-[#1A1D20] hover:bg-gray-50'}`}>Global</button>
             </div>
 
             <div className="relative w-full md:w-[320px]">
@@ -711,9 +709,7 @@ export default function Landing() {
               { name: 'Asia', image: 'asia_map.png', price: '4.49' },
               { name: 'Africa', image: 'africa_map.png', price: '3.99' },
               { name: 'Middle East & North Africa', image: 'middle east &north africa_map.png', price: '3.99' },
-              { name: 'The Caribbean', image: 'caribbean_map.png', price: '4.49' },
               { name: 'South America', image: 'southamerica_map.png', price: '4.49' },
-              { name: 'Globe', image: 'world_map.png', price: '6.99' },
             ].map((region, i) => (
               <div key={i} className="flex items-center justify-between p-4 rounded-2xl bg-white border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer group">
                 <div className="flex items-center gap-4">
@@ -729,11 +725,22 @@ export default function Landing() {
               </div>
             ))}
 
-            {activeTab === 'Plans' && (
-              <div className="col-span-full py-8 text-center text-[#6B7280]">
-                Plans are coming soon!
+            {activeTab === 'Global' && [
+              { name: 'Global', image: 'world_map.png', price: '6.99', desc: '130+ countries' },
+            ].map((region, i) => (
+              <div key={i} className="flex items-center justify-between p-4 rounded-2xl bg-white border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer group">
+                <div className="flex items-center gap-4">
+                  <div className="w-[54px] h-[36px] rounded-md overflow-hidden border border-gray-100 shrink-0 relative bg-[#FFF4F0]">
+                    <Image src={`/assets/Regions/${region.image}`} alt={region.name} fill className="object-cover" />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-[15px] font-bold text-[#1A1D20]">{region.name}</span>
+                    <span className="text-[13px] text-[#FF561E] font-medium">From US${region.price}</span>
+                  </div>
+                </div>
+                <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-[#FF561E] transition-colors" />
               </div>
-            )}
+            ))}
           </div>
 
           <button className="inline-flex items-center justify-center px-8 py-3.5 rounded-full bg-transparent border border-[#FF561E] text-[#FF561E] font-semibold text-[15px] hover:bg-[#FF561E] hover:text-white transition-all gap-2 group">

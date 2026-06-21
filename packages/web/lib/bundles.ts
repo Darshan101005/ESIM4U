@@ -96,3 +96,31 @@ export async function normalizeAndPriceBundles(rawBundles: RawBundle[]): Promise
     return bundle;
   });
 }
+
+const REGION_CODE_SET = new Set(["af", "as", "eu", "me", "na", "sa"]);
+
+const REGION_NAME_TO_CODE: [RegExp, string][] = [
+  [/middle\s*east/i, "me"],
+  [/north\s*america/i, "na"],
+  [/south\s*america/i, "sa"],
+  [/africa/i, "af"],
+  [/europe/i, "eu"],
+  [/asia/i, "as"],
+];
+
+const WORLDWIDE_MIN_COUNTRIES = 50;
+
+export function inferRegionCode(bundle: NormalizedBundle): string | null {
+  const code = (bundle.region_code || "").toLowerCase();
+  if (REGION_CODE_SET.has(code)) return code;
+  const haystack = `${bundle.marketing_name} ${bundle.bundle_name} ${bundle.region_name}`;
+  for (const [pattern, regionCode] of REGION_NAME_TO_CODE) {
+    if (pattern.test(haystack)) return regionCode;
+  }
+  return null;
+}
+
+export function isWorldwideGlobal(bundle: NormalizedBundle): boolean {
+  if (bundle.country_codes.length >= WORLDWIDE_MIN_COUNTRIES) return true;
+  return inferRegionCode(bundle) === null;
+}
