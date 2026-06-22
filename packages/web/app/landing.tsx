@@ -2,25 +2,27 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Globe, QrCode, Plane, Tag, Zap, ShieldCheck, Headphones, Smartphone, RadioTower, Search, ChevronRight, ChevronLeft, ArrowRight, X, Info, Wifi, Gift, CheckCircle2, XCircle, PhoneCall, Rocket, MapPin, BrickWallFire, Users } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { authClient } from '@/lib/auth-client';
 
 const Flag = dynamic<any>(() => import('react-flagpack').then(m => m.default || m), { ssr: false });
 
 const carouselItems = [
-  { name: 'Australia', image: 'australia.png', price: '3.99' },
-  { name: 'Brazil', image: 'brazil.png', price: '3.49' },
-  { name: 'Canada', image: 'canada.png', price: '3.99' },
-  { name: 'England', image: 'england.png', price: '3.99' },
-  { name: 'France', image: 'france.png', price: '3.49' },
-  { name: 'Japan', image: 'japan.png', price: '3.49' },
-  { name: 'Malaysia', image: 'malaysia.png', price: '3.49' },
-  { name: 'Singapore', image: 'singapore.png', price: '2.99' },
-  { name: 'Switzerland', image: 'switzerland.png', price: '4.49' },
-  { name: 'Turkey', image: 'turkey.png', price: '3.99' },
-  { name: 'UAE', image: 'uae.png', price: '3.99' },
-  { name: 'United States', image: 'usa.png', price: '4.49' },
+  { name: 'Australia', image: 'australia.png', iso3: 'AUS', price: '3.99' },
+  { name: 'Brazil', image: 'brazil.png', iso3: 'BRA', price: '3.49' },
+  { name: 'Canada', image: 'canada.png', iso3: 'CAN', price: '3.99' },
+  { name: 'England', image: 'england.png', iso3: 'GBR', price: '3.99' },
+  { name: 'France', image: 'france.png', iso3: 'FRA', price: '3.49' },
+  { name: 'Japan', image: 'japan.png', iso3: 'JPN', price: '3.49' },
+  { name: 'Malaysia', image: 'malaysia.png', iso3: 'MYS', price: '3.49' },
+  { name: 'Singapore', image: 'singapore.png', iso3: 'SGP', price: '2.99' },
+  { name: 'Switzerland', image: 'switzerland.png', iso3: 'CHE', price: '4.49' },
+  { name: 'Turkey', image: 'turkey.png', iso3: 'TUR', price: '3.99' },
+  { name: 'UAE', image: 'uae.png', iso3: 'ARE', price: '3.99' },
+  { name: 'United States', image: 'usa.png', iso3: 'USA', price: '4.49' },
 ];
 
 const telecomOrbits = [
@@ -133,6 +135,47 @@ export default function Landing() {
   const [coverageVisible, setCoverageVisible] = useState(false);
   const [activeTab, setActiveTab] = useState<'Countries' | 'Regions' | 'Global'>('Countries');
   const [locationsFolder, setLocationsFolder] = useState('Locations');
+  const [startingLoading, setStartingLoading] = useState(false);
+  const [landingPrices, setLandingPrices] = useState<{ countries: Record<string, number | null>; regions: Record<string, number | null>; global: number | null } | null>(null);
+  const router = useRouter();
+
+  useEffect(() => {
+    fetch('/api/landing-prices')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (d && !d.error) setLandingPrices(d); })
+      .catch(() => {});
+  }, []);
+
+  const fromLabel = useCallback(
+    (val: number | null | undefined) => (val != null ? `From US$${val.toFixed(2)}` : 'From US$…'),
+    []
+  );
+
+  const goProtected = useCallback(async (target: string) => {
+    try {
+      const result = await authClient.getSession();
+      const session = (result as { data?: { user?: unknown } | null })?.data;
+      router.push(session?.user ? target : `/login?redirect=${encodeURIComponent(target)}`);
+    } catch {
+      router.push(`/login?redirect=${encodeURIComponent(target)}`);
+    }
+  }, [router]);
+
+  const scrollToId = useCallback((id: string) => {
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, []);
+
+  const handleGetStarted = useCallback(async () => {
+    if (startingLoading) return;
+    setStartingLoading(true);
+    try {
+      const result = await authClient.getSession();
+      const session = (result as { data?: { user?: unknown } | null })?.data;
+      router.push(session?.user ? '/dashboard' : '/signup');
+    } catch {
+      router.push('/signup');
+    }
+  }, [router, startingLoading]);
   const carouselRef = useRef<HTMLDivElement | null>(null);
   const carouselViewportRef = useRef<HTMLDivElement | null>(null);
   const animationRef = useRef<number | null>(null);
@@ -337,11 +380,11 @@ export default function Landing() {
                 Home
                 <span className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-5 h-[2.5px] bg-[#FF561E] rounded-full"></span>
               </Link>
-              <Link href="/features" className="hover:text-[#FF561E] transition-colors">Features</Link>
-              <Link href="/faq" className="hover:text-[#FF561E] transition-colors">FAQs</Link>
-              <Link href="/destinations" className="hover:text-[#FF561E] transition-colors">Destinations</Link>
-              <Link href="/how-it-works" className="hover:text-[#FF561E] transition-colors">How It Works</Link>
+              <button onClick={() => scrollToId('comparison')} className="hover:text-[#FF561E] transition-colors">Features</button>
+              <button onClick={() => scrollToId('destinations')} className="hover:text-[#FF561E] transition-colors">Destinations</button>
+              <button onClick={() => scrollToId('how-it-works')} className="hover:text-[#FF561E] transition-colors">How It Works</button>
               <Link href="/about-us" className="hover:text-[#FF561E] transition-colors">About Us</Link>
+              <Link href="/faq" className="hover:text-[#FF561E] transition-colors">FAQs</Link>
             </nav>
           </div>
 
@@ -376,18 +419,18 @@ export default function Landing() {
             </p>
             
             <div className="flex items-center gap-4">
-              <Link href="/get-started" className="inline-flex items-center justify-center px-9 py-4 rounded-full bg-[#FF561E] text-white font-semibold text-[16px]  transition-all shadow-xl shadow-orange-500/25 gap-2 group">
+              <button onClick={handleGetStarted} disabled={startingLoading} className="inline-flex items-center justify-center px-9 py-4 rounded-full bg-[#FF561E] text-white font-semibold text-[16px]  transition-all shadow-xl shadow-orange-500/25 gap-2 group disabled:opacity-80">
                 Get Started
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="transform transition-transform group-hover:translate-x-1">
                   <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
-              </Link>
-              <Link href="/plans" className="inline-flex items-center justify-center px-9 py-4 rounded-full bg-white/90 backdrop-blur-md text-[#FF561E] font-semibold text-[16px] hover:bg-white transition-all border border-gray-200 shadow-sm gap-2 group">
+              </button>
+              <button onClick={() => scrollToId('where-next')} className="inline-flex items-center justify-center px-9 py-4 rounded-full bg-white/90 backdrop-blur-md text-[#FF561E] font-semibold text-[16px] hover:bg-white transition-all border border-gray-200 shadow-sm gap-2 group">
                 Explore Plans
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="transform transition-transform group-hover:translate-x-1">
                   <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
-              </Link>
+              </button>
             </div>
           </div>
         </main>
@@ -398,7 +441,7 @@ export default function Landing() {
       >
         <div className="w-full max-w-[1400px] flex flex-col gap-20 xl:gap-24">
           
-          <div ref={howRef} className="flex flex-col lg:flex-row gap-10 lg:gap-6 items-center lg:items-start w-full relative">
+          <div ref={howRef} id="how-it-works" className="scroll-mt-28 flex flex-col lg:flex-row gap-10 lg:gap-6 items-center lg:items-start w-full relative">
             <div 
               className={`w-full lg:w-[40%] flex flex-col justify-center pt-2 md:pt-4 xl:pt-8 pr-0 lg:pr-8 transition-all duration-[800ms] ease-out ${
                 howVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
@@ -492,7 +535,8 @@ export default function Landing() {
 
           <div 
             ref={whyRef}
-            className={`w-full bg-[#FFF4F0] rounded-[40px] px-8 py-12 md:py-16 md:px-16 text-center shadow-sm transition-all duration-[1000ms] ease-out ${
+            id="features"
+            className={`scroll-mt-28 w-full bg-[#FFF4F0] rounded-[40px] px-8 py-12 md:py-16 md:px-16 text-center shadow-sm transition-all duration-[1000ms] ease-out ${
               whyVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
             }`}
           >
@@ -529,7 +573,7 @@ export default function Landing() {
         </div>
       </section>
 
-      <section className="w-full px-8 md:px-12 xl:px-16 pt-4 pb-8 md:pt-6 md:pb-12 bg-white flex flex-col items-center justify-center relative">
+      <section id="coverage" className="scroll-mt-24 w-full px-8 md:px-12 xl:px-16 pt-4 pb-8 md:pt-6 md:pb-12 bg-white flex flex-col items-center justify-center relative">
         <div ref={coverageRef} className="w-full max-w-[1400px] flex flex-col lg:flex-row gap-16 lg:gap-4 items-center justify-between lg:justify-center">
           
           <div 
@@ -595,7 +639,7 @@ export default function Landing() {
         </div>
       </section>
 
-      <section className="w-full px-4 md:px-6 xl:px-8 pt-0 pb-4 md:pt-0 md:pb-6 bg-white flex flex-col items-center justify-center relative">
+      <section id="destinations" className="scroll-mt-24 w-full px-4 md:px-6 xl:px-8 pt-0 pb-4 md:pt-0 md:pb-6 bg-white flex flex-col items-center justify-center relative">
         <div className="w-full max-w-[1400px] flex flex-col items-center">
           <h2 className="text-[40px] md:text-[46px] xl:text-[54px] leading-[1.12] font-semibold text-[#1A1D20] mb-5 tracking-tight text-center">
             Browse Popular <span className="text-[#FF561E] font-serif italic font-medium pr-1">Destinations</span>
@@ -622,14 +666,18 @@ export default function Landing() {
                 className="w-full overflow-x-auto hide-scrollbar flex gap-6 py-2"
               >
                 {loopedCarouselItems.map((dest, i) => (
-                  <div key={`${dest.name}-${i}`} className="dest-card flex-shrink-0 w-[calc((100%_-_24px)/2)] sm:w-[calc((100%_-_48px)/3)] md:w-[calc((100%_-_72px)/4)] lg:w-[calc((100%_-_120px)/6)] bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col group cursor-pointer transition-transform duration-300 hover:translate-y-[-6px] hover:scale-[1.03]">
+                  <div
+                    key={`${dest.name}-${i}`}
+                    onClick={() => goProtected(`/dashboard/browse/${dest.iso3}?name=${encodeURIComponent(dest.name)}`)}
+                    className="dest-card flex-shrink-0 w-[calc((100%_-_24px)/2)] sm:w-[calc((100%_-_48px)/3)] md:w-[calc((100%_-_72px)/4)] lg:w-[calc((100%_-_120px)/6)] bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col group cursor-pointer transition-transform duration-300 hover:translate-y-[-6px] hover:scale-[1.03]"
+                  >
                     <div className="relative w-full aspect-square bg-[#FFF4F0] flex items-center justify-center">
                       <Image src={`/assets/${locationsFolder}/${dest.image}`} alt={dest.name} fill className="object-contain" />
                     </div>
                     <div className="p-4 flex flex-col">
                       <h3 className="text-[16px] font-bold text-[#1A1D20] mb-1">{dest.name}</h3>
                       <div className="flex items-center justify-between mt-1">
-                        <span className="text-[13px] text-[#FF561E] font-semibold">From ${dest.price}</span>
+                        <span className="text-[13px] text-[#FF561E] font-semibold">{fromLabel(landingPrices?.countries[dest.iso3])}</span>
                         <ArrowRight className="w-4 h-4 text-[#FF561E]" />
                       </div>
                     </div>
@@ -645,7 +693,7 @@ export default function Landing() {
         </div>
       </section>
 
-      <section className="w-full px-8 md:px-12 xl:px-16 pb-8 flex flex-col items-center justify-center relative">
+      <section id="where-next" className="scroll-mt-4 w-full px-8 md:px-12 xl:px-16 pb-8 flex flex-col items-center justify-center relative">
         <div className="w-full max-w-[1400px] bg-[#FFF4F0] rounded-[40px] px-8 py-12 md:py-16 md:px-12 flex flex-col items-center">
           <h2 className="text-[32px] md:text-[36px] font-semibold text-[#1A1D20] mb-3 tracking-tight text-center">
             Where are you traveling <span className="text-[#FF561E] font-serif italic font-medium pr-1">next?</span>
@@ -673,30 +721,30 @@ export default function Landing() {
 
           <div className="w-full max-w-[1000px] grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4 mb-12">
             {activeTab === 'Countries' && [
-              { name: 'India', flag: 'IN', price: '3.99' },
-              { name: 'United Kingdom', flag: 'GBR', price: '4.49' },
-              { name: 'Greece', flag: 'GR', price: '4.49' },
-              { name: 'Turkey', flag: 'TR', price: '3.99' },
-              { name: 'Germany', flag: 'DE', price: '4.49' },
-              { name: 'Switzerland', flag: 'CH', price: '4.49' },
-              { name: 'France', flag: 'FR', price: '3.99' },
-              { name: 'Italy', flag: 'IT', price: '3.99' },
-              { name: 'Netherlands', flag: 'NL', price: '3.99' },
-              { name: 'Spain', flag: 'ES', price: '3.99' },
-              { name: 'Portugal', flag: 'PT', price: '3.99' },
-              { name: 'United States', flag: 'US', price: '4.49' },
-              { name: 'Thailand', flag: 'TH', price: '3.99' },
-              { name: 'Indonesia', flag: 'ID', price: '3.99' },
-              { name: 'South Korea', flag: 'KR', price: '4.49' },
+              { name: 'India', flag: 'IN', iso3: 'IND', price: '3.99' },
+              { name: 'United Kingdom', flag: 'GBR', iso3: 'GBR', price: '4.49' },
+              { name: 'Greece', flag: 'GR', iso3: 'GRC', price: '4.49' },
+              { name: 'Turkey', flag: 'TR', iso3: 'TUR', price: '3.99' },
+              { name: 'Germany', flag: 'DE', iso3: 'DEU', price: '4.49' },
+              { name: 'Switzerland', flag: 'CH', iso3: 'CHE', price: '4.49' },
+              { name: 'France', flag: 'FR', iso3: 'FRA', price: '3.99' },
+              { name: 'Italy', flag: 'IT', iso3: 'ITA', price: '3.99' },
+              { name: 'Netherlands', flag: 'NL', iso3: 'NLD', price: '3.99' },
+              { name: 'Spain', flag: 'ES', iso3: 'ESP', price: '3.99' },
+              { name: 'Portugal', flag: 'PT', iso3: 'PRT', price: '3.99' },
+              { name: 'United States', flag: 'US', iso3: 'USA', price: '4.49' },
+              { name: 'Thailand', flag: 'TH', iso3: 'THA', price: '3.99' },
+              { name: 'Indonesia', flag: 'ID', iso3: 'IDN', price: '3.99' },
+              { name: 'South Korea', flag: 'KR', iso3: 'KOR', price: '4.49' },
             ].map((country, i) => (
-              <div key={i} className="flex items-center justify-between p-4 rounded-2xl bg-white border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer group">
+              <div key={i} onClick={() => goProtected(`/dashboard/browse/${country.iso3}?name=${encodeURIComponent(country.name)}`)} className="flex items-center justify-between p-4 rounded-2xl bg-white border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer group">
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-9 rounded-md overflow-hidden border border-gray-100 shrink-0 relative">
                     <Flag code={country.flag} size="l" hasBorder={false} hasBorderRadius={false} className="country-flag" />
                   </div>
                   <div className="flex flex-col">
                     <span className="text-[15px] font-bold text-[#1A1D20]">{country.name}</span>
-                    <span className="text-[13px] text-[#FF561E] font-medium">From US${country.price}</span>
+                    <span className="text-[13px] text-[#FF561E] font-medium">{fromLabel(landingPrices?.countries[country.iso3])}</span>
                   </div>
                 </div>
                 <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-[#FF561E] transition-colors" />
@@ -704,21 +752,21 @@ export default function Landing() {
             ))}
             
             {activeTab === 'Regions' && [
-              { name: 'North America', image: 'north america_map.png', price: '4.49' },
-              { name: 'Europe', image: 'europe_map.png', price: '4.49' },
-              { name: 'Asia', image: 'asia_map.png', price: '4.49' },
-              { name: 'Africa', image: 'africa_map.png', price: '3.99' },
-              { name: 'Middle East & North Africa', image: 'middle east &north africa_map.png', price: '3.99' },
-              { name: 'South America', image: 'southamerica_map.png', price: '4.49' },
+              { name: 'North America', image: 'north america_map.png', code: 'na', price: '4.49' },
+              { name: 'Europe', image: 'europe_map.png', code: 'eu', price: '4.49' },
+              { name: 'Asia', image: 'asia_map.png', code: 'as', price: '4.49' },
+              { name: 'Africa', image: 'africa_map.png', code: 'af', price: '3.99' },
+              { name: 'Middle East & North Africa', image: 'middle east &north africa_map.png', code: 'me', price: '3.99' },
+              { name: 'South America', image: 'southamerica_map.png', code: 'sa', price: '4.49' },
             ].map((region, i) => (
-              <div key={i} className="flex items-center justify-between p-4 rounded-2xl bg-white border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer group">
+              <div key={i} onClick={() => goProtected(`/dashboard/browse/region/${region.code}?name=${encodeURIComponent(region.name)}`)} className="flex items-center justify-between p-4 rounded-2xl bg-white border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer group">
                 <div className="flex items-center gap-4">
                   <div className="w-[54px] h-[36px] rounded-md overflow-hidden border border-gray-100 shrink-0 relative bg-[#FFF4F0]">
                     <Image src={`/assets/Regions/${region.image}`} alt={region.name} fill className="object-cover" />
                   </div>
                   <div className="flex flex-col">
                     <span className="text-[15px] font-bold text-[#1A1D20]">{region.name}</span>
-                    <span className="text-[13px] text-[#FF561E] font-medium">From US${region.price}</span>
+                    <span className="text-[13px] text-[#FF561E] font-medium">{fromLabel(landingPrices?.regions[region.code])}</span>
                   </div>
                 </div>
                 <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-[#FF561E] transition-colors" />
@@ -728,14 +776,14 @@ export default function Landing() {
             {activeTab === 'Global' && [
               { name: 'Global', image: 'world_map.png', price: '6.99', desc: '130+ countries' },
             ].map((region, i) => (
-              <div key={i} className="flex items-center justify-between p-4 rounded-2xl bg-white border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer group">
+              <div key={i} onClick={() => goProtected('/dashboard/browse?tab=global')} className="flex items-center justify-between p-4 rounded-2xl bg-white border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer group">
                 <div className="flex items-center gap-4">
                   <div className="w-[54px] h-[36px] rounded-md overflow-hidden border border-gray-100 shrink-0 relative bg-[#FFF4F0]">
                     <Image src={`/assets/Regions/${region.image}`} alt={region.name} fill className="object-cover" />
                   </div>
                   <div className="flex flex-col">
                     <span className="text-[15px] font-bold text-[#1A1D20]">{region.name}</span>
-                    <span className="text-[13px] text-[#FF561E] font-medium">From US${region.price}</span>
+                    <span className="text-[13px] text-[#FF561E] font-medium">{fromLabel(landingPrices?.global)}</span>
                   </div>
                 </div>
                 <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-[#FF561E] transition-colors" />
@@ -743,7 +791,7 @@ export default function Landing() {
             ))}
           </div>
 
-          <button className="inline-flex items-center justify-center px-8 py-3.5 rounded-full bg-transparent border border-[#FF561E] text-[#FF561E] font-semibold text-[15px] hover:bg-[#FF561E] hover:text-white transition-all gap-2 group">
+          <button onClick={() => goProtected('/dashboard/browse')} className="inline-flex items-center justify-center px-8 py-3.5 rounded-full bg-transparent border border-[#FF561E] text-[#FF561E] font-semibold text-[15px] hover:bg-[#FF561E] hover:text-white transition-all gap-2 group">
             View all destinations
             <ArrowRight className="w-4 h-4 transform transition-transform group-hover:translate-x-1" />
           </button>
@@ -861,7 +909,7 @@ export default function Landing() {
           }
         `}</style>
       </section>
-      <section className="w-full px-8 md:px-12 xl:px-16 pt-12 pb-24 bg-white flex flex-col items-center justify-center relative z-10 text-[#1A1D20]">
+      <section id="comparison" className="scroll-mt-0 w-full px-8 md:px-12 xl:px-16 pt-12 pb-24 bg-white flex flex-col items-center justify-center relative z-10 text-[#1A1D20]">
         <div className="w-full max-w-[1200px] flex flex-col items-center">
           <h2 className="text-[40px] md:text-[46px] xl:text-[54px] font-semibold mb-3 text-center tracking-tight">
             eSIM4U vs. Other <span className="text-[#FF561E] font-serif italic font-medium tracking-normal">eSIM Services</span>
@@ -1192,11 +1240,10 @@ export default function Landing() {
             <div className="flex flex-col gap-6">
               <h4 className="font-bold text-[15px] tracking-wide text-white mb-1">PRODUCT</h4>
               <div className="flex flex-col gap-4">
-                <Link href="/buy-esim" className="text-white hover:text-white/80 text-[15px] font-medium transition-colors leading-relaxed">Buy eSIM</Link>
-                <Link href="/countries" className="text-white hover:text-white/80 text-[15px] font-medium transition-colors leading-relaxed">Countries</Link>
-                <Link href="/how-it-works" className="text-white hover:text-white/80 text-[15px] font-medium transition-colors leading-relaxed">How it works</Link>
-                <Link href="/coverage" className="text-white hover:text-white/80 text-[15px] font-medium transition-colors leading-relaxed">Coverage</Link>
-                <Link href="/business" className="text-white hover:text-white/80 text-[15px] font-medium transition-colors leading-relaxed">eSIM for Business</Link>
+                <button onClick={() => goProtected('/dashboard/browse')} className="text-left text-white hover:text-white/80 text-[15px] font-medium transition-colors leading-relaxed">Buy eSIM</button>
+                <button onClick={() => scrollToId('where-next')} className="text-left text-white hover:text-white/80 text-[15px] font-medium transition-colors leading-relaxed">Countries</button>
+                <button onClick={() => scrollToId('how-it-works')} className="text-left text-white hover:text-white/80 text-[15px] font-medium transition-colors leading-relaxed">How it works</button>
+                <button onClick={() => scrollToId('coverage')} className="text-left text-white hover:text-white/80 text-[15px] font-medium transition-colors leading-relaxed">Coverage</button>
               </div>
             </div>
             <div className="flex flex-col gap-6">
@@ -1204,7 +1251,6 @@ export default function Landing() {
               <div className="flex flex-col gap-4">
                 <Link href="/about-us" className="text-white hover:text-white/80 text-[15px] font-medium transition-colors leading-relaxed">About us</Link>
                 <Link href="/blog" className="text-white hover:text-white/80 text-[15px] font-medium transition-colors leading-relaxed">Blog</Link>
-                <Link href="/careers" className="text-white hover:text-white/80 text-[15px] font-medium transition-colors leading-relaxed">Careers</Link>
                 <Link href="/contact" className="text-white hover:text-white/80 text-[15px] font-medium transition-colors leading-relaxed">Contact us</Link>
                 <Link href="/affiliate" className="text-white hover:text-white/80 text-[15px] font-medium transition-colors leading-relaxed">Affiliate Program</Link>
               </div>

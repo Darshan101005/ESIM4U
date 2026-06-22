@@ -78,14 +78,14 @@ export default function FaqPage() {
         <div className="hidden lg:flex h-[56px] bg-white/60 backdrop-blur-xl rounded-full shadow-[0_4px_24px_rgb(0,0,0,0.06)] border border-white/60 items-center px-8">
           <nav className="flex items-center gap-8 text-[14px] font-medium text-[#1A1D20]">
             <Link href="/" className="hover:text-[#FF561E] transition-colors">Home</Link>
-            <Link href="/features" className="hover:text-[#FF561E] transition-colors">Features</Link>
+            <Link href="/#comparison" className="hover:text-[#FF561E] transition-colors">Features</Link>
+            <Link href="/#destinations" className="hover:text-[#FF561E] transition-colors">Destinations</Link>
+            <Link href="/#how-it-works" className="hover:text-[#FF561E] transition-colors">How It Works</Link>
+            <Link href="/about-us" className="hover:text-[#FF561E] transition-colors">About Us</Link>
             <Link href="/faq" className="relative text-[#FF561E]">
               FAQs
               <span className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-5 h-[2.5px] bg-[#FF561E] rounded-full"></span>
             </Link>
-            <Link href="/destinations" className="hover:text-[#FF561E] transition-colors">Destinations</Link>
-            <Link href="/how-it-works" className="hover:text-[#FF561E] transition-colors">How It Works</Link>
-            <Link href="/about-us" className="hover:text-[#FF561E] transition-colors">About Us</Link>
           </nav>
         </div>
 
@@ -188,11 +188,10 @@ export default function FaqPage() {
             <div className="flex flex-col gap-6">
               <h4 className="font-bold text-[15px] tracking-wide text-white mb-1">PRODUCT</h4>
               <div className="flex flex-col gap-4">
-                <Link href="/buy-esim" className="text-white hover:text-white/80 text-[15px] font-medium transition-colors leading-relaxed">Buy eSIM</Link>
-                <Link href="/countries" className="text-white hover:text-white/80 text-[15px] font-medium transition-colors leading-relaxed">Countries</Link>
-                <Link href="/how-it-works" className="text-white hover:text-white/80 text-[15px] font-medium transition-colors leading-relaxed">How it works</Link>
-                <Link href="/coverage" className="text-white hover:text-white/80 text-[15px] font-medium transition-colors leading-relaxed">Coverage</Link>
-                <Link href="/business" className="text-white hover:text-white/80 text-[15px] font-medium transition-colors leading-relaxed">eSIM for Business</Link>
+                <Link href="/dashboard/browse" className="text-white hover:text-white/80 text-[15px] font-medium transition-colors leading-relaxed">Buy eSIM</Link>
+                <Link href="/#where-next" className="text-white hover:text-white/80 text-[15px] font-medium transition-colors leading-relaxed">Countries</Link>
+                <Link href="/#how-it-works" className="text-white hover:text-white/80 text-[15px] font-medium transition-colors leading-relaxed">How it works</Link>
+                <Link href="/#coverage" className="text-white hover:text-white/80 text-[15px] font-medium transition-colors leading-relaxed">Coverage</Link>
               </div>
             </div>
             <div className="flex flex-col gap-6">
@@ -200,7 +199,6 @@ export default function FaqPage() {
               <div className="flex flex-col gap-4">
                 <Link href="/about-us" className="text-white hover:text-white/80 text-[15px] font-medium transition-colors leading-relaxed">About us</Link>
                 <Link href="/blog" className="text-white hover:text-white/80 text-[15px] font-medium transition-colors leading-relaxed">Blog</Link>
-                <Link href="/careers" className="text-white hover:text-white/80 text-[15px] font-medium transition-colors leading-relaxed">Careers</Link>
                 <Link href="/contact" className="text-white hover:text-white/80 text-[15px] font-medium transition-colors leading-relaxed">Contact us</Link>
                 <Link href="/affiliate" className="text-white hover:text-white/80 text-[15px] font-medium transition-colors leading-relaxed">Affiliate Program</Link>
               </div>

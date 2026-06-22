@@ -95,7 +95,12 @@ export default function LoginPage() {
       logActivity("login", userId || undefined);
 
       toast.success("Welcome back!");
-      router.push("/dashboard");
+      let redirectTo = "/dashboard";
+      try {
+        const r = new URLSearchParams(window.location.search).get("redirect");
+        if (r && r.startsWith("/") && !r.startsWith("//")) redirectTo = r;
+      } catch {}
+      router.push(redirectTo);
     } catch {
       toast.error("Something went wrong. Please try again.");
     } finally {
