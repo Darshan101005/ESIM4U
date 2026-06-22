@@ -127,3 +127,16 @@ body {
   );
   animation: shimmer 1.4s infinite;
 }
+
+@keyframes review-marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-33.333%); }
+}
+
+.review-marquee {
+  animation: review-marquee 32s linear infinite;
+}
+
+.review-marquee:hover {
+  animation-play-state: paused;
+}

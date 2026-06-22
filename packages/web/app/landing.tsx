@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Globe, QrCode, Plane, Tag, Zap, ShieldCheck, Headphones, Smartphone, RadioTower, Search, ChevronRight, ChevronLeft, ArrowRight, X, Info, Wifi, Gift, CheckCircle2, XCircle, PhoneCall, Rocket, MapPin, BrickWallFire, Users } from 'lucide-react';
+import { Globe, QrCode, Plane, Tag, Zap, ShieldCheck, Headphones, Smartphone, RadioTower, Search, ChevronRight, ChevronLeft, ArrowRight, X, Info, Wifi, Gift, CheckCircle2, XCircle, PhoneCall, Rocket, MapPin, BrickWallFire, Users, Star, Quote } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { authClient } from '@/lib/auth-client';
@@ -23,6 +23,45 @@ const carouselItems = [
   { name: 'Turkey', image: 'turkey.png', iso3: 'TUR', price: '3.99' },
   { name: 'UAE', image: 'uae.png', iso3: 'ARE', price: '3.99' },
   { name: 'United States', image: 'usa.png', iso3: 'USA', price: '4.49' },
+];
+
+const reviews = [
+  {
+    name: 'Daniel K.',
+    country: 'United Kingdom',
+    flag: 'GBR',
+    text: 'eSIM4U made my trip so much easier! I had internet the moment I landed. Super fast and reliable.',
+  },
+  {
+    name: 'Sophia L.',
+    country: 'France',
+    flag: 'FRA',
+    text: 'Installation was quick and easy. Great coverage across Europe, highly recommended!',
+  },
+  {
+    name: 'Yuto M.',
+    country: 'Japan',
+    flag: 'JPN',
+    text: 'I used eSIM4U in Japan and it worked perfectly. No SIM swap, no hassle, just seamless connection.',
+  },
+  {
+    name: 'Aarav S.',
+    country: 'India',
+    flag: 'IND',
+    text: 'Activated my eSIM before the flight and was online instantly in Delhi. Brilliant service.',
+  },
+  {
+    name: 'Emma W.',
+    country: 'Australia',
+    flag: 'AUS',
+    text: 'Used it across three countries on one trip. Switching was effortless and the speed was great.',
+  },
+  {
+    name: 'Marco R.',
+    country: 'Italy',
+    flag: 'ITA',
+    text: 'Cheapest data I found for Europe and it just works. I will definitely use eSIM4U again.',
+  },
 ];
 
 const telecomOrbits = [
@@ -146,9 +185,15 @@ export default function Landing() {
       .catch(() => {});
   }, []);
 
-  const fromLabel = useCallback(
-    (val: number | null | undefined) => (val != null ? `From US$${val.toFixed(2)}` : 'From US$…'),
-    []
+  const priceText = useCallback(
+    (val: number | null | undefined) => {
+      if (!landingPrices) {
+        return <span className="skeleton inline-block h-[14px] w-[78px] rounded align-middle" />;
+      }
+      if (val == null) return "From US$—";
+      return `From US$${val.toFixed(2)}`;
+    },
+    [landingPrices]
   );
 
   const goProtected = useCallback(async (target: string) => {
@@ -160,6 +205,11 @@ export default function Landing() {
       router.push(`/login?redirect=${encodeURIComponent(target)}`);
     }
   }, [router]);
+
+  const reviewsRef = useRef<HTMLDivElement>(null);
+  const scrollReviews = useCallback((dir: number) => {
+    reviewsRef.current?.scrollBy({ left: dir * 330, behavior: 'smooth' });
+  }, []);
 
   const scrollToId = useCallback((id: string) => {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -677,7 +727,7 @@ export default function Landing() {
                     <div className="p-4 flex flex-col">
                       <h3 className="text-[16px] font-bold text-[#1A1D20] mb-1">{dest.name}</h3>
                       <div className="flex items-center justify-between mt-1">
-                        <span className="text-[13px] text-[#FF561E] font-semibold">{fromLabel(landingPrices?.countries[dest.iso3])}</span>
+                        <span className="text-[13px] text-[#FF561E] font-semibold">{priceText(landingPrices?.countries[dest.iso3])}</span>
                         <ArrowRight className="w-4 h-4 text-[#FF561E]" />
                       </div>
                     </div>
@@ -744,7 +794,7 @@ export default function Landing() {
                   </div>
                   <div className="flex flex-col">
                     <span className="text-[15px] font-bold text-[#1A1D20]">{country.name}</span>
-                    <span className="text-[13px] text-[#FF561E] font-medium">{fromLabel(landingPrices?.countries[country.iso3])}</span>
+                    <span className="text-[13px] text-[#FF561E] font-medium">{priceText(landingPrices?.countries[country.iso3])}</span>
                   </div>
                 </div>
                 <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-[#FF561E] transition-colors" />
@@ -766,7 +816,7 @@ export default function Landing() {
                   </div>
                   <div className="flex flex-col">
                     <span className="text-[15px] font-bold text-[#1A1D20]">{region.name}</span>
-                    <span className="text-[13px] text-[#FF561E] font-medium">{fromLabel(landingPrices?.regions[region.code])}</span>
+                    <span className="text-[13px] text-[#FF561E] font-medium">{priceText(landingPrices?.regions[region.code])}</span>
                   </div>
                 </div>
                 <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-[#FF561E] transition-colors" />
@@ -783,7 +833,7 @@ export default function Landing() {
                   </div>
                   <div className="flex flex-col">
                     <span className="text-[15px] font-bold text-[#1A1D20]">{region.name}</span>
-                    <span className="text-[13px] text-[#FF561E] font-medium">{fromLabel(landingPrices?.global)}</span>
+                    <span className="text-[13px] text-[#FF561E] font-medium">{priceText(landingPrices?.global)}</span>
                   </div>
                 </div>
                 <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-[#FF561E] transition-colors" />
@@ -1190,6 +1240,96 @@ export default function Landing() {
             <span className="text-[13px] text-[#1A1D20] font-semibold">No hidden conditions. Rewards are automatically applied after eligible purchases.</span>
           </div>
 
+        </div>
+      </section>
+
+      <section className="w-full px-8 md:px-12 xl:px-16 pt-0 pb-16 md:pb-24 bg-white overflow-hidden">
+        <div className="w-full max-w-[1400px] mx-auto flex flex-col lg:flex-row items-center gap-12 lg:gap-10">
+          <div className="w-full lg:w-[38%] shrink-0">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-orange-50 border border-orange-100 mb-6">
+              <Users className="w-3.5 h-3.5 text-[#FF561E]" strokeWidth={2.5} />
+              <span className="text-[#FF561E] text-[13px] font-semibold">Customer Reviews</span>
+            </div>
+            <h2 className="text-[40px] md:text-[46px] xl:text-[54px] leading-[1.12] font-semibold text-[#1A1D20] tracking-tight mb-5">
+              Loved by Travelers<br />
+              Around <span className="text-[#FF561E] font-serif italic font-medium lining-nums tracking-normal">the World</span>
+            </h2>
+            <p className="text-[16px] leading-[1.7] text-[#6B7280] font-medium max-w-[380px] mb-9">
+              Real stories from real travelers who stay connected effortlessly with eSIM4U everywhere they go.
+            </p>
+            <div className="flex items-center gap-10">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-full bg-[#FFF4F0] flex items-center justify-center shrink-0">
+                  <Users className="w-6 h-6 text-[#FF561E]" strokeWidth={2} />
+                </div>
+                <div>
+                  <p className="text-[22px] font-bold text-[#FF561E] leading-none">50K+</p>
+                  <p className="text-[13px] text-[#6B7280] mt-1">Happy Travelers</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-full bg-[#FFF4F0] flex items-center justify-center shrink-0">
+                  <Star className="w-6 h-6 text-[#FF561E] fill-[#FF561E]" strokeWidth={2} />
+                </div>
+                <div>
+                  <p className="text-[22px] font-bold text-[#FF561E] leading-none">4.8/5</p>
+                  <p className="text-[13px] text-[#6B7280] mt-1">Average Rating</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="w-full lg:w-[62%] min-w-0">
+            <div ref={reviewsRef} className="flex gap-5 overflow-x-auto hide-scrollbar scroll-smooth pb-2 snap-x">
+              {reviews.map((r, i) => (
+                <div
+                  key={i}
+                  className="w-[300px] shrink-0 snap-start bg-white rounded-[24px] border border-gray-100 shadow-[0_8px_30px_rgba(0,0,0,0.06)] p-6 flex flex-col"
+                >
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-center gap-1">
+                      {Array.from({ length: 5 }).map((_, s) => (
+                        <Star key={s} className="w-4 h-4 text-[#FF561E] fill-[#FF561E]" strokeWidth={1.5} />
+                      ))}
+                    </div>
+                    <Quote className="w-6 h-6 text-orange-200 fill-orange-200" strokeWidth={1.5} />
+                  </div>
+                  <p className="text-[14px] leading-[1.7] text-[#374151] mb-6 flex-1">{r.text}</p>
+                  <div className="flex items-center gap-3 pt-4 border-t border-gray-50">
+                    <div className="w-11 h-11 rounded-full bg-gradient-to-br from-[#FF561E] to-[#FF7A45] flex items-center justify-center text-white font-bold text-[16px] shrink-0">
+                      {r.name.charAt(0)}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[14px] font-bold text-[#1A1D20] leading-tight">{r.name}</p>
+                      <div className="flex items-center gap-2 mt-1.5">
+                        <div className="w-5 h-[14px] rounded-[2px] overflow-hidden border border-gray-100 shrink-0 relative">
+                          <Flag code={r.flag} size="l" hasBorder={false} hasBorderRadius={false} className="country-flag" />
+                        </div>
+                        <span className="text-[12px] text-[#6B7280]">{r.country}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex items-center gap-3 mt-6">
+              <button
+                onClick={() => scrollReviews(-1)}
+                aria-label="Previous reviews"
+                className="w-11 h-11 rounded-full bg-white border border-gray-200 flex items-center justify-center text-[#FF561E] hover:bg-[#FFF4F0] hover:border-orange-200 transition-colors"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+              <button
+                onClick={() => scrollReviews(1)}
+                aria-label="Next reviews"
+                className="w-11 h-11 rounded-full bg-[#FF561E] text-white flex items-center justify-center hover:bg-[#E04B18] transition-colors shadow-sm shadow-orange-500/20"
+              >
+                <ChevronRight className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
         </div>
       </section>
 
