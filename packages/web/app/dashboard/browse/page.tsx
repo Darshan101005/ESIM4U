@@ -2,7 +2,7 @@
 
 import DashboardTopbar from "@/components/dashboard/topbar";
 import { useEffect, useState, useCallback } from "react";
-import { Search, ChevronRight, Globe, MapPin, Loader2 } from "lucide-react";
+import { Search, ChevronRight, Globe, MapPin, Loader2, Ship, Flag as FlagIcon } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import Flag from "@/components/dashboard/flag";
@@ -19,7 +19,7 @@ interface Region {
   region_name: string;
 }
 
-type Tab = "countries" | "regions" | "global";
+type Tab = "countries" | "regions" | "global" | "cruise";
 
 const REGION_IMAGES: Record<string, string> = {
   af: "africa_map.png",
@@ -53,7 +53,7 @@ export default function BrowsePage() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const t = params.get("tab");
-    if (t === "regions" || t === "global") setTab(t);
+    if (t === "regions" || t === "global" || t === "cruise") setTab(t);
   }, []);
 
   const load = useCallback(async () => {
@@ -96,10 +96,11 @@ export default function BrowsePage() {
       )
     : regions;
 
-  const tabs: { key: Tab; label: string; icon: typeof Globe }[] = [
-    { key: "countries", label: "Country", icon: Globe },
+  const tabs: { key: Tab; label: string; icon: typeof Globe; badge?: string }[] = [
+    { key: "countries", label: "Country", icon: FlagIcon },
     { key: "regions", label: "Region", icon: MapPin },
     { key: "global", label: "Global", icon: Globe },
+    { key: "cruise", label: "Cruise", icon: Ship, badge: "New" },
   ];
 
   return (
@@ -124,12 +125,21 @@ export default function BrowsePage() {
                 }`}
               >
                 <Icon className="w-4 h-4" /> {t.label}
+                {t.badge && (
+                  <span
+                    className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold leading-none ${
+                      tab === t.key ? "bg-white/25 text-white" : "bg-emerald-50 text-emerald-600"
+                    }`}
+                  >
+                    {t.badge}
+                  </span>
+                )}
               </button>
             );
           })}
         </div>
 
-        {tab !== "global" && (
+        {tab !== "global" && tab !== "cruise" && (
           <div className="relative max-w-md mb-8">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
@@ -147,6 +157,11 @@ export default function BrowsePage() {
             fetchUrl="/api/montyesim/bundles?bundle_category=global&page_size=100"
             emptyMessage="No global plans are available right now"
             searchable
+          />
+        ) : tab === "cruise" ? (
+          <PlanGrid
+            fetchUrl="/api/montyesim/bundles?bundle_category=cruise&page_size=100"
+            emptyMessage="No cruise plans are available right now"
           />
         ) : error ? (
           <div className="bg-red-50 border border-red-100 rounded-2xl p-6 text-center">

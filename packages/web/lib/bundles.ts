@@ -43,11 +43,18 @@ export interface NormalizedBundle {
   supports_topup: boolean;
 }
 
+function formatDataNumber(n: number): string {
+  return parseFloat(n.toFixed(2)).toString();
+}
+
 function dataLabel(raw: RawBundle): string {
   if (raw.unlimited) return "Unlimited";
   const amount = raw.gprs_limit ?? 0;
-  const unit = raw.data_unit || "GB";
-  return `${amount} ${unit}`;
+  const unit = (raw.data_unit || "GB").toUpperCase();
+  if (unit === "MB") {
+    return `${formatDataNumber(amount / 1000)} GB`;
+  }
+  return `${formatDataNumber(amount)} ${unit}`;
 }
 
 export function normalizeBundle(raw: RawBundle): NormalizedBundle {

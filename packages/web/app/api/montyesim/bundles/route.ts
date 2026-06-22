@@ -33,6 +33,23 @@ export async function GET(request: NextRequest) {
         (b) => !isWorldwideGlobal(b) && inferRegionCode(b) === regionCode.toLowerCase()
       );
       bundles = [...movedIntoRegion, ...bundles];
+    } else if (countryCode && bundles.length === 0) {
+      const iso3 = countryCode.toUpperCase();
+      const [regionData, globalData] = await Promise.all([
+        fetchBundles({ bundleCategory: "region", pageSize: 100 }),
+        fetchBundles({ bundleCategory: "global", pageSize: 100 }),
+      ]);
+      const [regionBundles, globalBundles] = await Promise.all([
+        normalizeAndPriceBundles(regionData.bundles || []),
+        normalizeAndPriceBundles(globalData.bundles || []),
+      ]);
+      const covering = [...regionBundles, ...globalBundles].filter((b) =>
+        (b.country_codes || []).some((c) => c.toUpperCase() === iso3)
+      );
+      const seen = new Set<string>();
+      bundles = covering
+        .filter((b) => (seen.has(b.bundle_code) ? false : seen.add(b.bundle_code)))
+        .sort((a, b) => a.price - b.price);
     }
 
     return NextResponse.json({
