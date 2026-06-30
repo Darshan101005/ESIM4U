@@ -119,6 +119,17 @@ export async function initializeDatabase() {
   await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS discount_amount DECIMAL(10,2) DEFAULT 0`);
   await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS promo_code VARCHAR(50)`);
   await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS affiliate_code VARCHAR(50)`);
+  await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS stripe_session_id TEXT`);
+  await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS stripe_payment_intent TEXT`);
+  await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS stripe_charge_id TEXT`);
+  await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS card_brand VARCHAR(30)`);
+  await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS card_last4 VARCHAR(4)`);
+  await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS card_wallet VARCHAR(30)`);
+  await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_method_type VARCHAR(30)`);
+  await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS receipt_url TEXT`);
+  await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS refund_id TEXT`);
+  await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS refund_status VARCHAR(20)`);
+  await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_name TEXT`);
 
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_orders_user_id ON orders(user_id)`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_orders_user_email ON orders(user_email)`);

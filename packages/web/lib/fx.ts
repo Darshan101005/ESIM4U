@@ -1,12 +1,11 @@
-export type SupportedCurrency = "USD" | "EUR" | "GBP" | "INR";
+export type SupportedCurrency = "USD" | "EUR" | "GBP";
 
-export const SUPPORTED_CURRENCIES: SupportedCurrency[] = ["USD", "EUR", "GBP", "INR"];
+export const SUPPORTED_CURRENCIES: SupportedCurrency[] = ["USD", "EUR", "GBP"];
 
 export const CURRENCY_SYMBOLS: Record<SupportedCurrency, string> = {
   USD: "$",
   EUR: "€",
   GBP: "£",
-  INR: "₹",
 };
 
 export interface FxRates {
@@ -16,7 +15,7 @@ export interface FxRates {
   fetchedAt: number;
 }
 
-const FX_SOURCE = "https://api.frankfurter.dev/v1/latest?base=USD&symbols=EUR,GBP,INR";
+const FX_SOURCE = "https://api.frankfurter.dev/v1/latest?base=USD&symbols=EUR,GBP";
 const CACHE_TTL = 60 * 60 * 1000;
 
 let cache: FxRates | null = null;
@@ -34,16 +33,15 @@ export async function getFxRates(): Promise<FxRates> {
   const data = await res.json();
   const eur = data?.rates?.EUR;
   const gbp = data?.rates?.GBP;
-  const inr = data?.rates?.INR;
 
-  if (typeof eur !== "number" || typeof gbp !== "number" || typeof inr !== "number") {
+  if (typeof eur !== "number" || typeof gbp !== "number") {
     throw new Error("FX source returned incomplete rates");
   }
 
   cache = {
     base: "USD",
     date: data.date,
-    rates: { USD: 1, EUR: eur, GBP: gbp, INR: inr },
+    rates: { USD: 1, EUR: eur, GBP: gbp },
     fetchedAt: Date.now(),
   };
 
@@ -53,6 +51,5 @@ export async function getFxRates(): Promise<FxRates> {
 export function convertFromUsd(amountUsd: number, currency: SupportedCurrency, rates: FxRates): number {
   const rate = rates.rates[currency];
   const value = amountUsd * rate;
-  if (currency === "INR") return Math.round(value);
   return Math.round(value * 100) / 100;
 }

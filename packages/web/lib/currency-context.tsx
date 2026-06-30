@@ -54,7 +54,7 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
       if (currency === "USD") return Math.round(usd * 100) / 100;
       if (!rates) return null;
       const value = usd * rates[currency];
-      return currency === "INR" ? Math.round(value) : Math.round(value * 100) / 100;
+      return Math.round(value * 100) / 100;
     },
     [currency, rates]
   );
@@ -64,8 +64,7 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
       const symbol = CURRENCY_SYMBOLS[currency];
       const value = convert(usd);
       if (value === null) return `${symbol}…`;
-      const formatted = currency === "INR" ? value.toLocaleString("en-IN") : value.toFixed(2);
-      return `${symbol}${formatted}`;
+      return `${symbol}${value.toFixed(2)}`;
     },
     [currency, convert]
   );

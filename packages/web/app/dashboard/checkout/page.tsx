@@ -4,16 +4,28 @@ import DashboardTopbar from "@/components/dashboard/topbar";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Loader2, ShieldCheck, CreditCard, Lock, CheckCircle2, Tag, X } from "lucide-react";
+import Image from "next/image";
+import { Loader2, Lock, ArrowRight, ArrowLeft, Tag, X, Wallet, Wifi, Clock, RadioTower } from "lucide-react";
 import toast from "react-hot-toast";
+import Flag from "@/components/dashboard/flag";
 import { useCurrency } from "@/lib/currency-context";
 import { useCart } from "@/lib/cart-context";
+
+function Pill({ icon: Icon, children }: { icon: typeof Wifi; children: React.ReactNode }) {
+  return (
+    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-gray-50 border border-gray-100 text-[11.5px] font-semibold text-[#374151]">
+      <Icon className="w-3.5 h-3.5 text-[#FF561E]" strokeWidth={2} />
+      {children}
+    </span>
+  );
+}
 
 export default function CheckoutPage() {
   const router = useRouter();
   const { currency, format } = useCurrency();
-  const { items, loading, clearCart } = useCart();
+  const { items, loading } = useCart();
   const [placing, setPlacing] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<"stripe" | "wallet">("stripe");
 
   const [codeInput, setCodeInput] = useState("");
   const [appliedCode, setAppliedCode] = useState<string | null>(null);
@@ -56,46 +68,22 @@ export default function CheckoutPage() {
   };
 
   const placeOrder = async () => {
+    if (paymentMethod !== "stripe") return;
     setPlacing(true);
     try {
-      const res = await fetch("/api/orders", {
+      const res = await fetch("/api/payments/stripe/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           code: appliedCode || undefined,
           display_currency: currency,
-          items: items.map((i) => ({
-            bundle_code: i.bundle_code,
-            bundle_name: i.bundle_name,
-            country: i.country,
-            country_code: i.country_code,
-            data_amount: i.data_amount,
-            validity: i.validity,
-            price: parseFloat(i.price),
-            cost_price: i.cost_price ? parseFloat(i.cost_price) : null,
-            currency: "USD",
-          })),
         }),
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Checkout failed");
+      if (!res.ok || !data.url) throw new Error(data.error || "Could not start checkout");
 
-      const orders = data.orders || [];
-      const firstSuccess = orders.find((o: { id?: number; status?: string }) => o.id && o.status === "completed");
-      const anyFailed = orders.some((o: { status?: string }) => o.status === "failed");
-
-      clearCart();
-
-      if (firstSuccess) {
-        toast.success("eSIM ready");
-        router.push(`/dashboard/orders/${firstSuccess.id}`);
-      } else if (anyFailed) {
-        toast.error("Order could not be completed");
-        router.push("/dashboard/orders");
-      } else {
-        router.push("/dashboard/orders");
-      }
+      window.location.href = data.url;
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Checkout failed");
       setPlacing(false);
@@ -111,23 +99,35 @@ export default function CheckoutPage() {
             <Loader2 className="w-8 h-8 text-[#FF561E] animate-spin" />
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
             <div className="lg:col-span-2 space-y-6">
               <div className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-6">
-                <h3 className="text-[16px] font-bold text-[#1A1D20] mb-4">Review Order</h3>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-[16px] font-bold text-[#1A1D20]">Review Order</h3>
+                  <span className="text-[13px] font-medium text-[#6B7280]">{items.length} item{items.length !== 1 ? "s" : ""}</span>
+                </div>
                 <div className="divide-y divide-gray-50">
-                  {items.map((item) => (
-                    <div key={item.id} className="flex items-center justify-between py-3">
-                      <div>
-                        <p className="text-[14px] font-semibold text-[#1A1D20]">{item.bundle_name || item.country}</p>
-                        <p className="text-[12px] text-[#6B7280]">
-                          {item.data_amount}
-                          {item.validity ? ` · ${item.validity}` : ""}
-                        </p>
+                  {items.map((item) => {
+                    const title = item.bundle_name || item.country || "eSIM Plan";
+                    return (
+                      <div key={item.id} className="flex items-center justify-between gap-4 py-4 first:pt-0 last:pb-0">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-12 h-9 rounded-md overflow-hidden border border-gray-100 shrink-0 relative">
+                            <Flag code={item.country_code} name={item.country} className="w-full h-full" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-[14px] font-semibold text-[#1A1D20] truncate">{title}</p>
+                            <div className="flex flex-wrap items-center gap-2 mt-1.5">
+                              {item.data_amount && <Pill icon={Wifi}>{item.data_amount}</Pill>}
+                              {item.validity && <Pill icon={Clock}>{item.validity}</Pill>}
+                              <Pill icon={RadioTower}>4G / LTE</Pill>
+                            </div>
+                          </div>
+                        </div>
+                        <span className="text-[14px] font-bold text-[#1A1D20] shrink-0">{format(parseFloat(item.price))}</span>
                       </div>
-                      <span className="text-[14px] font-bold text-[#1A1D20]">{format(parseFloat(item.price))}</span>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
 
@@ -165,16 +165,40 @@ export default function CheckoutPage() {
 
               <div className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-6">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-[16px] font-bold text-[#1A1D20]">Payment</h3>
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gray-100 text-[#6B7280] text-[11px] font-semibold">
-                    <Lock className="w-3 h-3" /> Coming soon
+                  <h3 className="text-[16px] font-bold text-[#1A1D20]">Payment Method</h3>
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-600 text-[11px] font-semibold">
+                    <Lock className="w-3 h-3" /> Secure
                   </span>
                 </div>
-                <div className="flex items-center gap-3 rounded-xl border border-dashed border-gray-200 bg-gray-50/60 px-4 py-4">
-                  <CreditCard className="w-5 h-5 text-gray-400" />
-                  <p className="text-[13px] text-[#6B7280]">
-                    Card payment will be enabled here soon. Your eSIM is issued instantly on order confirmation.
-                  </p>
+
+                <div className="space-y-3">
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod("stripe")}
+                    className={`w-full flex items-center gap-4 rounded-xl border p-4 text-left transition-all ${
+                      paymentMethod === "stripe" ? "border-[#FF561E] bg-[#FFF4F0]/50 ring-1 ring-[#FF561E]/30" : "border-gray-200 hover:border-orange-200"
+                    }`}
+                  >
+                    <span className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${paymentMethod === "stripe" ? "border-[#FF561E]" : "border-gray-300"}`}>
+                      {paymentMethod === "stripe" && <span className="w-2.5 h-2.5 rounded-full bg-[#FF561E]" />}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <Image src="/assets/stripe.svg" alt="Stripe" width={96} height={40} className="h-6 w-auto object-contain" />
+                      <p className="text-[12.5px] text-[#6B7280] mt-2">Pay by card, Google Pay, Apple Pay, PayPal and more.</p>
+                    </div>
+                  </button>
+
+                  <div className="w-full flex items-center gap-4 rounded-xl border border-gray-200 p-4 opacity-70">
+                    <span className="w-5 h-5 rounded-full border-2 border-gray-300 shrink-0" />
+                    <div className="w-9 h-9 rounded-lg bg-[#FFF4F0] flex items-center justify-center shrink-0">
+                      <Wallet className="w-5 h-5 text-[#FF561E]" strokeWidth={2} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[14px] font-bold text-[#1A1D20]">eSIM4U Wallet</p>
+                      <p className="text-[12.5px] text-[#6B7280] mt-0.5">Balance: {format(0)}</p>
+                    </div>
+                    <span className="px-2.5 py-1 rounded-full bg-gray-100 text-[#6B7280] text-[10px] font-bold shrink-0">Coming soon</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -182,6 +206,10 @@ export default function CheckoutPage() {
             <div className="lg:col-span-1">
               <div className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-6 sticky top-24">
                 <h3 className="text-[16px] font-bold text-[#1A1D20] mb-4">Summary</h3>
+                <div className="flex items-center justify-between text-[14px] mb-2">
+                  <span className="text-[#6B7280]">Items</span>
+                  <span className="font-semibold text-[#1A1D20]">{items.length}</span>
+                </div>
                 <div className="flex items-center justify-between text-[14px] mb-2">
                   <span className="text-[#6B7280]">Subtotal</span>
                   <span className="font-semibold text-[#1A1D20]">{format(subtotal)}</span>
@@ -204,26 +232,21 @@ export default function CheckoutPage() {
                 >
                   {placing ? (
                     <>
-                      <Loader2 className="w-4 h-4 animate-spin" /> Issuing eSIM...
+                      <Loader2 className="w-4 h-4 animate-spin" /> Redirecting...
                     </>
                   ) : (
                     <>
-                      <CheckCircle2 className="w-4 h-4" /> Complete Order
+                      Continue to Payment <ArrowRight className="w-4 h-4" />
                     </>
                   )}
                 </button>
 
-                <div className="flex items-center gap-2 mt-4 text-[12px] text-[#6B7280]">
-                  <ShieldCheck className="w-4 h-4 text-emerald-500" />
-                  Instant eSIM delivery with QR code
+                <div className="flex items-center justify-center gap-2 mt-4 text-[12px] text-[#6B7280]">
+                  <Lock className="w-3.5 h-3.5 text-emerald-500" />
+                  Payments are encrypted and secure.
                 </div>
-                {currency !== "USD" && (
-                  <p className="text-[11px] text-[#6B7280] mt-2">
-                    Prices shown in {currency} at today&apos;s rate. Billed amount is based on USD pricing.
-                  </p>
-                )}
-                <Link href="/dashboard/cart" className="block text-center text-[13px] text-[#6B7280] font-medium mt-4 hover:text-[#FF561E]">
-                  Back to Cart
+                <Link href="/dashboard/cart" className="flex items-center justify-center gap-1.5 text-[13px] text-[#6B7280] font-medium mt-4 hover:text-[#FF561E]">
+                  <ArrowLeft className="w-4 h-4" /> Back to Cart
                 </Link>
               </div>
             </div>

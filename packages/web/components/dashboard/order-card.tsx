@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CheckCircle2, Clock, XCircle } from "lucide-react";
+import { CheckCircle2, Clock, XCircle, RotateCcw } from "lucide-react";
 import Flag from "@/components/dashboard/flag";
 
 export interface OrderSummary {
@@ -15,25 +15,45 @@ export interface OrderSummary {
 }
 
 function StatusBadge({ status }: { status: string }) {
-  if (status === "completed") {
-    return (
-      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-600 text-[11px] font-semibold">
-        <CheckCircle2 className="w-3.5 h-3.5" /> Active
-      </span>
-    );
+  const base = "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold";
+  switch (status) {
+    case "completed":
+      return (
+        <span className={`${base} bg-emerald-50 text-emerald-600`}>
+          <CheckCircle2 className="w-3.5 h-3.5" /> Completed
+        </span>
+      );
+    case "refunded":
+      return (
+        <span className={`${base} bg-blue-50 text-blue-600`}>
+          <RotateCcw className="w-3.5 h-3.5" /> Refunded
+        </span>
+      );
+    case "refund_failed":
+      return (
+        <span className={`${base} bg-red-50 text-red-500`}>
+          <XCircle className="w-3.5 h-3.5" /> Refund Failed
+        </span>
+      );
+    case "failed":
+      return (
+        <span className={`${base} bg-red-50 text-red-500`}>
+          <XCircle className="w-3.5 h-3.5" /> Failed
+        </span>
+      );
+    case "cancelled":
+      return (
+        <span className={`${base} bg-gray-100 text-[#6B7280]`}>
+          <XCircle className="w-3.5 h-3.5" /> Cancelled
+        </span>
+      );
+    default:
+      return (
+        <span className={`${base} bg-amber-50 text-amber-600`}>
+          <Clock className="w-3.5 h-3.5" /> Pending
+        </span>
+      );
   }
-  if (status === "failed") {
-    return (
-      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-red-50 text-red-500 text-[11px] font-semibold">
-        <XCircle className="w-3.5 h-3.5" /> Failed
-      </span>
-    );
-  }
-  return (
-    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 text-amber-600 text-[11px] font-semibold">
-      <Clock className="w-3.5 h-3.5" /> Pending
-    </span>
-  );
 }
 
 export default function OrderCard({ order }: { order: OrderSummary }) {

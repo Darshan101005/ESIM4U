@@ -1,0 +1,228 @@
+import QRCode from "qrcode";
+import pool from "@/lib/db";
+import { assignBundle, fetchOrderById } from "@/lib/montyesim";
+import { incrementPromoUsage } from "@/lib/promo";
+import { validateAffiliateCode, recordAffiliateSale } from "@/lib/affiliate";
+import { stripe, StripePaymentDetails } from "@/lib/stripe";
+import { ensureOrderPaymentColumns } from "@/lib/orders-schema";
+
+function round(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+
+async function buildQrDataUrl(activationCode: string | null): Promise<string | null> {
+  if (!activationCode) return null;
+  try {
+    return await QRCode.toDataURL(activationCode, { width: 480, margin: 1, errorCorrectionLevel: "M" });
+  } catch {
+    return null;
+  }
+}
+
+interface OrderRow {
+  id: number;
+  user_id: string;
+  user_email: string;
+  customer_name: string | null;
+  bundle_code: string;
+  order_reference: string;
+  price: string;
+  promo_code: string | null;
+  affiliate_code: string | null;
+  status: string;
+  refund_id: string | null;
+  [key: string]: unknown;
+}
+
+/**
+ * Resolves a paid Checkout Session: assigns each pending eSIM via MontyeSIM,
+ * marks each order completed/failed, auto-refunds failed items, clears the cart.
+ * Idempotent — only acts on rows still in `pending`.
+ */
+export async function fulfillSession(stripeSessionId: string, payment?: StripePaymentDetails) {
+  await ensureOrderPaymentColumns();
+
+  const res = await pool.query(`SELECT * FROM orders WHERE stripe_session_id = $1 ORDER BY id ASC`, [stripeSessionId]);
+  const rows = res.rows as OrderRow[];
+  if (rows.length === 0) return [];
+
+  // Atomically claim the pending rows so a concurrent caller (e.g. webhook +
+  // confirm-on-return firing together) can't process the same eSIM twice.
+  const claim = await pool.query(
+    `UPDATE orders SET status = 'processing' WHERE stripe_session_id = $1 AND status = 'pending' RETURNING *`,
+    [stripeSessionId]
+  );
+  const pending = claim.rows as OrderRow[];
+
+  // Process each pending eSIM order.
+  for (const row of pending) {
+    try {
+      const montyResult = await assignBundle({
+        bundleCode: row.bundle_code,
+        email: row.user_email,
+        name: row.customer_name || "Customer",
+        orderReference: row.order_reference,
+      });
+
+      const montyOrderId = montyResult.order_id || null;
+      let activationCode: string | null = null;
+      let smdpAddress: string | null = null;
+      let matchingId: string | null = null;
+      let activationOtp: string | null = null;
+      let iccid: string | null = montyResult.iccid || null;
+      let bundleExpiry: string | null = null;
+
+      if (montyOrderId) {
+        try {
+          const order = await fetchOrderById(montyOrderId);
+          if (order) {
+            activationCode = order.activation_code || null;
+            smdpAddress = order.smdp_address || null;
+            matchingId = order.matching_id || null;
+            activationOtp = order.otp || null;
+            iccid = order.iccid || iccid;
+            bundleExpiry = order.bundle_expiry_date || null;
+          }
+        } catch {}
+      }
+
+      const qrCodeUrl = await buildQrDataUrl(activationCode);
+
+      await pool.query(
+        `UPDATE orders SET monty_order_id = $1, iccid = $2, qr_code_url = $3, lpa_code = $4, smdp_address = $5,
+           matching_id = $6, activation_otp = $7, bundle_expiry_date = $8, status = 'completed',
+           stripe_payment_intent = $9, stripe_charge_id = $10, card_brand = $11, card_last4 = $12,
+           card_wallet = $13, payment_method_type = $14, receipt_url = $15
+         WHERE id = $16`,
+        [
+          montyOrderId,
+          iccid,
+          qrCodeUrl,
+          activationCode,
+          smdpAddress,
+          matchingId,
+          activationOtp,
+          bundleExpiry,
+          payment?.paymentIntentId ?? null,
+          payment?.chargeId ?? null,
+          payment?.cardBrand ?? null,
+          payment?.cardLast4 ?? null,
+          payment?.cardWallet ?? null,
+          payment?.methodType ?? null,
+          payment?.receiptUrl ?? null,
+          row.id,
+        ]
+      );
+
+      if (row.affiliate_code) {
+        try {
+          const aff = await validateAffiliateCode(row.affiliate_code, Number(row.price));
+          if (aff.valid && aff.affiliateId) {
+            await recordAffiliateSale({
+              affiliateId: aff.affiliateId,
+              affiliateCode: aff.code || row.affiliate_code,
+              orderId: row.id,
+              orderReference: row.order_reference,
+              saleAmount: Number(row.price),
+              commissionRate: aff.commissionRate,
+            });
+          }
+        } catch {}
+      }
+    } catch (assignError: unknown) {
+      const errorMsg = assignError instanceof Error ? assignError.message : "Assignment failed";
+      await pool.query(
+        `UPDATE orders SET status = 'failed', stripe_payment_intent = $1, stripe_charge_id = $2,
+           card_brand = $3, card_last4 = $4, card_wallet = $5, payment_method_type = $6, receipt_url = $7
+         WHERE id = $8`,
+        [
+          payment?.paymentIntentId ?? null,
+          payment?.chargeId ?? null,
+          payment?.cardBrand ?? null,
+          payment?.cardLast4 ?? null,
+          payment?.cardWallet ?? null,
+          payment?.methodType ?? null,
+          payment?.receiptUrl ?? null,
+          row.id,
+        ]
+      );
+      console.error(`Fulfilment failed for order ${row.order_reference}: ${errorMsg}`);
+    }
+  }
+
+  // Auto-refund any failed items that haven't been refunded yet.
+  if (pending.length > 0) {
+    await refundFailedItems(stripeSessionId, payment);
+  }
+
+  // Increment promo usage once, if at least one item completed.
+  const afterRes = await pool.query(`SELECT status, promo_code FROM orders WHERE stripe_session_id = $1`, [stripeSessionId]);
+  const afterRows = afterRes.rows as { status: string; promo_code: string | null }[];
+  const anyCompleted = afterRows.some((r) => r.status === "completed");
+  const promoCode = afterRows.find((r) => r.promo_code)?.promo_code;
+  if (promoCode && anyCompleted && pending.length > 0) {
+    try {
+      await incrementPromoUsage(promoCode);
+    } catch {}
+  }
+
+  // Clear the cart now that the session has been processed.
+  if (pending.length > 0) {
+    await pool.query(`DELETE FROM cart_items WHERE user_id = $1`, [rows[0].user_id]);
+  }
+
+  const final = await pool.query(`SELECT * FROM orders WHERE stripe_session_id = $1 ORDER BY id ASC`, [stripeSessionId]);
+  return final.rows;
+}
+
+/**
+ * Refunds (full or partial) the value of any failed items in a session that
+ * haven't been refunded yet, then marks them refunded / refund_failed.
+ */
+async function refundFailedItems(stripeSessionId: string, payment?: StripePaymentDetails) {
+  if (!payment?.paymentIntentId) return;
+
+  const res = await pool.query(`SELECT id, price, status, refund_id FROM orders WHERE stripe_session_id = $1`, [stripeSessionId]);
+  const rows = res.rows as { id: number; price: string; status: string; refund_id: string | null }[];
+
+  const failedUnrefunded = rows.filter((r) => r.status === "failed" && !r.refund_id);
+  if (failedUnrefunded.length === 0) return;
+
+  const totalUsd = round(rows.reduce((sum, r) => sum + Number(r.price), 0));
+  const failedUsd = round(failedUnrefunded.reduce((sum, r) => sum + Number(r.price), 0));
+
+  try {
+    let refund;
+    if (failedUsd >= totalUsd || payment.chargeTotalMinor == null || totalUsd <= 0) {
+      // Everything failed (or we can't compute a proportion) → full refund.
+      refund = await stripe.refunds.create({ payment_intent: payment.paymentIntentId });
+    } else {
+      const amount = Math.round(payment.chargeTotalMinor * (failedUsd / totalUsd));
+      refund = await stripe.refunds.create({ payment_intent: payment.paymentIntentId, amount });
+    }
+
+    await pool.query(
+      `UPDATE orders SET status = 'refunded', refund_id = $1, refund_status = 'succeeded'
+       WHERE stripe_session_id = $2 AND status = 'failed' AND refund_id IS NULL`,
+      [refund.id, stripeSessionId]
+    );
+  } catch (refundError: unknown) {
+    const msg = refundError instanceof Error ? refundError.message : "Refund failed";
+    console.error(`Refund failed for session ${stripeSessionId}: ${msg}`);
+    await pool.query(
+      `UPDATE orders SET status = 'refund_failed', refund_status = 'failed'
+       WHERE stripe_session_id = $1 AND status = 'failed' AND refund_id IS NULL`,
+      [stripeSessionId]
+    );
+  }
+}
+
+/**
+ * Marks a session's still-pending orders as cancelled (expired / abandoned /
+ * async payment failed). No money was captured, so nothing to refund. The cart
+ * is left intact so the customer can retry.
+ */
+export async function cancelSession(stripeSessionId: string) {
+  await ensureOrderPaymentColumns();
+  await pool.query(`UPDATE orders SET status = 'cancelled' WHERE stripe_session_id = $1 AND status = 'pending'`, [stripeSessionId]);
+}

@@ -5,7 +5,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, Loader2, Database, Clock, Calendar, Hash, XCircle } from "lucide-react";
 import QrDisplay from "@/components/dashboard/qr-display";
-import DataUsage from "@/components/dashboard/data-usage";
+import UsageDonut, { fmtGb } from "@/components/dashboard/usage-donut";
 import Flag from "@/components/dashboard/flag";
 
 interface Order {
@@ -95,7 +95,35 @@ export default function OrderDetailPage() {
     );
   }
 
-  const isFailed = order.status === "failed";
+  const isCompleted = order.status === "completed";
+
+  const NOTICE: Record<string, { cls: string; text: string }> = {
+    pending: {
+      cls: "border-amber-100 bg-amber-50 text-amber-700",
+      text: "Your payment is being processed. Your eSIM will appear here as soon as it's confirmed.",
+    },
+    processing: {
+      cls: "border-amber-100 bg-amber-50 text-amber-700",
+      text: "Payment confirmed — your eSIM is being issued. This usually takes a few seconds, please refresh shortly.",
+    },
+    refunded: {
+      cls: "border-blue-100 bg-blue-50 text-blue-700",
+      text: "This order could not be completed, so your payment has been refunded to your original payment method.",
+    },
+    refund_failed: {
+      cls: "border-red-100 bg-red-50 text-red-600",
+      text: "This order could not be completed and the automatic refund failed. Our team has been notified — please contact support.",
+    },
+    failed: {
+      cls: "border-red-100 bg-red-50 text-red-600",
+      text: "This order could not be completed. If you were charged, a refund will be issued. Please contact support if you need help.",
+    },
+    cancelled: {
+      cls: "border-gray-100 bg-gray-50 text-[#6B7280]",
+      text: "This checkout was not completed, so no eSIM was issued and no payment was taken.",
+    },
+  };
+  const notice = NOTICE[order.status] || NOTICE.failed;
 
   return (
     <>
@@ -110,7 +138,7 @@ export default function OrderDetailPage() {
           </button>
           <div className="flex items-center gap-3">
             <div className="w-12 h-9 rounded-md overflow-hidden border border-gray-100 shrink-0 relative">
-              <Flag code={order.country_code} className="w-full h-full" />
+              <Flag code={order.country_code} name={order.country} className="w-full h-full" />
             </div>
             <div>
               <h2 className="text-[20px] font-bold text-[#1A1D20]">{order.bundle_name || order.country}</h2>
@@ -119,13 +147,7 @@ export default function OrderDetailPage() {
           </div>
         </div>
 
-        {isFailed ? (
-          <div className="rounded-2xl border border-red-100 bg-red-50 p-6 mb-6">
-            <p className="text-[14px] text-red-600 font-medium">
-              This order could not be completed and no charge was applied. Please try again from Browse.
-            </p>
-          </div>
-        ) : (
+        {isCompleted ? (
           <div className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-6 mb-6">
             <h3 className="text-[16px] font-bold text-[#1A1D20] mb-4">Install your eSIM</h3>
             <QrDisplay
@@ -135,24 +157,47 @@ export default function OrderDetailPage() {
               matchingId={order.matching_id}
             />
           </div>
+        ) : (
+          <div className={`rounded-2xl border p-6 mb-6 ${notice.cls}`}>
+            <p className="text-[14px] font-medium">{notice.text}</p>
+          </div>
         )}
 
-        {consumption && !isFailed && (
+        {consumption && isCompleted && (
           <div className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-6 mb-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-[16px] font-bold text-[#1A1D20]">Data Usage</h3>
               {consumption.plan_status && (
-                <span className="px-2.5 py-1 rounded-full bg-[#FFF4F0] text-[#FF561E] text-[11px] font-semibold">
+                <span className={`px-2.5 py-1 rounded-full text-[11px] font-semibold ${planTone(consumption.plan_status)}`}>
                   {consumption.plan_status}
                 </span>
               )}
             </div>
-            <DataUsage
-              used={consumption.data_used ?? 0}
-              allocated={consumption.data_allocated ?? 0}
-              unit={consumption.data_unit || "GB"}
-              unlimited={consumption.unlimited}
-            />
+            <div className="flex flex-col sm:flex-row items-center gap-6 sm:gap-8">
+              <UsageDonut
+                usedMb={consumption.data_used ?? 0}
+                allocatedMb={consumption.data_allocated ?? 0}
+                unlimited={consumption.unlimited}
+              />
+              <div className="flex-1 w-full space-y-3">
+                <div className="flex items-center justify-between py-2.5 border-b border-gray-50">
+                  <span className="text-[13px] text-[#6B7280]">Used</span>
+                  <span className="text-[13.5px] font-bold text-[#1A1D20]">
+                    {consumption.unlimited ? "—" : `${fmtGb(consumption.data_used ?? 0)} / ${fmtGb(consumption.data_allocated ?? 0)}`}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between py-2.5 border-b border-gray-50">
+                  <span className="text-[13px] text-[#6B7280]">Remaining</span>
+                  <span className="text-[13.5px] font-bold text-[#1A1D20]">
+                    {consumption.unlimited ? "Unlimited" : fmtGb(Math.max(0, (consumption.data_allocated ?? 0) - (consumption.data_used ?? 0)))}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between py-2.5">
+                  <span className="text-[13px] text-[#6B7280]">eSIM Valid Until</span>
+                  <span className="text-[13.5px] font-bold text-[#1A1D20]">{formatValidTill(consumption.bundle_expiry_date) || "—"}</span>
+                </div>
+              </div>
+            </div>
           </div>
         )}
 
@@ -172,6 +217,21 @@ export default function OrderDetailPage() {
       </main>
     </>
   );
+}
+
+function planTone(status: string): string {
+  const s = status.toLowerCase();
+  if (s.includes("not started")) return "bg-amber-50 text-amber-600";
+  if (s.includes("expired") || s.includes("finished") || s.includes("terminated")) return "bg-red-50 text-red-500";
+  if (s.includes("active") || s.includes("started") || s.includes("progress")) return "bg-emerald-50 text-emerald-600";
+  return "bg-gray-100 text-[#6B7280]";
+}
+
+function formatValidTill(raw?: string): string | null {
+  if (!raw) return null;
+  const d = new Date(raw.replace(" ", "T").slice(0, 19));
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric" });
 }
 
 function Detail({ icon: Icon, label, value, mono }: { icon: typeof Database; label: string; value: string; mono?: boolean }) {

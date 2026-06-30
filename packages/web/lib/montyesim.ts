@@ -226,10 +226,14 @@ export async function fetchOrderById(orderId: string) {
 export async function fetchConsumption(orderId: string, orderReference?: string) {
   const { resellerId } = await getAccessToken();
 
+  // MontyeSIM requires EITHER order_id OR previous_order_reference, never both.
   const params = new URLSearchParams();
   params.set("reseller_id", resellerId);
-  params.set("order_id", orderId);
-  if (orderReference) params.set("order_reference", orderReference);
+  if (orderId) {
+    params.set("order_id", orderId);
+  } else if (orderReference) {
+    params.set("previous_order_reference", orderReference);
+  }
 
   const res = await montyFetch(`/Orders/Consumption?${params.toString()}`);
 

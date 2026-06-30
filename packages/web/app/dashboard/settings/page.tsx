@@ -7,7 +7,7 @@ import { Loader2, DollarSign, LogOut, ShieldCheck, LifeBuoy, Mail, Save } from "
 import toast from "react-hot-toast";
 import { signOutAndClear } from "@/lib/auth-client";
 
-const CURRENCIES = ["USD", "EUR", "GBP", "AED", "INR"];
+const CURRENCIES = ["USD", "EUR", "GBP"];
 
 export default function SettingsPage() {
   const router = useRouter();

@@ -3,6 +3,7 @@
 import DashboardTopbar from "@/components/dashboard/topbar";
 import HeroCarousel from "@/components/dashboard/hero-carousel";
 import DestinationsCarousel from "@/components/dashboard/destinations-carousel";
+import UsageOverview from "@/components/dashboard/usage-overview";
 import { Skeleton } from "@/components/dashboard/skeleton";
 import { useCachedSession } from "@/lib/auth-client";
 import { useCurrency } from "@/lib/currency-context";
@@ -24,7 +25,7 @@ import {
   CheckCircle2,
   Clock,
   XCircle,
-  ChevronRight,
+  RotateCcw,
   type LucideIcon,
 } from "lucide-react";
 
@@ -89,7 +90,9 @@ function DecoWave({ id, color }: { id: string; color: string }) {
 
 function statusIcon(status: string) {
   if (status === "completed") return <CheckCircle2 className="w-4 h-4 text-emerald-500" strokeWidth={2.5} />;
-  if (status === "failed") return <XCircle className="w-4 h-4 text-red-500" strokeWidth={2.5} />;
+  if (status === "refunded") return <RotateCcw className="w-4 h-4 text-blue-500" strokeWidth={2.5} />;
+  if (status === "failed" || status === "refund_failed") return <XCircle className="w-4 h-4 text-red-500" strokeWidth={2.5} />;
+  if (status === "cancelled") return <XCircle className="w-4 h-4 text-gray-400" strokeWidth={2.5} />;
   return <Clock className="w-4 h-4 text-amber-500" strokeWidth={2.5} />;
 }
 
@@ -263,51 +266,22 @@ export default function DashboardPage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-7">
-          <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-[16px] font-bold text-[#1A1D20]">My Data Usage</h3>
-              {completedOrders.length > 0 && (
-                <Link href="/dashboard/esims" className="text-[13px] font-semibold text-[#FF561E] hover:text-[#E04B18] flex items-center gap-1">
-                  View All <ArrowRight className="w-3.5 h-3.5" />
-                </Link>
-              )}
-            </div>
+          <div className="lg:col-span-2">
             {loading ? (
-              <div className="space-y-2">
-                {Array.from({ length: 3 }).map((_, i) => (
-                  <Skeleton key={i} className="h-[60px] rounded-xl" />
-                ))}
-              </div>
-            ) : completedOrders.length === 0 ? (
-              <div className="py-10 text-center">
-                <div className="w-14 h-14 rounded-full bg-gray-50 flex items-center justify-center mx-auto mb-3">
-                  <Smartphone className="w-6 h-6 text-gray-300" strokeWidth={1.5} />
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-6">
+                <Skeleton className="h-5 w-40 mb-5" />
+                <div className="flex items-center gap-8">
+                  <Skeleton className="w-[168px] h-[168px] rounded-full" />
+                  <div className="flex-1 space-y-3">
+                    <Skeleton className="h-6 w-24" />
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-2/3" />
+                  </div>
                 </div>
-                <p className="text-[15px] font-semibold text-[#1A1D20]">No active eSIMs</p>
-                <p className="text-[13px] text-[#6B7280] mt-1 mb-4">Purchase an eSIM plan to see your data usage here.</p>
-                <Link href="/dashboard/browse" className="inline-flex px-5 py-2.5 rounded-xl border border-[#FF561E]/40 text-[#FF561E] text-[13px] font-bold hover:bg-[#FF561E] hover:text-white transition-colors">
-                  Browse eSIM Plans
-                </Link>
               </div>
             ) : (
-              <div className="space-y-2">
-                {completedOrders.slice(0, 4).map((o) => (
-                  <Link key={o.id} href={`/dashboard/orders/${o.id}`} className="flex items-center justify-between px-4 py-3 rounded-xl border border-gray-100 hover:border-orange-100 hover:bg-gray-50/50 transition-all">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-9 h-9 rounded-lg bg-[#FFF4F0] flex items-center justify-center">
-                        <Smartphone className="w-4 h-4 text-[#FF561E]" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-[13px] font-semibold text-[#1A1D20] truncate">{o.bundle_name || o.country}</p>
-                        <p className="text-[11px] text-[#6B7280]">{o.data_amount || "eSIM"}</p>
-                      </div>
-                    </div>
-                    <span className="inline-flex items-center gap-1 text-[12px] font-semibold text-[#FF561E]">
-                      View usage <ChevronRight className="w-3.5 h-3.5" />
-                    </span>
-                  </Link>
-                ))}
-              </div>
+              <UsageOverview orders={completedOrders} />
             )}
           </div>
 

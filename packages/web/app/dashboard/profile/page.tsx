@@ -10,7 +10,7 @@ interface ProfileData {
   profile: { phone: string | null; preferred_currency: string; country: string | null };
 }
 
-const CURRENCIES = ["USD", "EUR", "GBP", "AED", "INR"];
+const CURRENCIES = ["USD", "EUR", "GBP"];
 
 export default function ProfilePage() {
   const [data, setData] = useState<ProfileData | null>(null);
