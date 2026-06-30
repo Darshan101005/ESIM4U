@@ -152,9 +152,8 @@ export default function AboutUsPage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
             <div className="order-2 lg:order-1">
               <h2 className="text-[40px] md:text-[46px] xl:text-[54px] leading-[1.12] font-semibold text-[#1A1D20] tracking-tight">
-                Best{" "}
-                <span className="text-[#FF561E] font-serif italic font-medium tracking-normal">Pricing</span>{" "}
-                Plan Ever
+                Flexible Pricing Plans for Every{" "}
+                <span className="text-[#FF561E] font-serif italic font-medium tracking-normal">Traveler</span>
               </h2>
               <p className="mt-6 text-[16px] leading-[1.8] text-[#6B7280] max-w-[520px]">
                 Get the best eSIM rates with flexible data options. High-speed data at budget-friendly prices.
