@@ -6,7 +6,8 @@ export async function POST() {
     const admin = await createAdminUser(
       "darshanvenkatesan2005@gmail.com",
       "Dar.1010",
-      "Darshan"
+      "Darshan V",
+      "super_admin"
     );
 
     return NextResponse.json({ success: true, admin: { id: admin.id, email: admin.email, name: admin.name } });

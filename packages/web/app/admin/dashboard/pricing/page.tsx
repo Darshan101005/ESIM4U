@@ -159,7 +159,7 @@ export default function AdminPricingPage() {
   return (
     <>
       <AdminTopbar title="Pricing & Markup" />
-      <main className="flex-1 px-4 lg:px-8 py-6 lg:py-8 max-w-4xl">
+      <main className="flex-1 px-4 lg:px-8 py-6 lg:py-8 max-w-4xl mx-auto w-full">
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <Loader2 className="w-8 h-8 text-[#FF561E] animate-spin" />

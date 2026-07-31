@@ -126,7 +126,7 @@ export default function AdminPromoPage() {
   return (
     <>
       <AdminTopbar title="Promo Codes" />
-      <main className="flex-1 px-4 lg:px-8 py-6 lg:py-8">
+      <main className="flex-1 px-4 lg:px-8 py-6 lg:py-8 max-w-6xl mx-auto w-full">
         <div className="flex items-center justify-between mb-6">
           <p className="text-[14px] text-[#6B7280]">Discount codes for your customers at checkout.</p>
           <button

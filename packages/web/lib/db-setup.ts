@@ -81,6 +81,9 @@ export async function initializeDatabase() {
     )
   `);
 
+  await pool.query(`ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS role VARCHAR(20) DEFAULT 'admin'`);
+  await pool.query(`ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true`);
+
   await pool.query(`
     CREATE TABLE IF NOT EXISTS orders (
       id SERIAL PRIMARY KEY,

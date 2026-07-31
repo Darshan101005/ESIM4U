@@ -16,11 +16,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
     }
 
+    if (admin.is_active === false) {
+      return NextResponse.json({ error: "This admin account has been paused. Contact a super admin." }, { status: 403 });
+    }
+
     const token = generateAdminToken(admin);
 
     const response = NextResponse.json({
       success: true,
-      admin: { id: admin.id, email: admin.email, name: admin.name },
+      admin: { id: admin.id, email: admin.email, name: admin.name, role: admin.role },
     });
 
     response.cookies.set(getAdminCookieName(), token, {

@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import Image from "next/image";
-import { LayoutDashboard, Users, ShoppingBag, Tag, Package, LogOut, Menu, X, ShieldCheck, Ticket, Megaphone } from "lucide-react";
-import { useState } from "react";
+import { LayoutDashboard, Users, ShoppingBag, Tag, Package, LogOut, Menu, X, ShieldCheck, Ticket, Megaphone, Settings, UserCog } from "lucide-react";
+import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
 
 const navItems = [
@@ -21,6 +21,26 @@ export default function AdminSidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [admin, setAdmin] = useState<{ name: string; email: string; role: string }>({
+    name: "Darshan V",
+    email: "",
+    role: "admin",
+  });
+
+  useEffect(() => {
+    fetch("/api/admin/me", { cache: "no-store" })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.name) setAdmin({ name: data.name, email: data.email || "", role: data.role || "admin" });
+      })
+      .catch(() => {});
+  }, []);
+
+  const isSuper = admin.role === "super_admin";
+  const RoleIcon = isSuper ? ShieldCheck : UserCog;
+  const roleLabel = isSuper ? "Super Admin" : "Admin";
+
+  const adminInitial = (admin.name || "D").trim().charAt(0).toUpperCase();
 
   const handleSignOut = async () => {
     try {
@@ -69,7 +89,26 @@ export default function AdminSidebar() {
         })}
       </nav>
 
-      <div className="px-3 pb-6">
+      <div className="px-3 pb-6 space-y-2">
+        <div className="flex items-center gap-3 px-3 py-3 rounded-xl bg-[#FFF4F0] border border-orange-100">
+          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#FF561E] to-[#FF7A45] flex items-center justify-center shrink-0">
+            <span className="text-white text-[14px] font-bold">{adminInitial}</span>
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-[13px] font-bold text-[#1A1D20] truncate">{admin.name}</p>
+            <span className="inline-flex items-center gap-1 text-[11.5px] font-semibold text-[#FF561E]">
+              <RoleIcon className="w-3.5 h-3.5" strokeWidth={2.2} /> {roleLabel}
+            </span>
+          </div>
+          <Link
+            href="/admin/dashboard/settings"
+            onClick={() => setMobileOpen(false)}
+            title="Settings"
+            className="w-8 h-8 rounded-lg bg-white border border-orange-100 flex items-center justify-center text-[#6B7280] hover:text-[#FF561E] hover:border-[#FF561E]/40 transition-colors shrink-0"
+          >
+            <Settings className="w-4 h-4" strokeWidth={2} />
+          </Link>
+        </div>
         <button
           onClick={handleSignOut}
           className="flex items-center gap-3 px-4 py-3 rounded-xl text-[14px] font-medium text-[#6B7280] hover:bg-red-50 hover:text-red-500 transition-all duration-200 w-full"

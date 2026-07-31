@@ -85,7 +85,7 @@ export default function AdminBundlesPage() {
   return (
     <>
       <AdminTopbar title="Bundles" />
-      <main className="flex-1 px-4 lg:px-8 py-6 lg:py-8">
+      <main className="flex-1 px-4 lg:px-8 py-6 lg:py-8 max-w-6xl mx-auto w-full">
         <div className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-6 mb-6">
           <p className="text-[13px] text-[#6B7280] mb-4">
             Inspect the live MontyeSIM catalog with your cost, the customer price after markup, and the resulting margin.

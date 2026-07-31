@@ -3,7 +3,7 @@
 import AdminTopbar from "@/components/admin/admin-topbar";
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import { Users, ShoppingBag, DollarSign, TrendingUp, Wallet, Loader2, ArrowRight, CheckCircle2, Clock, XCircle } from "lucide-react";
+import { Users, ShoppingBag, DollarSign, TrendingUp, Wallet, Loader2, ArrowRight, CheckCircle2, Clock, XCircle, ShieldCheck } from "lucide-react";
 import StatCard from "@/components/dashboard/stat-card";
 
 interface DashboardData {
@@ -43,6 +43,7 @@ function statusBadge(status: string) {
 export default function AdminDashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -58,6 +59,10 @@ export default function AdminDashboardPage() {
 
   useEffect(() => {
     load();
+    fetch("/api/admin/me", { cache: "no-store" })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((d) => setIsSuperAdmin(d?.role === "super_admin"))
+      .catch(() => {});
   }, [load]);
 
   const s = data?.stats;
@@ -65,8 +70,20 @@ export default function AdminDashboardPage() {
 
   return (
     <>
-      <AdminTopbar title="Overview" />
-      <main className="flex-1 px-4 lg:px-8 py-6 lg:py-8">
+      <AdminTopbar
+        title="Overview"
+        right={
+          isSuperAdmin ? (
+            <Link
+              href="/admin/dashboard/manage"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#FF561E] text-white text-[13px] font-bold hover:bg-[#E04B18] transition-colors shadow-sm shadow-orange-500/25"
+            >
+              <ShieldCheck className="w-4 h-4" /> Manage Admins
+            </Link>
+          ) : undefined
+        }
+      />
+      <main className="flex-1 px-4 lg:px-8 py-6 lg:py-8 max-w-6xl mx-auto w-full">
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <Loader2 className="w-8 h-8 text-[#FF561E] animate-spin" />

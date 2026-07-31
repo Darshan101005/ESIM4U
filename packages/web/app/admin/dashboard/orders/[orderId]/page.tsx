@@ -96,7 +96,7 @@ export default function AdminOrderDetailPage() {
   return (
     <>
       <AdminTopbar title="Order Details" />
-      <main className="flex-1 px-4 lg:px-8 py-6 lg:py-8 max-w-4xl">
+      <main className="flex-1 px-4 lg:px-8 py-6 lg:py-8 max-w-4xl mx-auto w-full">
         <div className="flex items-center gap-4 mb-6">
           <button
             onClick={() => router.back()}

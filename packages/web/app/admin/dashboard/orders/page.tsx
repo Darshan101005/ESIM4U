@@ -72,7 +72,7 @@ export default function AdminOrdersPage() {
   return (
     <>
       <AdminTopbar title="Orders" />
-      <main className="flex-1 px-4 lg:px-8 py-6 lg:py-8">
+      <main className="flex-1 px-4 lg:px-8 py-6 lg:py-8 max-w-6xl mx-auto w-full">
         <div className="flex items-center gap-2 mb-6 flex-wrap">
           {STATUSES.map((s) => (
             <button

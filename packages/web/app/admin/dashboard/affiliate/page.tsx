@@ -127,7 +127,7 @@ export default function AdminAffiliatePage() {
   return (
     <>
       <AdminTopbar title="Affiliates" />
-      <main className="flex-1 px-4 lg:px-8 py-6 lg:py-8">
+      <main className="flex-1 px-4 lg:px-8 py-6 lg:py-8 max-w-6xl mx-auto w-full">
         <div className="flex items-center justify-between mb-6">
           <p className="text-[14px] text-[#6B7280]">Codes for influencers / YouTubers — track their sales and commission owed.</p>
           <button
