@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CheckCircle2, Clock, XCircle, RotateCcw } from "lucide-react";
+import { CheckCircle2, Clock, XCircle, RotateCcw, PauseCircle } from "lucide-react";
 import Flag from "@/components/dashboard/flag";
 
 export interface OrderSummary {
@@ -45,6 +45,30 @@ function StatusBadge({ status }: { status: string }) {
       return (
         <span className={`${base} bg-gray-100 text-[#6B7280]`}>
           <XCircle className="w-3.5 h-3.5" /> Cancelled
+        </span>
+      );
+    case "pending_verification":
+      return (
+        <span className={`${base} bg-amber-50 text-amber-600`}>
+          <Clock className="w-3.5 h-3.5" /> Pending Verification
+        </span>
+      );
+    case "processing":
+      return (
+        <span className={`${base} bg-blue-50 text-blue-600`}>
+          <Clock className="w-3.5 h-3.5" /> Processing
+        </span>
+      );
+    case "on_hold":
+      return (
+        <span className={`${base} bg-gray-100 text-[#6B7280]`}>
+          <PauseCircle className="w-3.5 h-3.5" /> On Hold
+        </span>
+      );
+    case "rejected":
+      return (
+        <span className={`${base} bg-red-50 text-red-500`}>
+          <XCircle className="w-3.5 h-3.5" /> Rejected
         </span>
       );
     default:

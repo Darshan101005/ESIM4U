@@ -17,7 +17,7 @@ const FILTERS: { key: TxFilter; label: string }[] = [
 
 function normalizeStatus(status: string): TxFilter {
   if (status === "completed") return "completed";
-  if (status === "failed") return "failed";
+  if (status === "failed" || status === "refund_failed" || status === "rejected") return "failed";
   return "pending";
 }
 

@@ -102,6 +102,18 @@ export default function OrderDetailPage() {
       cls: "border-amber-100 bg-amber-50 text-amber-700",
       text: "Your payment is being processed. Your eSIM will appear here as soon as it's confirmed.",
     },
+    pending_verification: {
+      cls: "border-amber-100 bg-amber-50 text-amber-700",
+      text: "We've received your payment details and are verifying your bank transfer. Your eSIM will appear here once it's approved, usually within a few hours.",
+    },
+    on_hold: {
+      cls: "border-gray-100 bg-gray-50 text-[#6B7280]",
+      text: "Your bank transfer is on hold while we check a few details. Our team may reach out, or you can contact support for a quicker update.",
+    },
+    rejected: {
+      cls: "border-red-100 bg-red-50 text-red-600",
+      text: "We couldn't verify your bank transfer, so this order wasn't activated. If you believe this is a mistake, please contact support.",
+    },
     processing: {
       cls: "border-amber-100 bg-amber-50 text-amber-700",
       text: "Payment confirmed — your eSIM is being issued. This usually takes a few seconds, please refresh shortly.",

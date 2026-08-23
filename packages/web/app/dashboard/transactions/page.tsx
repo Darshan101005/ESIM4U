@@ -38,10 +38,11 @@ const FILTERS: { key: TxFilter; label: string }[] = [
 
 function normalizeStatus(status: string): TxFilter {
   if (status === "completed") return "completed";
-  if (status === "pending" || status === "processing") return "pending";
+  if (status === "pending" || status === "processing" || status === "pending_verification" || status === "on_hold")
+    return "pending";
   if (status === "refunded") return "refunded";
   if (status === "cancelled") return "cancelled";
-  return "failed"; // failed + refund_failed
+  return "failed"; // failed + refund_failed + rejected
 }
 
 function pillMeta(status: string): { label: string; cls: string } {
@@ -51,7 +52,13 @@ function pillMeta(status: string): { label: string; cls: string } {
     case "pending":
       return { label: "Pending", cls: "bg-amber-50 text-amber-600" };
     case "processing":
-      return { label: "Processing", cls: "bg-amber-50 text-amber-600" };
+      return { label: "Processing", cls: "bg-blue-50 text-blue-600" };
+    case "pending_verification":
+      return { label: "Pending Verification", cls: "bg-amber-50 text-amber-600" };
+    case "on_hold":
+      return { label: "On Hold", cls: "bg-gray-100 text-[#6B7280]" };
+    case "rejected":
+      return { label: "Rejected", cls: "bg-red-50 text-red-500" };
     case "refunded":
       return { label: "Refunded", cls: "bg-blue-50 text-blue-600" };
     case "refund_failed":
@@ -106,6 +113,9 @@ function lockedAmount(t: Transaction): string {
 // Builds "<method> · <gateway>" capturing maximum detail.
 // Gateway is derived from stored data (Stripe today, others later) — never hardcoded.
 function buildMethodLabel(t: Transaction): string {
+  if (t.payment_method_type === "bank_transfer") return "Bank Transfer · Monzo";
+  if (t.payment_method_type === "wallet") return "eSIM4U Wallet";
+
   let method: string | null = null;
   if (t.card_wallet) {
     method = prettyType(t.card_wallet);

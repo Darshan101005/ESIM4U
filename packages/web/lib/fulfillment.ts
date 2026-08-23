@@ -356,6 +356,79 @@ async function refundFailedItemsToWallet(walletReference: string, userId: string
 }
 
 /**
+ * Provisions the eSIMs for an admin-approved bank transfer. The customer paid
+ * by manual bank transfer, so there is NO automatic refund — any item that
+ * fails to provision is marked `failed` for the admin to retry or refund
+ * manually. Claims rows still in `pending_verification` or `failed`, so this
+ * doubles as the "retry failed items" action. Returns the final order rows.
+ */
+export async function fulfillBankTransferSession(bankTransferReference: string) {
+  await ensureOrderPaymentColumns();
+
+  const res = await pool.query(`SELECT * FROM orders WHERE bank_transfer_reference = $1 ORDER BY id ASC`, [
+    bankTransferReference,
+  ]);
+  const rows = res.rows as OrderRow[];
+  if (rows.length === 0) return [];
+
+  const claim = await pool.query(
+    `UPDATE orders SET status = 'processing'
+     WHERE bank_transfer_reference = $1 AND status IN ('pending_verification', 'failed') RETURNING *`,
+    [bankTransferReference]
+  );
+  const pending = claim.rows as OrderRow[];
+
+  for (const row of pending) {
+    try {
+      const a = await performAssignment(row);
+      await pool.query(
+        `UPDATE orders SET monty_order_id = $1, iccid = $2, qr_code_url = $3, lpa_code = $4, smdp_address = $5,
+           matching_id = $6, activation_otp = $7, bundle_expiry_date = $8, status = 'completed',
+           payment_method_type = 'bank_transfer'
+         WHERE id = $9`,
+        [a.montyOrderId, a.iccid, a.qrCodeUrl, a.activationCode, a.smdpAddress, a.matchingId, a.activationOtp, a.bundleExpiry, row.id]
+      );
+
+      await recordAffiliateForRow(row);
+    } catch (assignError: unknown) {
+      const errorMsg = assignError instanceof Error ? assignError.message : "Assignment failed";
+      await pool.query(`UPDATE orders SET status = 'failed', payment_method_type = 'bank_transfer' WHERE id = $1`, [row.id]);
+      console.error(`Bank-transfer fulfilment failed for order ${row.order_reference}: ${errorMsg}`);
+    }
+  }
+
+  await finalizeSessionSideEffects("bank_transfer_reference", bankTransferReference, rows[0].user_id, pending.length > 0);
+
+  const final = await pool.query(`SELECT * FROM orders WHERE bank_transfer_reference = $1 ORDER BY id ASC`, [
+    bankTransferReference,
+  ]);
+  return final.rows as OrderRow[];
+}
+
+/**
+ * Marks an admin-rejected bank transfer's orders as `rejected`. No provisioning,
+ * no refund (money handled manually / not received).
+ */
+export async function rejectBankTransferOrders(bankTransferReference: string) {
+  await ensureOrderPaymentColumns();
+  await pool.query(
+    `UPDATE orders SET status = 'rejected'
+     WHERE bank_transfer_reference = $1 AND status IN ('pending_verification', 'on_hold')`,
+    [bankTransferReference]
+  );
+}
+
+/** Puts an admin-held bank transfer's pending orders into `on_hold`. */
+export async function holdBankTransferOrders(bankTransferReference: string) {
+  await ensureOrderPaymentColumns();
+  await pool.query(
+    `UPDATE orders SET status = 'on_hold'
+     WHERE bank_transfer_reference = $1 AND status IN ('pending_verification', 'rejected')`,
+    [bankTransferReference]
+  );
+}
+
+/**
  * Marks a session's still-pending orders as cancelled (expired / abandoned /
  * async payment failed). No money was captured, so nothing to refund. The cart
  * is left intact so the customer can retry.

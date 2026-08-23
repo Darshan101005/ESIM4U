@@ -1,6 +1,6 @@
-const LOGO_URL = "https://res.cloudinary.com/dvjnmti1l/image/upload/v1780838460/esim4u-logo_jetmv6.png";
+const LOGO_URL = "https://res.cloudinary.com/esim4u/image/upload/v1780838460/esim4u-logo_jetmv6.png";
 const BRAND_ORANGE = "#FF5722";
-const SUPPORT_EMAIL = "support@esim4u.com";
+const SUPPORT_EMAIL = "support@esim4u.uk";
 const DASHBOARD_URL = "https://esim4u.uk/dashboard";
 
 export function getOTPEmailTemplate(otp: string, name: string): string {
