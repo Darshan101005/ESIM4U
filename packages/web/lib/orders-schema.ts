@@ -20,6 +20,8 @@ export async function ensureOrderPaymentColumns(): Promise<void> {
     ALTER TABLE orders ADD COLUMN IF NOT EXISTS refund_id TEXT;
     ALTER TABLE orders ADD COLUMN IF NOT EXISTS refund_status VARCHAR(20);
     ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_name TEXT;
+    ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_source VARCHAR(20) DEFAULT 'stripe';
+    ALTER TABLE orders ADD COLUMN IF NOT EXISTS wallet_reference TEXT;
   `);
   ensured = true;
 }

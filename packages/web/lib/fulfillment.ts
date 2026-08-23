@@ -5,6 +5,7 @@ import { incrementPromoUsage } from "@/lib/promo";
 import { validateAffiliateCode, recordAffiliateSale } from "@/lib/affiliate";
 import { stripe, StripePaymentDetails } from "@/lib/stripe";
 import { ensureOrderPaymentColumns } from "@/lib/orders-schema";
+import { creditWallet } from "@/lib/wallet";
 
 function round(value: number): number {
   return Math.round(value * 100) / 100;
@@ -34,6 +35,98 @@ interface OrderRow {
   [key: string]: unknown;
 }
 
+interface AssignmentData {
+  montyOrderId: string | null;
+  iccid: string | null;
+  qrCodeUrl: string | null;
+  activationCode: string | null;
+  smdpAddress: string | null;
+  matchingId: string | null;
+  activationOtp: string | null;
+  bundleExpiry: string | null;
+}
+
+/**
+ * Calls MontyeSIM to provision the eSIM for a single order row and gathers the
+ * activation details. Shared by both the Stripe and wallet fulfilment paths.
+ * Throws if provisioning fails.
+ */
+async function performAssignment(row: OrderRow): Promise<AssignmentData> {
+  const montyResult = await assignBundle({
+    bundleCode: row.bundle_code,
+    email: row.user_email,
+    name: row.customer_name || "Customer",
+    orderReference: row.order_reference,
+  });
+
+  const montyOrderId = montyResult.order_id || null;
+  let activationCode: string | null = null;
+  let smdpAddress: string | null = null;
+  let matchingId: string | null = null;
+  let activationOtp: string | null = null;
+  let iccid: string | null = montyResult.iccid || null;
+  let bundleExpiry: string | null = null;
+
+  if (montyOrderId) {
+    try {
+      const order = await fetchOrderById(montyOrderId);
+      if (order) {
+        activationCode = order.activation_code || null;
+        smdpAddress = order.smdp_address || null;
+        matchingId = order.matching_id || null;
+        activationOtp = order.otp || null;
+        iccid = order.iccid || iccid;
+        bundleExpiry = order.bundle_expiry_date || null;
+      }
+    } catch {}
+  }
+
+  const qrCodeUrl = await buildQrDataUrl(activationCode);
+
+  return { montyOrderId, iccid, qrCodeUrl, activationCode, smdpAddress, matchingId, activationOtp, bundleExpiry };
+}
+
+/** Records the affiliate commission for a completed order, if one applies. */
+async function recordAffiliateForRow(row: OrderRow): Promise<void> {
+  if (!row.affiliate_code) return;
+  try {
+    const aff = await validateAffiliateCode(row.affiliate_code, Number(row.price));
+    if (aff.valid && aff.affiliateId) {
+      await recordAffiliateSale({
+        affiliateId: aff.affiliateId,
+        affiliateCode: aff.code || row.affiliate_code,
+        orderId: row.id,
+        orderReference: row.order_reference,
+        saleAmount: Number(row.price),
+        commissionRate: aff.commissionRate,
+      });
+    }
+  } catch {}
+}
+
+/** Increments promo usage once if any item completed. Shared helper. */
+async function finalizeSessionSideEffects(
+  whereClause: string,
+  whereValue: string,
+  userId: string,
+  hadPending: boolean
+): Promise<void> {
+  if (!hadPending) return;
+
+  const afterRes = await pool.query(`SELECT status, promo_code FROM orders WHERE ${whereClause} = $1`, [whereValue]);
+  const afterRows = afterRes.rows as { status: string; promo_code: string | null }[];
+  const anyCompleted = afterRows.some((r) => r.status === "completed");
+  const promoCode = afterRows.find((r) => r.promo_code)?.promo_code;
+  if (promoCode && anyCompleted) {
+    try {
+      await incrementPromoUsage(promoCode);
+    } catch {}
+  }
+
+  // Clear the cart now that the session has been processed.
+  await pool.query(`DELETE FROM cart_items WHERE user_id = $1`, [userId]);
+}
+
 /**
  * Resolves a paid Checkout Session: assigns each pending eSIM via MontyeSIM,
  * marks each order completed/failed, auto-refunds failed items, clears the cart.
@@ -54,40 +147,9 @@ export async function fulfillSession(stripeSessionId: string, payment?: StripePa
   );
   const pending = claim.rows as OrderRow[];
 
-  // Process each pending eSIM order.
   for (const row of pending) {
     try {
-      const montyResult = await assignBundle({
-        bundleCode: row.bundle_code,
-        email: row.user_email,
-        name: row.customer_name || "Customer",
-        orderReference: row.order_reference,
-      });
-
-      const montyOrderId = montyResult.order_id || null;
-      let activationCode: string | null = null;
-      let smdpAddress: string | null = null;
-      let matchingId: string | null = null;
-      let activationOtp: string | null = null;
-      let iccid: string | null = montyResult.iccid || null;
-      let bundleExpiry: string | null = null;
-
-      if (montyOrderId) {
-        try {
-          const order = await fetchOrderById(montyOrderId);
-          if (order) {
-            activationCode = order.activation_code || null;
-            smdpAddress = order.smdp_address || null;
-            matchingId = order.matching_id || null;
-            activationOtp = order.otp || null;
-            iccid = order.iccid || iccid;
-            bundleExpiry = order.bundle_expiry_date || null;
-          }
-        } catch {}
-      }
-
-      const qrCodeUrl = await buildQrDataUrl(activationCode);
-
+      const a = await performAssignment(row);
       await pool.query(
         `UPDATE orders SET monty_order_id = $1, iccid = $2, qr_code_url = $3, lpa_code = $4, smdp_address = $5,
            matching_id = $6, activation_otp = $7, bundle_expiry_date = $8, status = 'completed',
@@ -95,14 +157,14 @@ export async function fulfillSession(stripeSessionId: string, payment?: StripePa
            card_wallet = $13, payment_method_type = $14, receipt_url = $15
          WHERE id = $16`,
         [
-          montyOrderId,
-          iccid,
-          qrCodeUrl,
-          activationCode,
-          smdpAddress,
-          matchingId,
-          activationOtp,
-          bundleExpiry,
+          a.montyOrderId,
+          a.iccid,
+          a.qrCodeUrl,
+          a.activationCode,
+          a.smdpAddress,
+          a.matchingId,
+          a.activationOtp,
+          a.bundleExpiry,
           payment?.paymentIntentId ?? null,
           payment?.chargeId ?? null,
           payment?.cardBrand ?? null,
@@ -114,21 +176,7 @@ export async function fulfillSession(stripeSessionId: string, payment?: StripePa
         ]
       );
 
-      if (row.affiliate_code) {
-        try {
-          const aff = await validateAffiliateCode(row.affiliate_code, Number(row.price));
-          if (aff.valid && aff.affiliateId) {
-            await recordAffiliateSale({
-              affiliateId: aff.affiliateId,
-              affiliateCode: aff.code || row.affiliate_code,
-              orderId: row.id,
-              orderReference: row.order_reference,
-              saleAmount: Number(row.price),
-              commissionRate: aff.commissionRate,
-            });
-          }
-        } catch {}
-      }
+      await recordAffiliateForRow(row);
     } catch (assignError: unknown) {
       const errorMsg = assignError instanceof Error ? assignError.message : "Assignment failed";
       await pool.query(
@@ -155,29 +203,15 @@ export async function fulfillSession(stripeSessionId: string, payment?: StripePa
     await refundFailedItems(stripeSessionId, payment);
   }
 
-  // Increment promo usage once, if at least one item completed.
-  const afterRes = await pool.query(`SELECT status, promo_code FROM orders WHERE stripe_session_id = $1`, [stripeSessionId]);
-  const afterRows = afterRes.rows as { status: string; promo_code: string | null }[];
-  const anyCompleted = afterRows.some((r) => r.status === "completed");
-  const promoCode = afterRows.find((r) => r.promo_code)?.promo_code;
-  if (promoCode && anyCompleted && pending.length > 0) {
-    try {
-      await incrementPromoUsage(promoCode);
-    } catch {}
-  }
-
-  // Clear the cart now that the session has been processed.
-  if (pending.length > 0) {
-    await pool.query(`DELETE FROM cart_items WHERE user_id = $1`, [rows[0].user_id]);
-  }
+  await finalizeSessionSideEffects("stripe_session_id", stripeSessionId, rows[0].user_id, pending.length > 0);
 
   const final = await pool.query(`SELECT * FROM orders WHERE stripe_session_id = $1 ORDER BY id ASC`, [stripeSessionId]);
   return final.rows;
 }
 
 /**
- * Refunds (full or partial) the value of any failed items in a session that
- * haven't been refunded yet, then marks them refunded / refund_failed.
+ * Refunds (full or partial) the value of any failed items in a Stripe session
+ * that haven't been refunded yet, then marks them refunded / refund_failed.
  */
 async function refundFailedItems(stripeSessionId: string, payment?: StripePaymentDetails) {
   if (!payment?.paymentIntentId) return;
@@ -213,6 +247,110 @@ async function refundFailedItems(stripeSessionId: string, payment?: StripePaymen
       `UPDATE orders SET status = 'refund_failed', refund_status = 'failed'
        WHERE stripe_session_id = $1 AND status = 'failed' AND refund_id IS NULL`,
       [stripeSessionId]
+    );
+  }
+}
+
+/**
+ * Fulfils a set of orders paid for with wallet balance. The wallet has already
+ * been debited by the caller for the full amount, so any items that fail to
+ * provision are refunded straight back to the wallet. Idempotent — only acts on
+ * rows still in `pending` for this wallet reference.
+ */
+export async function fulfillWalletSession(walletReference: string) {
+  await ensureOrderPaymentColumns();
+
+  const res = await pool.query(`SELECT * FROM orders WHERE wallet_reference = $1 ORDER BY id ASC`, [walletReference]);
+  const rows = res.rows as OrderRow[];
+  if (rows.length === 0) return [];
+
+  const claim = await pool.query(
+    `UPDATE orders SET status = 'processing' WHERE wallet_reference = $1 AND status = 'pending' RETURNING *`,
+    [walletReference]
+  );
+  const pending = claim.rows as OrderRow[];
+
+  for (const row of pending) {
+    try {
+      const a = await performAssignment(row);
+      await pool.query(
+        `UPDATE orders SET monty_order_id = $1, iccid = $2, qr_code_url = $3, lpa_code = $4, smdp_address = $5,
+           matching_id = $6, activation_otp = $7, bundle_expiry_date = $8, status = 'completed',
+           payment_method_type = 'wallet'
+         WHERE id = $9`,
+        [a.montyOrderId, a.iccid, a.qrCodeUrl, a.activationCode, a.smdpAddress, a.matchingId, a.activationOtp, a.bundleExpiry, row.id]
+      );
+
+      await recordAffiliateForRow(row);
+    } catch (assignError: unknown) {
+      const errorMsg = assignError instanceof Error ? assignError.message : "Assignment failed";
+      await pool.query(`UPDATE orders SET status = 'failed', payment_method_type = 'wallet' WHERE id = $1`, [row.id]);
+      console.error(`Wallet fulfilment failed for order ${row.order_reference}: ${errorMsg}`);
+    }
+  }
+
+  if (pending.length > 0) {
+    await refundFailedItemsToWallet(walletReference, rows[0].user_id);
+  }
+
+  await finalizeSessionSideEffects("wallet_reference", walletReference, rows[0].user_id, pending.length > 0);
+
+  const final = await pool.query(`SELECT * FROM orders WHERE wallet_reference = $1 ORDER BY id ASC`, [walletReference]);
+  return final.rows;
+}
+
+/**
+ * Credits the value of any failed wallet-paid items back to the customer's
+ * wallet, then marks them refunded. No external gateway involved.
+ */
+async function refundFailedItemsToWallet(walletReference: string, userId: string) {
+  const res = await pool.query(
+    `SELECT id, price, status, refund_id, display_currency, display_rate FROM orders WHERE wallet_reference = $1`,
+    [walletReference]
+  );
+  const rows = res.rows as {
+    id: number;
+    price: string;
+    status: string;
+    refund_id: string | null;
+    display_currency: string | null;
+    display_rate: string | null;
+  }[];
+
+  const failedUnrefunded = rows.filter((r) => r.status === "failed" && !r.refund_id);
+  if (failedUnrefunded.length === 0) return;
+
+  const refundUsd = round(failedUnrefunded.reduce((sum, r) => sum + Number(r.price), 0));
+  if (refundUsd <= 0) return;
+
+  const displayCurrency = failedUnrefunded[0].display_currency;
+  const displayRate = failedUnrefunded[0].display_rate != null ? Number(failedUnrefunded[0].display_rate) : null;
+  const refundId = `WALLET-${Date.now().toString(36).toUpperCase()}`;
+
+  try {
+    await creditWallet({
+      userId,
+      amountUsd: refundUsd,
+      reason: "refund",
+      reference: walletReference,
+      description: "Refund for eSIM that could not be activated",
+      displayCurrency,
+      displayAmount: displayRate != null ? round(refundUsd * displayRate) : null,
+      displayRate,
+    });
+
+    await pool.query(
+      `UPDATE orders SET status = 'refunded', refund_id = $1, refund_status = 'succeeded'
+       WHERE wallet_reference = $2 AND status = 'failed' AND refund_id IS NULL`,
+      [refundId, walletReference]
+    );
+  } catch (refundError: unknown) {
+    const msg = refundError instanceof Error ? refundError.message : "Wallet refund failed";
+    console.error(`Wallet refund failed for ${walletReference}: ${msg}`);
+    await pool.query(
+      `UPDATE orders SET status = 'refund_failed', refund_status = 'failed'
+       WHERE wallet_reference = $1 AND status = 'failed' AND refund_id IS NULL`,
+      [walletReference]
     );
   }
 }

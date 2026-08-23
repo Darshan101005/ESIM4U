@@ -71,7 +71,7 @@ export default function OrdersPage() {
             </Link>
           </div>
         ) : (
-          <div className="max-w-3xl">
+          <div className="max-w-2xl">
             <div className="flex flex-wrap items-center gap-2 mb-5">
               {FILTERS.map((f) => {
                 const active = filter === f.key;

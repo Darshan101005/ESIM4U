@@ -1,8 +1,9 @@
 "use client";
 
 import AdminTopbar from "@/components/admin/admin-topbar";
+import SelectMenu from "@/components/admin/select-menu";
 import { useEffect, useState, useCallback } from "react";
-import { Loader2, Package, Search } from "lucide-react";
+import { Loader2, Package } from "lucide-react";
 
 interface Bundle {
   bundle_code: string;
@@ -82,6 +83,13 @@ export default function AdminBundlesPage() {
     }
   }, [scopeType, scopeCode]);
 
+  // Auto-load whenever a valid selection is made — no Load button needed.
+  useEffect(() => {
+    if (scopeType === "global" || scopeCode) {
+      loadBundles();
+    }
+  }, [scopeType, scopeCode, loadBundles]);
+
   return (
     <>
       <AdminTopbar title="Bundles" />
@@ -91,60 +99,44 @@ export default function AdminBundlesPage() {
             Inspect the live MontyeSIM catalog with your cost, the customer price after markup, and the resulting margin.
           </p>
           {loadingMeta ? (
-            <div className="flex items-center py-4">
+            <div className="flex items-center justify-center py-4">
               <Loader2 className="w-5 h-5 text-[#FF561E] animate-spin" />
             </div>
           ) : (
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-3">
+            <div className="flex flex-col sm:flex-row items-stretch gap-3">
               <div className="flex-1">
                 <label className="block text-[12px] font-medium text-[#6B7280] mb-2">Scope</label>
-                <select
+                <SelectMenu
                   value={scopeType}
-                  onChange={(e) => {
-                    setScopeType(e.target.value as ScopeType);
+                  onChange={(v) => {
+                    setScopeType(v as ScopeType);
                     setScopeCode("");
                     setBundles([]);
                     setTotal(null);
                     setLoaded(false);
                   }}
-                  className="w-full px-4 py-2.5 rounded-xl bg-white border border-gray-200 outline-none focus:border-[#FF561E] text-[14px]"
-                >
-                  <option value="country">Country</option>
-                  <option value="region">Region</option>
-                  <option value="global">Global</option>
-                </select>
+                  options={[
+                    { value: "country", label: "Country" },
+                    { value: "region", label: "Region" },
+                    { value: "global", label: "Global" },
+                  ]}
+                />
               </div>
               {scopeType !== "global" && (
                 <div className="flex-1">
                   <label className="block text-[12px] font-medium text-[#6B7280] mb-2">Destination</label>
-                  <select
+                  <SelectMenu
                     value={scopeCode}
-                    onChange={(e) => setScopeCode(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl bg-white border border-gray-200 outline-none focus:border-[#FF561E] text-[14px]"
-                  >
-                    <option value="">Select...</option>
-                    {scopeType === "country"
-                      ? countries.map((c) => (
-                          <option key={c.iso3_code} value={c.iso3_code}>
-                            {c.country_name}
-                          </option>
-                        ))
-                      : regions.map((r) => (
-                          <option key={r.region_code} value={r.region_code}>
-                            {r.region_name}
-                          </option>
-                        ))}
-                  </select>
+                    onChange={setScopeCode}
+                    placeholder="Select..."
+                    options={
+                      scopeType === "country"
+                        ? countries.map((c) => ({ value: c.iso3_code, label: c.country_name }))
+                        : regions.map((r) => ({ value: r.region_code, label: r.region_name }))
+                    }
+                  />
                 </div>
               )}
-              <button
-                onClick={loadBundles}
-                disabled={(scopeType !== "global" && !scopeCode) || loadingBundles}
-                className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-[#FF561E] text-white text-[14px] font-bold hover:bg-[#E04B18] transition-colors shadow-sm shadow-orange-500/20 disabled:opacity-60"
-              >
-                {loadingBundles ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
-                Load
-              </button>
             </div>
           )}
         </div>
@@ -157,7 +149,7 @@ export default function AdminBundlesPage() {
           <div className="text-center py-16 bg-white rounded-2xl border border-gray-100">
             <Package className="w-12 h-12 text-gray-300 mx-auto mb-3" strokeWidth={1.5} />
             <p className="text-[14px] text-[#6B7280] font-medium">
-              {scopeType === "global" ? "Load the global catalog" : "Select a destination and load bundles"}
+              {scopeType === "global" ? "Loading the global catalog…" : "Select a destination to view bundles"}
             </p>
           </div>
         ) : bundles.length === 0 ? (

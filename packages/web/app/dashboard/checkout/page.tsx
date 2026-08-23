@@ -23,9 +23,11 @@ function Pill({ icon: Icon, children }: { icon: typeof Wifi; children: React.Rea
 export default function CheckoutPage() {
   const router = useRouter();
   const { currency, format } = useCurrency();
-  const { items, loading } = useCart();
+  const { items, loading, clearCart } = useCart();
   const [placing, setPlacing] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<"stripe" | "wallet">("stripe");
+
+  const [walletBalanceUsd, setWalletBalanceUsd] = useState<number | null>(null);
 
   const [codeInput, setCodeInput] = useState("");
   const [appliedCode, setAppliedCode] = useState<string | null>(null);
@@ -36,8 +38,18 @@ export default function CheckoutPage() {
     if (!loading && items.length === 0) router.replace("/dashboard/cart");
   }, [loading, items, router]);
 
+  useEffect(() => {
+    fetch("/api/wallet")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data && typeof data.balanceUsd === "number") setWalletBalanceUsd(data.balanceUsd);
+      })
+      .catch(() => {});
+  }, []);
+
   const subtotal = items.reduce((sum, i) => sum + parseFloat(i.price || "0"), 0);
   const finalTotal = Math.max(0, Math.round((subtotal - discountUsd) * 100) / 100);
+  const walletCovers = walletBalanceUsd !== null && walletBalanceUsd + 1e-9 >= finalTotal;
 
   const applyCode = async () => {
     const code = codeInput.trim();
@@ -67,8 +79,7 @@ export default function CheckoutPage() {
     setCodeInput("");
   };
 
-  const placeOrder = async () => {
-    if (paymentMethod !== "stripe") return;
+  const placeStripeOrder = async () => {
     setPlacing(true);
     try {
       const res = await fetch("/api/payments/stripe/checkout", {
@@ -89,6 +100,53 @@ export default function CheckoutPage() {
       setPlacing(false);
     }
   };
+
+  const placeWalletOrder = async () => {
+    if (!walletCovers) {
+      toast.error("Not enough wallet balance. Top up first.");
+      return;
+    }
+    setPlacing(true);
+    try {
+      const res = await fetch("/api/payments/wallet/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          code: appliedCode || undefined,
+          display_currency: currency,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        if (data.code === "INSUFFICIENT_FUNDS") {
+          toast.error("Not enough wallet balance. Top up first.");
+          setWalletBalanceUsd(typeof data.balanceUsd === "number" ? data.balanceUsd : walletBalanceUsd);
+          setPlacing(false);
+          return;
+        }
+        throw new Error(data.error || "Wallet payment failed");
+      }
+
+      clearCart();
+      const orders: { id?: number; status?: string }[] = data.orders || [];
+      const firstSuccess = orders.find((o) => o.id && o.status === "completed");
+      if (firstSuccess) {
+        toast.success("Paid with wallet! Your eSIM is ready.");
+        router.replace(`/dashboard/orders/${firstSuccess.id}`);
+      } else if (orders.length > 0) {
+        toast.error("Payment taken, but eSIM activation needs attention. We refunded any failed items to your wallet.");
+        router.replace("/dashboard/orders");
+      } else {
+        router.replace("/dashboard/orders");
+      }
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Wallet payment failed");
+      setPlacing(false);
+    }
+  };
+
+  const placeOrder = () => (paymentMethod === "wallet" ? placeWalletOrder() : placeStripeOrder());
 
   return (
     <>
@@ -188,17 +246,41 @@ export default function CheckoutPage() {
                     </div>
                   </button>
 
-                  <div className="w-full flex items-center gap-4 rounded-xl border border-gray-200 p-4 opacity-70">
-                    <span className="w-5 h-5 rounded-full border-2 border-gray-300 shrink-0" />
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod("wallet")}
+                    className={`w-full flex items-center gap-4 rounded-xl border p-4 text-left transition-all ${
+                      paymentMethod === "wallet" ? "border-[#FF561E] bg-[#FFF4F0]/50 ring-1 ring-[#FF561E]/30" : "border-gray-200 hover:border-orange-200"
+                    }`}
+                  >
+                    <span className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${paymentMethod === "wallet" ? "border-[#FF561E]" : "border-gray-300"}`}>
+                      {paymentMethod === "wallet" && <span className="w-2.5 h-2.5 rounded-full bg-[#FF561E]" />}
+                    </span>
                     <div className="w-9 h-9 rounded-lg bg-[#FFF4F0] flex items-center justify-center shrink-0">
                       <Wallet className="w-5 h-5 text-[#FF561E]" strokeWidth={2} />
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-[14px] font-bold text-[#1A1D20]">eSIM4U Wallet</p>
-                      <p className="text-[12.5px] text-[#6B7280] mt-0.5">Balance: {format(0)}</p>
+                      <p className="text-[12.5px] text-[#6B7280] mt-0.5">
+                        Balance: {walletBalanceUsd === null ? "…" : format(walletBalanceUsd)}
+                      </p>
                     </div>
-                    <span className="px-2.5 py-1 rounded-full bg-gray-100 text-[#6B7280] text-[10px] font-bold shrink-0">Coming soon</span>
-                  </div>
+                    {walletBalanceUsd !== null && !walletCovers && (
+                      <Link
+                        href="/dashboard/topup"
+                        onClick={(e) => e.stopPropagation()}
+                        className="px-2.5 py-1 rounded-full bg-[#FF561E]/10 text-[#FF561E] text-[10px] font-bold shrink-0 hover:bg-[#FF561E]/20"
+                      >
+                        Top up
+                      </Link>
+                    )}
+                  </button>
+
+                  {paymentMethod === "wallet" && walletBalanceUsd !== null && !walletCovers && (
+                    <p className="text-[12px] text-red-500 font-medium pl-1">
+                      Your balance is short by {format(finalTotal - walletBalanceUsd)}. Top up to pay with your wallet.
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
@@ -227,12 +309,16 @@ export default function CheckoutPage() {
 
                 <button
                   onClick={placeOrder}
-                  disabled={placing}
-                  className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-[#FF561E] text-white text-[14px] font-bold hover:bg-[#E04B18] transition-colors shadow-sm shadow-orange-500/20 disabled:opacity-70"
+                  disabled={placing || (paymentMethod === "wallet" && !walletCovers)}
+                  className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-[#FF561E] text-white text-[14px] font-bold hover:bg-[#E04B18] transition-colors shadow-sm shadow-orange-500/20 disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   {placing ? (
                     <>
-                      <Loader2 className="w-4 h-4 animate-spin" /> Redirecting...
+                      <Loader2 className="w-4 h-4 animate-spin" /> {paymentMethod === "wallet" ? "Processing..." : "Redirecting..."}
+                    </>
+                  ) : paymentMethod === "wallet" ? (
+                    <>
+                      Pay {format(finalTotal)} with Wallet <Wallet className="w-4 h-4" />
                     </>
                   ) : (
                     <>

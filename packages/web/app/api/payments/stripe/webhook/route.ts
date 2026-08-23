@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { stripe, STRIPE_ENABLED, extractPaymentDetails } from "@/lib/stripe";
 import { fulfillSession, cancelSession } from "@/lib/fulfillment";
+import { completeTopup, cancelTopup, isTopupSession } from "@/lib/wallet-topup";
 
 // Stripe needs the raw, unparsed body to verify the signature.
 export const dynamic = "force-dynamic";
@@ -42,16 +43,24 @@ export async function POST(request: NextRequest) {
             expand: ["payment_intent", "payment_intent.latest_charge"],
           });
           const payment = extractPaymentDetails(full);
-          await fulfillSession(session.id, payment);
+          if (isTopupSession(full.metadata)) {
+            await completeTopup(session.id, payment);
+          } else {
+            await fulfillSession(session.id, payment);
+          }
         }
         break;
       }
 
-      // Payment never completed — release the pending orders (no money captured).
+      // Payment never completed — release the pending orders / top-up (no money captured).
       case "checkout.session.async_payment_failed":
       case "checkout.session.expired": {
         const session = event.data.object as Stripe.Checkout.Session;
-        await cancelSession(session.id);
+        if (isTopupSession(session.metadata)) {
+          await cancelTopup(session.id);
+        } else {
+          await cancelSession(session.id);
+        }
         break;
       }
 
