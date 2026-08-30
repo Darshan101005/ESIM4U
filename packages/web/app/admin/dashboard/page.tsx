@@ -5,6 +5,7 @@ import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { Users, ShoppingBag, DollarSign, TrendingUp, Wallet, Loader2, ArrowRight, CheckCircle2, Clock, XCircle, ShieldCheck } from "lucide-react";
 import StatCard from "@/components/dashboard/stat-card";
+import AdminNotificationBell from "@/components/admin/admin-notification-bell";
 
 interface DashboardData {
   stats: {
@@ -73,14 +74,17 @@ export default function AdminDashboardPage() {
       <AdminTopbar
         title="Overview"
         right={
-          isSuperAdmin ? (
-            <Link
-              href="/admin/dashboard/manage"
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#FF561E] text-white text-[13px] font-bold hover:bg-[#E04B18] transition-colors shadow-sm shadow-orange-500/25"
-            >
-              <ShieldCheck className="w-4 h-4" /> Manage Admins
-            </Link>
-          ) : undefined
+          <>
+            <AdminNotificationBell />
+            {isSuperAdmin && (
+              <Link
+                href="/admin/dashboard/manage"
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#FF561E] text-white text-[13px] font-bold hover:bg-[#E04B18] transition-colors shadow-sm shadow-orange-500/25"
+              >
+                <ShieldCheck className="w-4 h-4" /> Manage Admins
+              </Link>
+            )}
+          </>
         }
       />
       <main className="flex-1 px-4 lg:px-8 py-6 lg:py-8 max-w-6xl mx-auto w-full">

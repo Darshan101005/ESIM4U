@@ -28,7 +28,7 @@ function timeAgo(iso: string): string {
   }
 }
 
-export default function NotificationBell() {
+export default function AdminNotificationBell() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<Notif[]>([]);
@@ -37,7 +37,7 @@ export default function NotificationBell() {
 
   const load = useCallback(async () => {
     try {
-      const res = await fetch("/api/support/notifications", { cache: "no-store" });
+      const res = await fetch("/api/admin/support/notifications", { cache: "no-store" });
       if (!res.ok) return;
       const data = await res.json();
       setItems(data.items || []);
@@ -65,7 +65,7 @@ export default function NotificationBell() {
     if (next && unread > 0) {
       setUnread(0);
       setItems((prev) => prev.map((i) => ({ ...i, read: true })));
-      await fetch("/api/support/notifications", {
+      await fetch("/api/admin/support/notifications", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({}),
@@ -75,8 +75,7 @@ export default function NotificationBell() {
 
   const go = (n: Notif) => {
     setOpen(false);
-    if (n.kind === "ticket" && n.ref) router.push(`/dashboard/support/tickets/${n.ref}`);
-    else router.push("/dashboard/support/chat");
+    router.push(n.kind === "ticket" ? "/admin/dashboard/support?tab=tickets" : "/admin/dashboard/support");
   };
 
   return (
@@ -103,7 +102,7 @@ export default function NotificationBell() {
               <div className="w-12 h-12 rounded-full bg-gray-50 flex items-center justify-center mx-auto mb-3">
                 <Bell className="w-5 h-5 text-gray-300" strokeWidth={1.5} />
               </div>
-              <p className="text-[13px] text-[#6B7280] font-medium">You&apos;re all caught up</p>
+              <p className="text-[13px] text-[#6B7280] font-medium">No new activity</p>
             </div>
           ) : (
             <div className="max-h-96 overflow-y-auto divide-y divide-gray-50">

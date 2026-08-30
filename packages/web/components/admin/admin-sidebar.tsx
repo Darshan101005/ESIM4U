@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import Image from "next/image";
-import { LayoutDashboard, Users, ShoppingBag, Tag, Package, LogOut, Menu, X, ShieldCheck, Ticket, Megaphone, Settings, UserCog, Landmark } from "lucide-react";
+import { LayoutDashboard, Users, ShoppingBag, Tag, Package, LogOut, Menu, X, ShieldCheck, Ticket, Megaphone, Settings, UserCog, Landmark, Headset } from "lucide-react";
 import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
 
@@ -15,6 +15,7 @@ const navItems = [
   { label: "Verify Payments", href: "/admin/dashboard/verify-payments", icon: Landmark },
   { label: "Promo Codes", href: "/admin/dashboard/promo", icon: Ticket },
   { label: "Affiliates", href: "/admin/dashboard/affiliate", icon: Megaphone },
+  { label: "Support", href: "/admin/dashboard/support", icon: Headset },
   { label: "Customers", href: "/admin/dashboard/users", icon: Users },
 ];
 
