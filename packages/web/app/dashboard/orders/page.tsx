@@ -57,7 +57,7 @@ export default function OrdersPage() {
   return (
     <>
       <DashboardTopbar title="Orders" />
-      <main className="flex-1 px-4 lg:px-8 py-6 lg:py-8">
+      <main className="flex-1 px-4 lg:px-16 xl:px-24 py-6 lg:py-8 max-w-6xl mx-auto w-full">
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <Loader2 className="w-8 h-8 text-[#FF561E] animate-spin" />
@@ -71,7 +71,7 @@ export default function OrdersPage() {
             </Link>
           </div>
         ) : (
-          <div className="max-w-2xl">
+          <div className="max-w-xl">
             <div className="flex flex-wrap items-center gap-2 mb-5">
               {FILTERS.map((f) => {
                 const active = filter === f.key;

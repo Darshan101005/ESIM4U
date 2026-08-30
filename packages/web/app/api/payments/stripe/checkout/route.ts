@@ -7,12 +7,30 @@ import { validatePromoCode } from "@/lib/promo";
 import { validateAffiliateCode } from "@/lib/affiliate";
 import { getFxRates, convertFromUsd, SupportedCurrency, SUPPORTED_CURRENCIES } from "@/lib/fx";
 import { ensureOrderPaymentColumns, generateOrderReference } from "@/lib/orders-schema";
+import { expireStalePendingOrders, getActivePendingOrder } from "@/lib/order-lifecycle";
 
 function round(value: number): number {
   return Math.round(value * 100) / 100;
 }
 
 const CHARGE_TO_FX: Record<string, "USD" | "EUR" | "GBP"> = { usd: "USD", eur: "EUR", gbp: "GBP" };
+
+/** Blocks a new checkout if the customer already has a live payment in progress. */
+async function guardActivePending(userId: string) {
+  await expireStalePendingOrders();
+  const active = await getActivePendingOrder(userId);
+  if (active) {
+    return NextResponse.json(
+      {
+        error: "You already have a payment in progress. Please complete or cancel it before starting a new order.",
+        code: "PENDING_EXISTS",
+        orderId: active.id,
+      },
+      { status: 409 }
+    );
+  }
+  return null;
+}
 
 interface CartRow {
   bundle_code: string;
@@ -39,6 +57,9 @@ export async function POST(request: NextRequest) {
     const userId = session.user.id;
     const userEmail = session.user.email as string;
     const customerName = (session.user.name as string) || "Customer";
+
+    const blocked = await guardActivePending(userId);
+    if (blocked) return blocked;
 
     const body = await request.json().catch(() => ({}));
     const code = (body.code || "").trim();

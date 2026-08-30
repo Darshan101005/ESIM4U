@@ -165,7 +165,7 @@ export default function TopUpPage() {
   return (
     <>
       <DashboardTopbar title="Wallet" />
-      <main className="flex-1 px-4 lg:px-8 py-6 lg:py-8">
+      <main className="flex-1 px-4 lg:px-16 xl:px-24 py-6 lg:py-8 max-w-6xl mx-auto w-full">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
           {/* Left: balance + add funds + perks */}
           <div className="lg:col-span-2 space-y-6">

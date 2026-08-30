@@ -173,6 +173,18 @@ export default function CheckoutPage() {
     setCodeInput("");
   };
 
+  // If the server blocks a new checkout because a payment is already in progress,
+  // send the customer to that order so they can complete or cancel it.
+  const handleBlocked = (status: number, data: { code?: string; error?: string; orderId?: number }): boolean => {
+    if (status === 409 && data.code === "PENDING_EXISTS") {
+      toast.error(data.error || "You already have a payment in progress.");
+      if (data.orderId) router.push(`/dashboard/orders/${data.orderId}`);
+      setPlacing(false);
+      return true;
+    }
+    return false;
+  };
+
   const placeStripeOrder = async () => {
     setPlacing(true);
     try {
@@ -186,6 +198,7 @@ export default function CheckoutPage() {
       });
 
       const data = await res.json();
+      if (handleBlocked(res.status, data)) return;
       if (!res.ok || !data.url) throw new Error(data.error || "Could not start checkout");
 
       window.location.href = data.url;
@@ -212,6 +225,7 @@ export default function CheckoutPage() {
       });
 
       const data = await res.json();
+      if (handleBlocked(res.status, data)) return;
       if (!res.ok) {
         if (data.code === "INSUFFICIENT_FUNDS") {
           toast.error("Not enough wallet balance. Top up first.");
@@ -249,6 +263,7 @@ export default function CheckoutPage() {
         body: JSON.stringify({ code: appliedCode || undefined, display_currency: currency }),
       });
       const data = await res.json();
+      if (handleBlocked(res.status, data)) return;
       if (!res.ok || !data.url) throw new Error(data.error || "Could not start PayPal checkout");
       window.location.href = data.url;
     } catch (err: unknown) {
@@ -279,6 +294,7 @@ export default function CheckoutPage() {
         }),
       });
       const data = await res.json();
+      if (handleBlocked(res.status, data)) return;
       if (!res.ok) throw new Error(data.error || "Submission failed");
 
       clearCart();
@@ -300,7 +316,7 @@ export default function CheckoutPage() {
   return (
     <>
       <DashboardTopbar title="Checkout" />
-      <main className="flex-1 px-4 lg:px-8 py-6 lg:py-8">
+      <main className="flex-1 px-4 lg:px-16 xl:px-24 py-6 lg:py-8 max-w-6xl mx-auto w-full">
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <Loader2 className="w-8 h-8 text-[#FF561E] animate-spin" />
@@ -562,9 +578,11 @@ export default function CheckoutPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-[14px] font-bold text-[#1A1D20]">eSIM4U Wallet</p>
-                      <p className="text-[12.5px] text-[#6B7280] mt-0.5">
-                        Balance: {walletBalanceUsd === null ? "…" : format(walletBalanceUsd)}
-                      </p>
+                      {walletBalanceUsd === null ? (
+                        <div className="skeleton h-3.5 w-24 rounded mt-1.5" />
+                      ) : (
+                        <p className="text-[12.5px] text-[#6B7280] mt-0.5">Balance: {format(walletBalanceUsd)}</p>
+                      )}
                     </div>
                     {walletBalanceUsd !== null && !walletCovers && (
                       <Link

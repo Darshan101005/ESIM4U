@@ -3,8 +3,9 @@
 import DashboardTopbar from "@/components/dashboard/topbar";
 import { useEffect, useState, useCallback, useMemo } from "react";
 import Link from "next/link";
-import { Loader2, ArrowLeftRight, ArrowUpRight, CreditCard, Hash, Receipt, ExternalLink } from "lucide-react";
+import { Loader2, ArrowLeftRight, ArrowUpRight, CreditCard, Hash, Receipt, ExternalLink, RotateCcw, Info } from "lucide-react";
 import { CURRENCY_SYMBOLS, SupportedCurrency } from "@/lib/fx";
+import { buildPaymentRows, type PaymentRow } from "@/lib/payment-details";
 
 interface Transaction {
   id: number;
@@ -75,34 +76,6 @@ function pillMeta(status: string): { label: string; cls: string } {
   }
 }
 
-// Friendly names for the payment-method types Stripe reports on the charge.
-const METHOD_NAMES: Record<string, string> = {
-  card: "Card",
-  amazon_pay: "Amazon Pay",
-  paypal: "PayPal",
-  link: "Link",
-  alipay: "Alipay",
-  cashapp: "Cash App",
-  klarna: "Klarna",
-  wechat_pay: "WeChat Pay",
-  us_bank_account: "Bank Account",
-  sepa_debit: "SEPA Debit",
-  google_pay: "Google Pay",
-  apple_pay: "Apple Pay",
-};
-
-function prettyType(type: string): string {
-  if (METHOD_NAMES[type]) return METHOD_NAMES[type];
-  return type
-    .split("_")
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-    .join(" ");
-}
-
-function cap(s: string): string {
-  return s.charAt(0).toUpperCase() + s.slice(1);
-}
-
 // Shows the amount in the currency the customer actually purchased in (locked at
 // purchase time via display_currency + display_rate). Does not change with the toggle.
 function lockedAmount(t: Transaction): string {
@@ -113,49 +86,43 @@ function lockedAmount(t: Transaction): string {
   return `${symbol}${value.toFixed(2)}`;
 }
 
-// Builds "<method> · <gateway>" capturing maximum detail.
-// Gateway is derived from stored data (Stripe today, others later) — never hardcoded.
-/** Gateway-aware transaction reference (label + value) for the card. */
-function buildTxnRef(t: Transaction): { label: string; value: string | null } {
-  if (t.payment_method_type === "paypal") {
-    return { label: "PayPal Transaction ID", value: t.paypal_capture_id || t.paypal_order_id || null };
-  }
-  if (t.payment_method_type === "bank_transfer") {
-    return { label: "Bank Transfer Reference", value: t.bank_transfer_reference || null };
-  }
-  if (t.payment_method_type === "wallet") {
-    return { label: "Payment", value: "eSIM4U Wallet" };
-  }
-  return { label: "Stripe Transaction ID", value: t.stripe_payment_intent || null };
-}
-
-function buildMethodLabel(t: Transaction): string {
-  if (t.payment_method_type === "bank_transfer") return "Bank Transfer · Monzo";
-  if (t.payment_method_type === "wallet") return "eSIM4U Wallet";
-  if (t.payment_method_type === "paypal") return "PayPal";
-
-  let method: string | null = null;
-  if (t.card_wallet) {
-    method = prettyType(t.card_wallet);
-    if (t.card_brand && t.card_last4) method += ` (${cap(t.card_brand)} •••• ${t.card_last4})`;
-  } else if (t.card_brand) {
-    method = `${cap(t.card_brand)} •••• ${t.card_last4 || "????"}`;
-  } else if (t.payment_method_type) {
-    method = prettyType(t.payment_method_type);
-  }
-
-  const gateway = t.stripe_payment_intent || t.stripe_session_id ? "Stripe" : null;
-
-  if (method && gateway) return `${method} · ${gateway}`;
-  if (method) return method;
-  if (gateway) return gateway;
-  return "—";
-}
-
 function chipClass(active: boolean) {
   return active
     ? "bg-[#FFF4F0] text-[#FF561E] border-[#FF561E]"
     : "bg-white text-[#6B7280] border-gray-200 hover:text-[#FF561E] hover:border-orange-200";
+}
+
+function iconForRow(row: PaymentRow) {
+  if (row.href) return Receipt;
+  if (row.label.includes("Method")) return CreditCard;
+  if (row.label.includes("Refund")) return RotateCcw;
+  if (row.label === "Reason") return Info;
+  return Hash;
+}
+
+function PaymentDetailRow({ row }: { row: PaymentRow }) {
+  const Icon = iconForRow(row);
+  const fullWidth = row.label === "Reason" || !!row.href;
+  return (
+    <div className={`flex items-center gap-2.5 ${fullWidth ? "sm:col-span-2" : ""}`}>
+      <Icon className="w-4 h-4 text-[#6B7280] shrink-0" strokeWidth={2} />
+      <div className="min-w-0">
+        <p className="text-[11px] text-[#6B7280]">{row.label}</p>
+        {row.href ? (
+          <a
+            href={row.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[12.5px] font-semibold text-[#FF561E] hover:text-[#E04B18] inline-flex items-center gap-1"
+          >
+            {row.value} <ExternalLink className="w-3.5 h-3.5" />
+          </a>
+        ) : (
+          <p className={`text-[12.5px] font-semibold text-[#1A1D20] truncate ${row.mono ? "font-mono" : ""}`}>{row.value}</p>
+        )}
+      </div>
+    </div>
+  );
 }
 
 export default function TransactionsPage() {
@@ -194,7 +161,7 @@ export default function TransactionsPage() {
   return (
     <>
       <DashboardTopbar title="Transactions" />
-      <main className="flex-1 px-4 lg:px-8 py-6 lg:py-8">
+      <main className="flex-1 px-4 lg:px-16 xl:px-24 py-6 lg:py-8 max-w-6xl mx-auto w-full">
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <Loader2 className="w-8 h-8 text-[#FF561E] animate-spin" />
@@ -229,8 +196,7 @@ export default function TransactionsPage() {
               <div className="space-y-3">
                 {filtered.map((t) => {
                   const pill = pillMeta(t.status);
-                  const methodLabel = buildMethodLabel(t);
-                  const txn = buildTxnRef(t);
+                  const rows = buildPaymentRows(t, "customer");
                   return (
                     <div key={t.id} className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-5">
                       <div className="flex items-center justify-between gap-3">
@@ -250,39 +216,10 @@ export default function TransactionsPage() {
                       </div>
 
                       <div className="mt-4 pt-4 border-t border-gray-50 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div className="flex items-center gap-2.5">
-                          <CreditCard className="w-4 h-4 text-[#6B7280] shrink-0" strokeWidth={2} />
-                          <div className="min-w-0">
-                            <p className="text-[11px] text-[#6B7280]">Payment Method</p>
-                            <p className="text-[12.5px] font-semibold text-[#1A1D20]">{methodLabel}</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2.5">
-                          <Hash className="w-4 h-4 text-[#6B7280] shrink-0" strokeWidth={2} />
-                          <div className="min-w-0">
-                            <p className="text-[11px] text-[#6B7280]">Order ID</p>
-                            <p className="text-[12.5px] font-semibold text-[#1A1D20] font-mono truncate">{t.order_reference}</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2.5 sm:col-span-2">
-                          <Receipt className="w-4 h-4 text-[#6B7280] shrink-0" strokeWidth={2} />
-                          <div className="min-w-0">
-                            <p className="text-[11px] text-[#6B7280]">{txn.label}</p>
-                            <p className="text-[12.5px] font-semibold text-[#1A1D20] font-mono truncate">{txn.value || "—"}</p>
-                          </div>
-                        </div>
+                        {rows.map((r, i) => (
+                          <PaymentDetailRow key={i} row={r} />
+                        ))}
                       </div>
-
-                      {t.receipt_url && (
-                        <a
-                          href={t.receipt_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 mt-4 text-[12.5px] font-semibold text-[#FF561E] hover:text-[#E04B18]"
-                        >
-                          View Stripe receipt <ExternalLink className="w-3.5 h-3.5" />
-                        </a>
-                      )}
                     </div>
                   );
                 })}

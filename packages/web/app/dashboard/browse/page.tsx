@@ -106,7 +106,7 @@ export default function BrowsePage() {
   return (
     <>
       <DashboardTopbar title="Browse eSIMs" />
-      <main className="flex-1 px-4 lg:px-8 py-6 lg:py-8">
+      <main className="flex-1 px-4 lg:px-16 xl:px-24 py-6 lg:py-8 max-w-6xl mx-auto w-full">
         <div className="mb-6">
           <p className="text-[15px] text-[#6B7280] font-medium">
             Choose a destination to view available eSIM plans.

@@ -6,6 +6,7 @@ import { validatePromoCode } from "@/lib/promo";
 import { validateAffiliateCode } from "@/lib/affiliate";
 import { getFxRates, convertFromUsd, SupportedCurrency, SUPPORTED_CURRENCIES } from "@/lib/fx";
 import { ensureOrderPaymentColumns, generateOrderReference } from "@/lib/orders-schema";
+import { expireStalePendingOrders, getActivePendingOrder } from "@/lib/order-lifecycle";
 import { PAYPAL_ENABLED, createPaypalOrder } from "@/lib/paypal";
 
 function round(value: number): number {
@@ -37,6 +38,20 @@ export async function POST(request: NextRequest) {
     const userId = session.user.id;
     const userEmail = session.user.email as string;
     const customerName = (session.user.name as string) || "Customer";
+
+    // One live payment at a time: expire stale attempts, then block if one is active.
+    await expireStalePendingOrders();
+    const activePending = await getActivePendingOrder(userId);
+    if (activePending) {
+      return NextResponse.json(
+        {
+          error: "You already have a payment in progress. Please complete or cancel it before starting a new order.",
+          code: "PENDING_EXISTS",
+          orderId: activePending.id,
+        },
+        { status: 409 }
+      );
+    }
 
     const body = await request.json().catch(() => ({}));
     const code = (body.code || "").trim();

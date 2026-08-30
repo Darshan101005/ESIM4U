@@ -25,6 +25,12 @@ export async function ensureOrderPaymentColumns(): Promise<void> {
     ALTER TABLE orders ADD COLUMN IF NOT EXISTS bank_transfer_reference TEXT;
     ALTER TABLE orders ADD COLUMN IF NOT EXISTS paypal_order_id TEXT;
     ALTER TABLE orders ADD COLUMN IF NOT EXISTS paypal_capture_id TEXT;
+    ALTER TABLE orders ADD COLUMN IF NOT EXISTS status_reason TEXT;
+    ALTER TABLE orders ADD COLUMN IF NOT EXISTS admin_updated_by TEXT;
+    ALTER TABLE orders ADD COLUMN IF NOT EXISTS admin_updated_at TIMESTAMPTZ;
+    ALTER TABLE orders ADD COLUMN IF NOT EXISTS deleted_scope VARCHAR(10);
+    ALTER TABLE orders ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
+    ALTER TABLE orders ADD COLUMN IF NOT EXISTS deleted_by TEXT;
   `);
   ensured = true;
 }

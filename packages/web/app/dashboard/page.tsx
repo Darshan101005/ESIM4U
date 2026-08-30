@@ -117,6 +117,7 @@ export default function DashboardPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [destinations, setDestinations] = useState<Destination[]>([]);
   const [loading, setLoading] = useState(true);
+  const [walletBalanceUsd, setWalletBalanceUsd] = useState<number | null>(null);
 
   const user = session?.user as { name?: string } | undefined;
 
@@ -134,6 +135,12 @@ export default function DashboardPage() {
       fetch("/api/popular-destinations")
         .then((res) => res.json())
         .then((data) => setDestinations(data.destinations || []))
+        .catch(() => {});
+      fetch("/api/wallet")
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (data && typeof data.balanceUsd === "number") setWalletBalanceUsd(data.balanceUsd);
+        })
         .catch(() => {});
     }
   }, [session, isPending, router]);
@@ -230,7 +237,11 @@ export default function DashboardPage() {
                       Top Up
                     </Link>
                   </div>
-                  <p className="text-[26px] font-bold text-[#1A1D20] leading-none">&nbsp;{format(0)}</p>
+                  {walletBalanceUsd === null ? (
+                    <div className="skeleton h-7 w-24 rounded-lg" />
+                  ) : (
+                    <p className="text-[26px] font-bold text-[#1A1D20] leading-none">{format(walletBalanceUsd)}</p>
+                  )}
                   <p className="text-[12px] text-[#6B7280] mt-2">Available balance</p>
                 </div>
               </>

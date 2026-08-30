@@ -557,3 +557,33 @@ export async function cancelPaypalSession(paypalOrderId: string) {
   await ensureOrderPaymentColumns();
   await pool.query(`UPDATE orders SET status = 'cancelled' WHERE paypal_order_id = $1 AND status = 'pending'`, [paypalOrderId]);
 }
+
+/**
+ * Admin action: (re)provision a single order via MontyeSIM. Useful when payment
+ * was taken but the eSIM failed to issue. Marks the order completed on success
+ * or failed (with a reason) on error. Returns the updated row.
+ */
+export async function provisionOrderById(orderId: number): Promise<OrderRow | null> {
+  await ensureOrderPaymentColumns();
+  const res = await pool.query(`SELECT * FROM orders WHERE id = $1`, [orderId]);
+  if (res.rows.length === 0) return null;
+  const row = res.rows[0] as OrderRow;
+
+  await pool.query(`UPDATE orders SET status = 'processing' WHERE id = $1`, [orderId]);
+  try {
+    const a = await performAssignment(row);
+    await pool.query(
+      `UPDATE orders SET monty_order_id = $1, iccid = $2, qr_code_url = $3, lpa_code = $4, smdp_address = $5,
+         matching_id = $6, activation_otp = $7, bundle_expiry_date = $8, status = 'completed', status_reason = NULL
+       WHERE id = $9`,
+      [a.montyOrderId, a.iccid, a.qrCodeUrl, a.activationCode, a.smdpAddress, a.matchingId, a.activationOtp, a.bundleExpiry, orderId]
+    );
+    await recordAffiliateForRow(row);
+  } catch (assignError: unknown) {
+    const msg = assignError instanceof Error ? assignError.message : "Assignment failed";
+    await pool.query(`UPDATE orders SET status = 'failed', status_reason = $1 WHERE id = $2`, [msg, orderId]);
+  }
+
+  const final = await pool.query(`SELECT * FROM orders WHERE id = $1`, [orderId]);
+  return final.rows[0] as OrderRow;
+}

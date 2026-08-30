@@ -8,6 +8,7 @@ import { getFxRates, SupportedCurrency, SUPPORTED_CURRENCIES } from "@/lib/fx";
 import { ensureOrderPaymentColumns, generateOrderReference } from "@/lib/orders-schema";
 import { getWalletBalanceUsd, debitWallet, WalletError } from "@/lib/wallet";
 import { fulfillWalletSession } from "@/lib/fulfillment";
+import { expireStalePendingOrders, getActivePendingOrder } from "@/lib/order-lifecycle";
 
 function round(value: number): number {
   return Math.round(value * 100) / 100;
@@ -34,6 +35,20 @@ export async function POST(request: NextRequest) {
     const userId = session.user.id;
     const userEmail = session.user.email as string;
     const customerName = (session.user.name as string) || "Customer";
+
+    // One live payment at a time: expire stale attempts, then block if one is active.
+    await expireStalePendingOrders();
+    const activePending = await getActivePendingOrder(userId);
+    if (activePending) {
+      return NextResponse.json(
+        {
+          error: "You already have a payment in progress. Please complete or cancel it before starting a new order.",
+          code: "PENDING_EXISTS",
+          orderId: activePending.id,
+        },
+        { status: 409 }
+      );
+    }
 
     const body = await request.json().catch(() => ({}));
     const code = (body.code || "").trim();
