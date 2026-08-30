@@ -265,3 +265,159 @@ export function getVerificationSuccessTemplate(
 </body>
 </html>`;
 }
+
+export interface OrderReadyTemplateData {
+  name: string;
+  orderReference: string;
+  planName: string;
+  country?: string;
+  dataAmount?: string;
+  validity?: string;
+  amountText: string;
+  smdpAddress?: string | null;
+  activationCode?: string | null;
+  iccid?: string | null;
+  isTopup?: boolean;
+  hasQr?: boolean;
+}
+
+function detailRow(label: string, value: string): string {
+  return `<tr>
+<td style="vertical-align:top;padding:6px 0;width:150px;"><span style="font-size:14px;color:#666666;">${label}</span></td>
+<td style="vertical-align:top;padding:6px 0;width:12px;"><span style="font-size:14px;color:#999999;">:</span></td>
+<td style="vertical-align:top;padding:6px 0;"><span style="font-size:14px;font-weight:700;color:#1a1a1a;word-break:break-all;">${value}</span></td>
+</tr>`;
+}
+
+/** Branded eSIM4U order confirmation — sent by us, never referencing MontyeSIM. */
+export function getOrderReadyTemplate(d: OrderReadyTemplateData): string {
+  const heading = d.isTopup ? "Your eSIM has been recharged" : "Your eSIM is ready";
+  const intro = d.isTopup
+    ? "Your new plan has been added to your existing eSIM. There's nothing to reinstall — it's active on the same eSIM you already have."
+    : "Thank you for your order. Your eSIM has been issued and is ready to install. Scan the QR code below or enter the details manually.";
+
+  const orderRows = [
+    detailRow("Order Reference", d.orderReference),
+    detailRow("Plan", d.planName),
+    d.country ? detailRow("Destination", d.country) : "",
+    d.dataAmount ? detailRow("Data", d.dataAmount) : "",
+    d.validity ? detailRow("Validity", d.validity) : "",
+    detailRow("Amount Paid", d.amountText),
+  ]
+    .filter(Boolean)
+    .join("");
+
+  // Activation block (only for a fresh eSIM, not a recharge).
+  const activationBlock =
+    !d.isTopup && (d.hasQr || d.activationCode || d.smdpAddress)
+      ? `<tr>
+<td style="padding:0 40px 8px 40px;">
+<div style="font-size:13px;font-weight:700;color:${BRAND_ORANGE};letter-spacing:1.5px;text-transform:uppercase;margin-bottom:14px;">Install your eSIM</div>
+</td>
+</tr>
+${
+  d.hasQr
+    ? `<tr>
+<td align="center" style="padding:0 40px 20px 40px;">
+<img src="cid:esim-qr" alt="eSIM QR code" width="220" style="display:block;width:220px;height:220px;border:1px solid #eeeeee;border-radius:12px;padding:10px;background:#ffffff;" />
+<p style="margin:12px 0 0 0;font-size:13px;color:#666666;">Scan this QR code with your phone's camera to install. It's also attached to this email.</p>
+</td>
+</tr>`
+    : ""
+}
+<tr>
+<td style="padding:0 40px 24px 40px;">
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color:#FFF8F0;border-radius:12px;border:1px solid #FFE0B2;">
+<tr><td style="padding:20px 24px;">
+<div style="font-size:14px;font-weight:700;color:#1a1a1a;margin-bottom:14px;">Manual installation details</div>
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+${d.smdpAddress ? detailRow("SM-DP+ Address", d.smdpAddress) : ""}
+${d.activationCode ? detailRow("Activation Code", d.activationCode) : ""}
+${d.iccid ? detailRow("ICCID", d.iccid) : ""}
+</table>
+</td></tr>
+</table>
+</td>
+</tr>`
+      : "";
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${heading} - eSIM4U</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f5f5f5;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color:#f5f5f5;">
+<tr>
+<td align="center" style="padding:40px 20px;">
+<table role="presentation" cellpadding="0" cellspacing="0" width="600" style="max-width:600px;background-color:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,0.06);">
+
+<!-- Logo -->
+<tr>
+<td align="center" style="padding:40px 40px 24px 40px;">
+<img src="${LOGO_URL}" alt="eSIM4U" width="220" style="display:block;max-width:220px;height:auto;" />
+</td>
+</tr>
+
+<!-- Heading -->
+<tr>
+<td align="center" style="padding:0 40px 6px 40px;">
+<h1 style="margin:0;font-size:26px;font-weight:700;color:#1a1a1a;">${heading}</h1>
+</td>
+</tr>
+
+<!-- Greeting + intro -->
+<tr>
+<td align="center" style="padding:8px 40px 28px 40px;">
+<p style="margin:0 0 6px 0;font-size:16px;color:#4a4a4a;line-height:1.6;">Hi <span style="color:${BRAND_ORANGE};font-weight:600;">${d.name}</span>,</p>
+<p style="margin:0;font-size:15px;color:#4a4a4a;line-height:1.6;">${intro}</p>
+</td>
+</tr>
+
+${activationBlock}
+
+<!-- Order / invoice -->
+<tr>
+<td style="padding:0 40px 8px 40px;">
+<div style="font-size:13px;font-weight:700;color:${BRAND_ORANGE};letter-spacing:1.5px;text-transform:uppercase;margin-bottom:14px;">Order summary</div>
+</td>
+</tr>
+<tr>
+<td style="padding:0 40px 28px 40px;">
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color:#fafafa;border-radius:12px;border:1px solid #eeeeee;">
+<tr><td style="padding:20px 24px;">
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+${orderRows}
+</table>
+</td></tr>
+</table>
+</td>
+</tr>
+
+<!-- Manage button -->
+<tr>
+<td align="center" style="padding:0 40px 32px 40px;">
+<a href="${DASHBOARD_URL}/esims" target="_blank" style="display:inline-block;background-color:${BRAND_ORANGE};color:#ffffff;font-size:16px;font-weight:700;text-decoration:none;padding:15px 44px;border-radius:10px;text-align:center;">Manage My eSIM</a>
+</td>
+</tr>
+
+<!-- Divider -->
+<tr><td style="padding:0 40px;"><div style="height:1px;background-color:#eeeeee;"></div></td></tr>
+
+<!-- Support -->
+<tr>
+<td align="center" style="padding:24px 40px 40px 40px;">
+<p style="margin:0 0 4px 0;font-size:14px;color:#666666;line-height:1.6;">Need help? We're here for you.</p>
+<a href="mailto:${SUPPORT_EMAIL}" style="font-size:14px;color:${BRAND_ORANGE};font-weight:600;text-decoration:none;">${SUPPORT_EMAIL}</a>
+</td>
+</tr>
+
+</table>
+</td>
+</tr>
+</table>
+</body>
+</html>`;
+}

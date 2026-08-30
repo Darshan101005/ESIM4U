@@ -183,6 +183,50 @@ export async function assignBundle(params: AssignBundleParams) {
   return res.json();
 }
 
+export interface AssignTopupParams {
+  /** The top-up bundle to add (from /Bundles/AvailableTopup). */
+  bundleCode: string;
+  /** The existing eSIM's MontyeSIM order id (24-hex). */
+  orderId: string;
+  /** A new custom reference for this top-up order. */
+  orderReference: string;
+  /** The original eSIM order's custom reference. */
+  previousOrderReference: string;
+  whatsappNumber?: string;
+  currencyCode?: string;
+}
+
+/**
+ * Tops up an existing eSIM with another plan (recharge / renew). The plan is
+ * added to the SAME eSIM profile — no new QR / reinstall needed.
+ */
+export async function assignTopup(params: AssignTopupParams) {
+  const { resellerId } = await getAccessToken();
+
+  const queryParams = new URLSearchParams();
+  queryParams.set("reseller_id", resellerId);
+  queryParams.set("currency_code", params.currencyCode || "USD");
+
+  const res = await montyFetch(`/Bundles/Topup?${queryParams.toString()}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      bundle_code: params.bundleCode,
+      order_id: params.orderId,
+      order_reference: params.orderReference,
+      previous_order_reference: params.previousOrderReference,
+      ...(params.whatsappNumber && { whatsapp_number: params.whatsappNumber }),
+    }),
+  });
+
+  if (!res.ok) {
+    const errorText = await res.text();
+    throw new Error(`Failed to top up bundle: ${res.status} ${errorText}`);
+  }
+
+  return res.json();
+}
+
 export interface OrderFilters {
   orderId?: string;
   orderReference?: string;

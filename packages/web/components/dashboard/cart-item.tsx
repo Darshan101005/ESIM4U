@@ -35,7 +35,14 @@ export default function CartItem({ item, removing, onRemove }: CartItemProps) {
             <Flag code={item.country_code} name={item.country} className="w-full h-full" />
           </div>
           <div className="min-w-0">
-            <p className="text-[15px] font-bold text-[#1A1D20] leading-tight truncate">{title}</p>
+            <div className="flex items-center gap-2 flex-wrap">
+              <p className="text-[15px] font-bold text-[#1A1D20] leading-tight truncate">{title}</p>
+              {item.topup_of_order_id && (
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-[#FFF4F0] text-[#FF561E] text-[10px] font-bold shrink-0">
+                  Recharge
+                </span>
+              )}
+            </div>
             {showCountry && <p className="text-[12.5px] text-[#6B7280] mt-0.5 truncate">{item.country}</p>}
             <div className="flex flex-wrap items-center gap-2 mt-2.5">
               {item.data_amount && <Pill icon={Wifi}>{item.data_amount}</Pill>}

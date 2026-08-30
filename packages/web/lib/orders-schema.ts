@@ -31,6 +31,12 @@ export async function ensureOrderPaymentColumns(): Promise<void> {
     ALTER TABLE orders ADD COLUMN IF NOT EXISTS deleted_scope VARCHAR(10);
     ALTER TABLE orders ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
     ALTER TABLE orders ADD COLUMN IF NOT EXISTS deleted_by TEXT;
+    ALTER TABLE orders ADD COLUMN IF NOT EXISTS topup_of_order_id INTEGER;
+    ALTER TABLE orders ADD COLUMN IF NOT EXISTS previous_order_reference TEXT;
+    ALTER TABLE orders ADD COLUMN IF NOT EXISTS previous_monty_order_id TEXT;
+    ALTER TABLE cart_items ADD COLUMN IF NOT EXISTS topup_of_order_id INTEGER;
+    ALTER TABLE cart_items ADD COLUMN IF NOT EXISTS previous_order_reference TEXT;
+    ALTER TABLE cart_items ADD COLUMN IF NOT EXISTS previous_monty_order_id TEXT;
   `);
   ensured = true;
 }

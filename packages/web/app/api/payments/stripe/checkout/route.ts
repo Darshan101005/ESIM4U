@@ -41,6 +41,9 @@ interface CartRow {
   validity: string | null;
   price: string;
   cost_price: string | null;
+  topup_of_order_id: number | null;
+  previous_order_reference: string | null;
+  previous_monty_order_id: string | null;
 }
 
 export async function POST(request: NextRequest) {
@@ -69,7 +72,8 @@ export async function POST(request: NextRequest) {
       : "USD";
 
     const cartRes = await pool.query(
-      `SELECT bundle_code, bundle_name, country, country_code, data_amount, validity, price, cost_price
+      `SELECT bundle_code, bundle_name, country, country_code, data_amount, validity, price, cost_price,
+              topup_of_order_id, previous_order_reference, previous_monty_order_id
        FROM cart_items WHERE user_id = $1 ORDER BY added_at ASC`,
       [userId]
     );
@@ -172,8 +176,9 @@ export async function POST(request: NextRequest) {
       await pool.query(
         `INSERT INTO orders (user_id, user_email, customer_name, bundle_code, bundle_name, country, country_code,
            data_amount, validity, price, currency, order_reference, cost_price, display_currency, display_rate,
-           discount_amount, promo_code, affiliate_code, status, stripe_session_id)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)`,
+           discount_amount, promo_code, affiliate_code, status, stripe_session_id,
+           topup_of_order_id, previous_order_reference, previous_monty_order_id)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23)`,
         [
           userId,
           userEmail,
@@ -195,6 +200,9 @@ export async function POST(request: NextRequest) {
           affiliateCode,
           "pending",
           checkoutSession.id,
+          item.topup_of_order_id,
+          item.previous_order_reference,
+          item.previous_monty_order_id,
         ]
       );
     }

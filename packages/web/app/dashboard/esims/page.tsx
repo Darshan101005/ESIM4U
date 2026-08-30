@@ -3,12 +3,17 @@
 import DashboardTopbar from "@/components/dashboard/topbar";
 import { useEffect, useState, useCallback, useMemo } from "react";
 import Link from "next/link";
-import { Loader2, Smartphone, ChevronRight } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Loader2, Smartphone, ChevronRight, RefreshCw, X, Database, Clock, Plus } from "lucide-react";
+import toast from "react-hot-toast";
 import Flag from "@/components/dashboard/flag";
 import { Skeleton } from "@/components/dashboard/skeleton";
+import { useCart } from "@/lib/cart-context";
+import { useCurrency } from "@/lib/currency-context";
 
 interface EsimOrder {
   id: number;
+  bundle_code?: string;
   bundle_name?: string;
   country?: string;
   country_code?: string;
@@ -16,8 +21,22 @@ interface EsimOrder {
   validity?: string;
   status: string;
   iccid?: string;
+  order_reference?: string;
+  monty_order_id?: string;
   bundle_expiry_date?: string;
   created_at: string;
+}
+
+interface TopupBundle {
+  bundle_code: string;
+  bundle_name: string;
+  marketing_name: string;
+  primary_country_code: string;
+  primary_country_name: string;
+  data_label: string;
+  validity_days: number;
+  price: number;
+  cost_price: number;
 }
 
 type EsimStatus = "active" | "not_started" | "expired" | "unknown";
@@ -59,11 +78,74 @@ const STATUS_META: Record<EsimStatus, { label: string; className: string }> = {
 };
 
 export default function EsimsPage() {
+  const router = useRouter();
+  const { addToCart } = useCart();
+  const { format } = useCurrency();
   const [orders, setOrders] = useState<EsimOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusMap, setStatusMap] = useState<Record<number, EsimStatus>>({});
   const [statusesLoaded, setStatusesLoaded] = useState(false);
   const [filter, setFilter] = useState<"all" | EsimStatus>("all");
+
+  // Recharge / renew modal state.
+  const [rechargeOrder, setRechargeOrder] = useState<EsimOrder | null>(null);
+  const [topups, setTopups] = useState<TopupBundle[] | null>(null);
+  const [topupsLoading, setTopupsLoading] = useState(false);
+  const [addingCode, setAddingCode] = useState<string | null>(null);
+
+  const openRecharge = async (order: EsimOrder) => {
+    if (!order.bundle_code || !order.monty_order_id || !order.order_reference) {
+      toast.error("This eSIM can't be recharged.");
+      return;
+    }
+    setRechargeOrder(order);
+    setTopups(null);
+    setTopupsLoading(true);
+    try {
+      const params = new URLSearchParams({ bundle_code: order.bundle_code });
+      if (order.country_code) params.set("country_code", order.country_code);
+      const res = await fetch(`/api/montyesim/topups?${params.toString()}`, { cache: "no-store" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Could not load recharge plans");
+      setTopups(data.bundles || []);
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Could not load recharge plans");
+      setTopups([]);
+    } finally {
+      setTopupsLoading(false);
+    }
+  };
+
+  const rechargeWith = async (b: TopupBundle) => {
+    if (!rechargeOrder) return;
+    setAddingCode(b.bundle_code);
+    try {
+      const result = await addToCart({
+        bundle_code: b.bundle_code,
+        bundle_name: b.marketing_name || b.bundle_name,
+        country: b.primary_country_name || rechargeOrder.country,
+        country_code: b.primary_country_code || rechargeOrder.country_code,
+        data_amount: b.data_label,
+        validity: b.validity_days ? `${b.validity_days} days` : undefined,
+        price: b.price,
+        cost_price: b.cost_price,
+        currency: "USD",
+        topup_of_order_id: rechargeOrder.id,
+        previous_order_reference: rechargeOrder.order_reference,
+        previous_monty_order_id: rechargeOrder.monty_order_id,
+      });
+      if (result === "error") {
+        toast.error("Could not add the plan. Please try again.");
+        return;
+      }
+      if (result === "exists") toast("This recharge is already in your cart.");
+      else toast.success("Recharge added to cart.");
+      setRechargeOrder(null);
+      router.push("/dashboard/checkout");
+    } finally {
+      setAddingCode(null);
+    }
+  };
 
   const load = useCallback(async () => {
     try {
@@ -166,10 +248,10 @@ export default function EsimsPage() {
                   const s = statusMap[order.id];
                   const meta = STATUS_META[s ?? "unknown"];
                   return (
-                    <Link
+                    <div
                       key={order.id}
-                      href={`/dashboard/orders/${order.id}`}
-                      className="group bg-white rounded-2xl border border-gray-100 shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-5 hover:border-orange-100 hover:shadow-md transition-all duration-200"
+                      onClick={() => router.push(`/dashboard/orders/${order.id}`)}
+                      className="group bg-white rounded-2xl border border-gray-100 shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-5 hover:border-orange-100 hover:shadow-md transition-all duration-200 cursor-pointer"
                     >
                       <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-3 min-w-0">
@@ -195,7 +277,16 @@ export default function EsimsPage() {
                           <span className="text-[11px] text-[#6B7280] font-medium">Valid until {formatValidUntil(order.bundle_expiry_date)}</span>
                         )}
                       </div>
-                    </Link>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openRecharge(order);
+                        }}
+                        className="mt-3 w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#FFF4F0] text-[#FF561E] text-[13px] font-bold hover:bg-[#FFE7DC] transition-colors"
+                      >
+                        <RefreshCw className="w-4 h-4" /> Recharge
+                      </button>
+                    </div>
                   );
                 })}
               </div>
@@ -203,6 +294,73 @@ export default function EsimsPage() {
           </>
         )}
       </main>
+
+      {rechargeOrder && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => !addingCode && setRechargeOrder(null)} />
+          <div className="relative bg-white rounded-2xl border border-gray-100 shadow-2xl w-full max-w-md max-h-[85vh] overflow-y-auto">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 sticky top-0 bg-white">
+              <div className="min-w-0">
+                <h3 className="text-[15px] font-bold text-[#1A1D20]">Recharge eSIM</h3>
+                <p className="text-[12px] text-[#6B7280] truncate">
+                  {rechargeOrder.bundle_name || rechargeOrder.country} · same eSIM, new plan
+                </p>
+              </div>
+              <button
+                onClick={() => !addingCode && setRechargeOrder(null)}
+                className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center hover:bg-gray-200 shrink-0"
+              >
+                <X className="w-4 h-4 text-[#1A1D20]" />
+              </button>
+            </div>
+            <div className="p-5">
+              <p className="text-[12px] text-[#6B7280] mb-4">
+                Pick a plan to add to your existing eSIM. No reinstall needed — it activates on the same eSIM.
+              </p>
+              {topupsLoading ? (
+                <div className="flex items-center justify-center py-10">
+                  <Loader2 className="w-6 h-6 text-[#FF561E] animate-spin" />
+                </div>
+              ) : !topups || topups.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-[13px] text-[#6B7280] font-medium">No recharge plans are available for this eSIM right now.</p>
+                </div>
+              ) : (
+                <div className="space-y-2.5">
+                  {topups.map((b) => (
+                    <div key={b.bundle_code} className="flex items-center justify-between gap-3 rounded-xl border border-gray-200 p-3.5">
+                      <div className="min-w-0">
+                        <p className="text-[13.5px] font-bold text-[#1A1D20] truncate">{b.marketing_name || b.bundle_name}</p>
+                        <div className="flex items-center gap-3 mt-1 text-[11.5px] text-[#6B7280]">
+                          <span className="inline-flex items-center gap-1">
+                            <Database className="w-3.5 h-3.5 text-[#FF561E]" /> {b.data_label}
+                          </span>
+                          {b.validity_days > 0 && (
+                            <span className="inline-flex items-center gap-1">
+                              <Clock className="w-3.5 h-3.5 text-[#FF561E]" /> {b.validity_days} days
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3 shrink-0">
+                        <span className="text-[14px] font-bold text-[#1A1D20]">{format(b.price)}</span>
+                        <button
+                          onClick={() => rechargeWith(b)}
+                          disabled={addingCode !== null}
+                          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[#FF561E] text-white text-[12.5px] font-bold hover:bg-[#E04B18] transition-colors disabled:opacity-60"
+                        >
+                          {addingCode === b.bundle_code ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+                          Recharge
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

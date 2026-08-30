@@ -1,12 +1,13 @@
 import QRCode from "qrcode";
 import pool from "@/lib/db";
-import { assignBundle, fetchOrderById } from "@/lib/montyesim";
+import { assignBundle, assignTopup, fetchOrderById } from "@/lib/montyesim";
 import { incrementPromoUsage } from "@/lib/promo";
 import { validateAffiliateCode, recordAffiliateSale } from "@/lib/affiliate";
 import { stripe, StripePaymentDetails } from "@/lib/stripe";
 import { refundPaypalCapture, PaypalPaymentDetails } from "@/lib/paypal";
 import { ensureOrderPaymentColumns } from "@/lib/orders-schema";
 import { creditWallet } from "@/lib/wallet";
+import { sendOrderReadyEmail } from "@/lib/email";
 
 function round(value: number): number {
   return Math.round(value * 100) / 100;
@@ -53,12 +54,27 @@ interface AssignmentData {
  * Throws if provisioning fails.
  */
 async function performAssignment(row: OrderRow): Promise<AssignmentData> {
-  const montyResult = await assignBundle({
-    bundleCode: row.bundle_code,
-    email: row.user_email,
-    name: row.customer_name || "Customer",
-    orderReference: row.order_reference,
-  });
+  // A top-up recharges an existing eSIM instead of provisioning a new one.
+  const previousOrderReference = row.previous_order_reference as string | null;
+  const previousMontyOrderId = row.previous_monty_order_id as string | null;
+  const isTopup = Boolean(previousOrderReference && previousMontyOrderId);
+
+  const montyResult = isTopup
+    ? await assignTopup({
+        bundleCode: row.bundle_code,
+        orderId: previousMontyOrderId as string,
+        orderReference: row.order_reference,
+        previousOrderReference: previousOrderReference as string,
+      })
+    : await assignBundle({
+        bundleCode: row.bundle_code,
+        // Sent empty on purpose: MontyeSIM only emails when an address is
+        // present. We suppress theirs (customers must not see MontyeSIM) and
+        // send our own branded eSIM4U email instead.
+        email: "",
+        name: row.customer_name || "Customer",
+        orderReference: row.order_reference,
+      });
 
   const montyOrderId = montyResult.order_id || null;
   let activationCode: string | null = null;
@@ -103,6 +119,34 @@ async function recordAffiliateForRow(row: OrderRow): Promise<void> {
       });
     }
   } catch {}
+}
+
+/**
+ * Sends our own branded eSIM-ready email (with QR attached). Never throws —
+ * a mail hiccup must not fail an order that has already been provisioned.
+ */
+async function emailOrderReady(row: OrderRow, a: AssignmentData): Promise<void> {
+  try {
+    await sendOrderReadyEmail({
+      email: row.user_email,
+      name: (row.customer_name as string) || "there",
+      orderReference: row.order_reference,
+      planName: (row.bundle_name as string) || (row.country as string) || "eSIM Plan",
+      country: (row.country as string) || undefined,
+      dataAmount: (row.data_amount as string) || undefined,
+      validity: (row.validity as string) || undefined,
+      amountUsd: Number(row.price),
+      displayCurrency: (row.display_currency as string) ?? null,
+      displayRate: (row.display_rate as string) ?? null,
+      smdpAddress: a.smdpAddress,
+      activationCode: a.activationCode,
+      iccid: a.iccid,
+      qrDataUrl: a.qrCodeUrl,
+      isTopup: Boolean(row.previous_order_reference),
+    });
+  } catch (e) {
+    console.error("Failed to send order-ready email:", e instanceof Error ? e.message : e);
+  }
 }
 
 /** Increments promo usage once if any item completed. Shared helper. */
@@ -178,6 +222,7 @@ export async function fulfillSession(stripeSessionId: string, payment?: StripePa
       );
 
       await recordAffiliateForRow(row);
+      await emailOrderReady(row, a);
     } catch (assignError: unknown) {
       const errorMsg = assignError instanceof Error ? assignError.message : "Assignment failed";
       await pool.query(
@@ -283,6 +328,7 @@ export async function fulfillWalletSession(walletReference: string) {
       );
 
       await recordAffiliateForRow(row);
+      await emailOrderReady(row, a);
     } catch (assignError: unknown) {
       const errorMsg = assignError instanceof Error ? assignError.message : "Assignment failed";
       await pool.query(`UPDATE orders SET status = 'failed', payment_method_type = 'wallet' WHERE id = $1`, [row.id]);
@@ -391,6 +437,7 @@ export async function fulfillBankTransferSession(bankTransferReference: string) 
       );
 
       await recordAffiliateForRow(row);
+      await emailOrderReady(row, a);
     } catch (assignError: unknown) {
       const errorMsg = assignError instanceof Error ? assignError.message : "Assignment failed";
       await pool.query(`UPDATE orders SET status = 'failed', payment_method_type = 'bank_transfer' WHERE id = $1`, [row.id]);
@@ -470,6 +517,7 @@ export async function fulfillPaypalSession(paypalOrderId: string, payment: Paypa
       );
 
       await recordAffiliateForRow(row);
+      await emailOrderReady(row, a);
     } catch (assignError: unknown) {
       const errorMsg = assignError instanceof Error ? assignError.message : "Assignment failed";
       await pool.query(
@@ -579,6 +627,7 @@ export async function provisionOrderById(orderId: number): Promise<OrderRow | nu
       [a.montyOrderId, a.iccid, a.qrCodeUrl, a.activationCode, a.smdpAddress, a.matchingId, a.activationOtp, a.bundleExpiry, orderId]
     );
     await recordAffiliateForRow(row);
+    await emailOrderReady(row, a);
   } catch (assignError: unknown) {
     const msg = assignError instanceof Error ? assignError.message : "Assignment failed";
     await pool.query(`UPDATE orders SET status = 'failed', status_reason = $1 WHERE id = $2`, [msg, orderId]);

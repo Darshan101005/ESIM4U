@@ -13,6 +13,8 @@ export interface CartItemData {
   price: string;
   cost_price?: string;
   currency: string;
+  topup_of_order_id?: number | null;
+  previous_order_reference?: string | null;
 }
 
 export interface AddToCartPayload {
@@ -25,6 +27,10 @@ export interface AddToCartPayload {
   price: number;
   cost_price?: number | null;
   currency?: string;
+  /** Top-up context — set when recharging an existing eSIM. */
+  topup_of_order_id?: number;
+  previous_order_reference?: string;
+  previous_monty_order_id?: string;
 }
 
 type AddResult = "added" | "exists" | "error";

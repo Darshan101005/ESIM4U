@@ -3,7 +3,8 @@
 import DashboardTopbar from "@/components/dashboard/topbar";
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Loader2, Database, Clock, Calendar, Hash, XCircle, RotateCcw, Ban } from "lucide-react";
+import Link from "next/link";
+import { ArrowLeft, Loader2, Database, Clock, Calendar, Hash, XCircle, RotateCcw, Ban, RefreshCw } from "lucide-react";
 import toast from "react-hot-toast";
 import QrDisplay from "@/components/dashboard/qr-display";
 import UsageDonut, { fmtGb } from "@/components/dashboard/usage-donut";
@@ -33,6 +34,8 @@ interface Order {
   status: string;
   status_reason?: string;
   payment_method_type?: string;
+  topup_of_order_id?: number;
+  previous_order_reference?: string;
   created_at: string;
 }
 
@@ -167,6 +170,7 @@ export default function OrderDetailPage() {
   }
 
   const isCompleted = order.status === "completed";
+  const isTopup = Boolean(order.topup_of_order_id || order.previous_order_reference);
   const notice = NOTICE[order.status];
 
   // Locked amount in the currency the customer was quoted.
@@ -203,7 +207,30 @@ export default function OrderDetailPage() {
           </div>
         </div>
 
-        {isCompleted ? (
+        {isCompleted && isTopup ? (
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-6 mb-6">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center shrink-0">
+                <RefreshCw className="w-5 h-5 text-emerald-600" strokeWidth={2} />
+              </div>
+              <div>
+                <h3 className="text-[16px] font-bold text-[#1A1D20]">Recharge applied</h3>
+                <p className="text-[13.5px] text-[#6B7280] mt-1">
+                  This plan was added to your existing eSIM — there&apos;s no new QR code and nothing to reinstall. It&apos;s
+                  active on the same eSIM you already have.
+                </p>
+                {order.topup_of_order_id && (
+                  <Link
+                    href={`/dashboard/orders/${order.topup_of_order_id}`}
+                    className="inline-flex items-center gap-1.5 mt-3 text-[13px] font-semibold text-[#FF561E] hover:text-[#E04B18]"
+                  >
+                    View the eSIM <ArrowLeft className="w-3.5 h-3.5 rotate-180" />
+                  </Link>
+                )}
+              </div>
+            </div>
+          </div>
+        ) : isCompleted ? (
           <div className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-6 mb-6">
             <h3 className="text-[16px] font-bold text-[#1A1D20] mb-4">Install your eSIM</h3>
             <QrDisplay

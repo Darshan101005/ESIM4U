@@ -130,10 +130,10 @@ export default function SettingsPage() {
                 Need help with your eSIM or an order? Reach our support team.
               </p>
               <a
-                href="mailto:support@esim4u.com"
+                href="mailto:support@esim4u.uk"
                 className="inline-flex items-center gap-2 text-[14px] font-semibold text-[#FF561E] hover:text-[#E04B18] transition-colors"
               >
-                <Mail className="w-4 h-4" /> support@esim4u.com
+                <Mail className="w-4 h-4" /> support@esim4u.uk
               </a>
             </div>
           </div>

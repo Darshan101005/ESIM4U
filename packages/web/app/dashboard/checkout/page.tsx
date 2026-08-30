@@ -339,7 +339,14 @@ export default function CheckoutPage() {
                             <Flag code={item.country_code} name={item.country} className="w-full h-full" />
                           </div>
                           <div className="min-w-0">
-                            <p className="text-[14px] font-semibold text-[#1A1D20] truncate">{title}</p>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <p className="text-[14px] font-semibold text-[#1A1D20] truncate">{title}</p>
+                              {item.topup_of_order_id && (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-[#FFF4F0] text-[#FF561E] text-[10px] font-bold shrink-0">
+                                  Recharge
+                                </span>
+                              )}
+                            </div>
                             <div className="flex flex-wrap items-center gap-2 mt-1.5">
                               {item.data_amount && <Pill icon={Wifi}>{item.data_amount}</Pill>}
                               {item.validity && <Pill icon={Clock}>{item.validity}</Pill>}

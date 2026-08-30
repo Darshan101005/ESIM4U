@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import pool from "@/lib/db";
+import { ensureOrderPaymentColumns } from "@/lib/orders-schema";
 
 async function getSession() {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -16,7 +17,7 @@ export async function GET() {
     }
 
     const result = await pool.query(
-      `SELECT id, bundle_code, bundle_name, country, country_code, data_amount, validity, price, cost_price, currency, added_at FROM cart_items WHERE user_id = $1 ORDER BY added_at DESC`,
+      `SELECT id, bundle_code, bundle_name, country, country_code, data_amount, validity, price, cost_price, currency, topup_of_order_id, previous_order_reference, added_at FROM cart_items WHERE user_id = $1 ORDER BY added_at DESC`,
       [session.user.id]
     );
 
@@ -35,24 +36,64 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { bundle_code, bundle_name, country, country_code, data_amount, validity, price, cost_price, currency } = body;
+    const {
+      bundle_code,
+      bundle_name,
+      country,
+      country_code,
+      data_amount,
+      validity,
+      price,
+      cost_price,
+      currency,
+      topup_of_order_id,
+      previous_order_reference,
+      previous_monty_order_id,
+    } = body;
 
     if (!bundle_code || !price) {
       return NextResponse.json({ error: "bundle_code and price are required" }, { status: 400 });
     }
 
-    const existing = await pool.query(
-      `SELECT id FROM cart_items WHERE user_id = $1 AND bundle_code = $2`,
-      [session.user.id, bundle_code]
-    );
+    await ensureOrderPaymentColumns();
+
+    const isTopup = Boolean(topup_of_order_id && previous_order_reference && previous_monty_order_id);
+
+    // A normal purchase de-dupes by bundle. A top-up is tied to a specific eSIM,
+    // so it's only a duplicate if the same top-up (same target eSIM) is queued.
+    const existing = isTopup
+      ? await pool.query(`SELECT id FROM cart_items WHERE user_id = $1 AND bundle_code = $2 AND topup_of_order_id = $3`, [
+          session.user.id,
+          bundle_code,
+          topup_of_order_id,
+        ])
+      : await pool.query(`SELECT id FROM cart_items WHERE user_id = $1 AND bundle_code = $2 AND topup_of_order_id IS NULL`, [
+          session.user.id,
+          bundle_code,
+        ]);
 
     if (existing.rows.length > 0) {
       return NextResponse.json({ error: "Item already in cart" }, { status: 409 });
     }
 
     const result = await pool.query(
-      `INSERT INTO cart_items (user_id, bundle_code, bundle_name, country, country_code, data_amount, validity, price, cost_price, currency) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
-      [session.user.id, bundle_code, bundle_name || null, country || null, country_code || null, data_amount || null, validity || null, price, cost_price ?? null, currency || "USD"]
+      `INSERT INTO cart_items (user_id, bundle_code, bundle_name, country, country_code, data_amount, validity, price, cost_price, currency, topup_of_order_id, previous_order_reference, previous_monty_order_id)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING *`,
+      [
+        session.user.id,
+        bundle_code,
+        bundle_name || null,
+        country || null,
+        country_code || null,
+        data_amount || null,
+        validity || null,
+        price,
+        cost_price ?? null,
+        currency || "USD",
+        isTopup ? topup_of_order_id : null,
+        isTopup ? previous_order_reference : null,
+        isTopup ? previous_monty_order_id : null,
+      ]
     );
 
     return NextResponse.json({ item: result.rows[0] }, { status: 201 });
