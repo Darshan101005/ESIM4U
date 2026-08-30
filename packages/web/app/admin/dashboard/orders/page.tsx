@@ -23,8 +23,8 @@ interface Order {
 const STATUSES = [
   { value: "", label: "All" },
   { value: "completed", label: "Completed" },
-  { value: "failed", label: "Failed" },
   { value: "pending", label: "Pending" },
+  { value: "failed", label: "Failed" },
 ];
 
 function statusPill(status: string) {

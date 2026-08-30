@@ -1,6 +1,6 @@
 // App constants
 export const APP_NAME = 'eSIM4U';
-export const API_BASE_URL = 'https://api.esim4u.com';
+export const API_BASE_URL = 'https://api.esim4u.uk';
 export const API_VERSION = 'v1';
 
 // Colors

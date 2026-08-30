@@ -8,6 +8,7 @@ import { refundPaypalCapture, PaypalPaymentDetails } from "@/lib/paypal";
 import { ensureOrderPaymentColumns } from "@/lib/orders-schema";
 import { creditWallet } from "@/lib/wallet";
 import { sendOrderReadyEmail } from "@/lib/email";
+import { qualifyReferralIfEligible, refundReferralForOrders } from "@/lib/referral";
 
 function round(value: number): number {
   return Math.round(value * 100) / 100;
@@ -158,14 +159,41 @@ async function finalizeSessionSideEffects(
 ): Promise<void> {
   if (!hadPending) return;
 
-  const afterRes = await pool.query(`SELECT status, promo_code FROM orders WHERE ${whereClause} = $1`, [whereValue]);
-  const afterRows = afterRes.rows as { status: string; promo_code: string | null }[];
+  const afterRes = await pool.query(
+    `SELECT status, promo_code, price, discount_amount, referral_credit_used FROM orders WHERE ${whereClause} = $1`,
+    [whereValue]
+  );
+  const afterRows = afterRes.rows as {
+    status: string;
+    promo_code: string | null;
+    price: string;
+    discount_amount: string | null;
+    referral_credit_used: string | null;
+  }[];
   const anyCompleted = afterRows.some((r) => r.status === "completed");
   const promoCode = afterRows.find((r) => r.promo_code)?.promo_code;
   if (promoCode && anyCompleted) {
     try {
       await incrementPromoUsage(promoCode);
     } catch {}
+  }
+
+  // Referral qualification: if the completed value of this purchase meets the
+  // minimum, grant the reward to both the referrer and this buyer (once).
+  if (anyCompleted) {
+    const qualifyingUsd = round(
+      afterRows
+        .filter((r) => r.status === "completed")
+        .reduce(
+          (sum, r) => sum + Number(r.price) + Number(r.discount_amount ?? 0) + Number(r.referral_credit_used ?? 0),
+          0
+        )
+    );
+    try {
+      await qualifyReferralIfEligible(userId, qualifyingUsd);
+    } catch (e) {
+      console.error("Referral qualification failed:", e instanceof Error ? e.message : e);
+    }
   }
 
   // Clear the cart now that the session has been processed.
@@ -464,6 +492,10 @@ export async function rejectBankTransferOrders(bankTransferReference: string) {
      WHERE bank_transfer_reference = $1 AND status IN ('pending_verification', 'on_hold')`,
     [bankTransferReference]
   );
+  // The transfer was rejected — return any redeemed referral credit.
+  await refundReferralForOrders("bank_transfer_reference", bankTransferReference).catch((e) =>
+    console.error("Referral refund failed on rejectBankTransferOrders:", e instanceof Error ? e.message : e)
+  );
 }
 
 /** Puts an admin-held bank transfer's pending orders into `on_hold`. */
@@ -598,12 +630,19 @@ async function refundFailedPaypalItems(paypalOrderId: string, payment: PaypalPay
 export async function cancelSession(stripeSessionId: string) {
   await ensureOrderPaymentColumns();
   await pool.query(`UPDATE orders SET status = 'cancelled' WHERE stripe_session_id = $1 AND status = 'pending'`, [stripeSessionId]);
+  // Return any referral credit that was redeemed on this abandoned session.
+  await refundReferralForOrders("stripe_session_id", stripeSessionId).catch((e) =>
+    console.error("Referral refund failed on cancelSession:", e instanceof Error ? e.message : e)
+  );
 }
 
 /** Cancels a PayPal order's still-pending rows (buyer abandoned / not captured). */
 export async function cancelPaypalSession(paypalOrderId: string) {
   await ensureOrderPaymentColumns();
   await pool.query(`UPDATE orders SET status = 'cancelled' WHERE paypal_order_id = $1 AND status = 'pending'`, [paypalOrderId]);
+  await refundReferralForOrders("paypal_order_id", paypalOrderId).catch((e) =>
+    console.error("Referral refund failed on cancelPaypalSession:", e instanceof Error ? e.message : e)
+  );
 }
 
 /**

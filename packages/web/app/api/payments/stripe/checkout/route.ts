@@ -8,6 +8,12 @@ import { validateAffiliateCode } from "@/lib/affiliate";
 import { getFxRates, convertFromUsd, SupportedCurrency, SUPPORTED_CURRENCIES } from "@/lib/fx";
 import { ensureOrderPaymentColumns, generateOrderReference } from "@/lib/orders-schema";
 import { expireStalePendingOrders, getActivePendingOrder } from "@/lib/order-lifecycle";
+import {
+  getReferralBalanceUsd,
+  computeRedeemableUsd,
+  debitReferral,
+  REFERRAL_MIN_PURCHASE_USD,
+} from "@/lib/referral";
 
 function round(value: number): number {
   return Math.round(value * 100) / 100;
@@ -66,6 +72,7 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json().catch(() => ({}));
     const code = (body.code || "").trim();
+    const applyReferralCredit = body.apply_referral_credit === true;
     const displayCurrencyRaw = body.display_currency || "USD";
     const displayCurrency: SupportedCurrency = SUPPORTED_CURRENCIES.includes(displayCurrencyRaw as SupportedCurrency)
       ? (displayCurrencyRaw as SupportedCurrency)
@@ -107,14 +114,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Order total is too low for card payment" }, { status: 400 });
     }
 
+    // Resolve redeemable referral credit. Only when opted-in and the cart meets
+    // the minimum. Leave at least $0.50 to charge (Stripe minimum).
+    let referralUsd = 0;
+    if (applyReferralCredit && subtotalUsd + 1e-9 >= REFERRAL_MIN_PURCHASE_USD) {
+      const balanceUsd = await getReferralBalanceUsd(userId);
+      referralUsd = computeRedeemableUsd(subtotalUsd, balanceUsd, round(finalUsd - 0.5));
+    }
+    const chargeableUsd = round(Math.max(0, finalUsd - referralUsd));
+
     const chargeCurrency = resolveChargeCurrency(displayCurrency);
-    let chargeAmount = finalUsd;
+    let chargeAmount = chargeableUsd;
     let displayRate = 1;
     try {
       const fx = await getFxRates();
       displayRate = fx.rates[displayCurrency] ?? 1;
       if (chargeCurrency !== "usd") {
-        chargeAmount = convertFromUsd(finalUsd, CHARGE_TO_FX[chargeCurrency], fx);
+        chargeAmount = convertFromUsd(chargeableUsd, CHARGE_TO_FX[chargeCurrency], fx);
       }
     } catch {
       if (chargeCurrency !== "usd") {
@@ -159,26 +175,49 @@ export async function POST(request: NextRequest) {
     // abandoned/expired session leaves the cart intact so the customer can retry.
     await ensureOrderPaymentColumns();
 
+    // Debit the referral ledger now (order creation). The refund path keys off
+    // the referral_credit_used stored on the order rows.
+    if (referralUsd > 0) {
+      try {
+        await debitReferral({
+          userId,
+          amountUsd: referralUsd,
+          reason: "redeemed",
+          reference: checkoutSession.id,
+          description: "Referral credit applied at checkout",
+        });
+      } catch {
+        return NextResponse.json({ error: "Referral credit is no longer available" }, { status: 409 });
+      }
+    }
+
     let allocatedDiscount = 0;
+    let allocatedReferral = 0;
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
       const itemPrice = Number(item.price);
 
       let itemDiscount: number;
+      let itemReferral: number;
       if (i === items.length - 1) {
         itemDiscount = round(discountUsd - allocatedDiscount);
+        itemReferral = round(referralUsd - allocatedReferral);
       } else {
         itemDiscount = subtotalUsd > 0 ? round(discountUsd * (itemPrice / subtotalUsd)) : 0;
         allocatedDiscount = round(allocatedDiscount + itemDiscount);
+        itemReferral = subtotalUsd > 0 ? round(referralUsd * (itemPrice / subtotalUsd)) : 0;
+        allocatedReferral = round(allocatedReferral + itemReferral);
       }
-      const finalPrice = round(Math.max(0, itemPrice - itemDiscount));
+      const finalPrice = round(Math.max(0, itemPrice - itemDiscount - itemReferral));
+      // Store the full redeemed amount on the first row only, to avoid double refunds.
+      const rowReferralUsed = i === 0 ? referralUsd : 0;
 
       await pool.query(
         `INSERT INTO orders (user_id, user_email, customer_name, bundle_code, bundle_name, country, country_code,
            data_amount, validity, price, currency, order_reference, cost_price, display_currency, display_rate,
            discount_amount, promo_code, affiliate_code, status, stripe_session_id,
-           topup_of_order_id, previous_order_reference, previous_monty_order_id)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23)`,
+           topup_of_order_id, previous_order_reference, previous_monty_order_id, referral_credit_used)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24)`,
         [
           userId,
           userEmail,
@@ -203,6 +242,7 @@ export async function POST(request: NextRequest) {
           item.topup_of_order_id,
           item.previous_order_reference,
           item.previous_monty_order_id,
+          rowReferralUsed,
         ]
       );
     }

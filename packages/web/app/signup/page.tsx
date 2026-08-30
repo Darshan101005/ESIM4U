@@ -17,10 +17,14 @@ export default function SignupPage() {
   const [mounted, setMounted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [passwordFocused, setPasswordFocused] = useState(false);
+  const [refCode, setRefCode] = useState("");
   const router = useRouter();
 
   useEffect(() => {
     setMounted(true);
+    // Capture referral code from the invite link (?ref=CODE).
+    const ref = new URLSearchParams(window.location.search).get("ref");
+    if (ref) setRefCode(ref.trim());
   }, []);
 
   const hasUppercase = /[A-Z]/.test(password);
@@ -89,6 +93,16 @@ export default function SignupPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
       });
+
+      // Record the referral relationship (reward is granted later, on the
+      // referee's first qualifying purchase).
+      if (refCode && data?.user?.id) {
+        fetch("/api/referrals/attach", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ code: refCode, refereeUserId: data.user.id }),
+        }).catch(() => {});
+      }
 
       if (data?.user?.id) {
         let clientIpv4 = null;

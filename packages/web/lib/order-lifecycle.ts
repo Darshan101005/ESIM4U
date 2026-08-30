@@ -1,5 +1,6 @@
 import pool from "@/lib/db";
 import { ensureOrderPaymentColumns } from "@/lib/orders-schema";
+import { refundReferralForOrders } from "@/lib/referral";
 
 /**
  * How long a card/PayPal checkout may sit unpaid before we treat it as
@@ -24,9 +25,25 @@ export async function expireStalePendingOrders(): Promise<number> {
      WHERE status = 'pending'
        AND COALESCE(payment_source, 'stripe') IN ('stripe', 'paypal')
        AND created_at < now() - ($1 || ' minutes')::interval
-     RETURNING id`,
+     RETURNING id, stripe_session_id, paypal_order_id`,
     [String(PENDING_TTL_MINUTES)]
   );
+
+  // Return any referral credit that was redeemed on the sessions we just expired.
+  const expired = res.rows as { id: number; stripe_session_id: string | null; paypal_order_id: string | null }[];
+  const stripeRefs = [...new Set(expired.map((r) => r.stripe_session_id).filter(Boolean))] as string[];
+  const paypalRefs = [...new Set(expired.map((r) => r.paypal_order_id).filter(Boolean))] as string[];
+  for (const ref of stripeRefs) {
+    await refundReferralForOrders("stripe_session_id", ref).catch((e) =>
+      console.error("Referral refund failed on expire (stripe):", e instanceof Error ? e.message : e)
+    );
+  }
+  for (const ref of paypalRefs) {
+    await refundReferralForOrders("paypal_order_id", ref).catch((e) =>
+      console.error("Referral refund failed on expire (paypal):", e instanceof Error ? e.message : e)
+    );
+  }
+
   return res.rowCount ?? 0;
 }
 

@@ -22,6 +22,7 @@ import {
   Trash2,
   Landmark,
   Info,
+  Gift,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import Flag from "@/components/dashboard/flag";
@@ -89,6 +90,16 @@ export default function CheckoutPage() {
   const [discountUsd, setDiscountUsd] = useState(0);
   const [validating, setValidating] = useState(false);
 
+  // Referral credit.
+  const [referralQuote, setReferralQuote] = useState<{
+    eligible: boolean;
+    minPurchaseUsd: number;
+    balanceUsd: number;
+    percent: number;
+    redeemableUsd: number;
+  } | null>(null);
+  const [applyReferral, setApplyReferral] = useState(false);
+
   useEffect(() => {
     if (!loading && items.length === 0) router.replace("/dashboard/cart");
   }, [loading, items, router]);
@@ -110,8 +121,37 @@ export default function CheckoutPage() {
   }, []);
 
   const subtotal = items.reduce((sum, i) => sum + parseFloat(i.price || "0"), 0);
-  const finalTotal = Math.max(0, Math.round((subtotal - discountUsd) * 100) / 100);
+  const afterDiscount = Math.max(0, Math.round((subtotal - discountUsd) * 100) / 100);
+  // Referral credit only applies when opted-in and the quote says eligible.
+  const referralUsedUsd = applyReferral && referralQuote?.eligible ? Math.min(referralQuote.redeemableUsd, afterDiscount) : 0;
+  const finalTotal = Math.max(0, Math.round((afterDiscount - referralUsedUsd) * 100) / 100);
   const walletCovers = walletBalanceUsd !== null && walletBalanceUsd + 1e-9 >= finalTotal;
+
+  // Fetch how much referral credit can be redeemed for this cart. The card only
+  // shows when the cart meets the minimum; the server independently re-validates.
+  useEffect(() => {
+    if (subtotal + 1e-9 < 25) {
+      setReferralQuote(null);
+      setApplyReferral(false);
+      return;
+    }
+    let active = true;
+    fetch("/api/referrals/quote", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ cart_usd: subtotal, amount_due_usd: afterDiscount }),
+    })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!active || !data) return;
+        setReferralQuote(data);
+        if (data.redeemableUsd <= 0) setApplyReferral(false);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [subtotal, afterDiscount]);
 
   // Amount the customer should pay into the GBP bank account.
   const payCurrency = BANK_PAY_CURRENCY;
@@ -194,6 +234,7 @@ export default function CheckoutPage() {
         body: JSON.stringify({
           code: appliedCode || undefined,
           display_currency: currency,
+          apply_referral_credit: applyReferral,
         }),
       });
 
@@ -221,6 +262,7 @@ export default function CheckoutPage() {
         body: JSON.stringify({
           code: appliedCode || undefined,
           display_currency: currency,
+          apply_referral_credit: applyReferral,
         }),
       });
 
@@ -260,7 +302,7 @@ export default function CheckoutPage() {
       const res = await fetch("/api/payments/paypal/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code: appliedCode || undefined, display_currency: currency }),
+        body: JSON.stringify({ code: appliedCode || undefined, display_currency: currency, apply_referral_credit: applyReferral }),
       });
       const data = await res.json();
       if (handleBlocked(res.status, data)) return;
@@ -285,6 +327,7 @@ export default function CheckoutPage() {
         body: JSON.stringify({
           code: appliedCode || undefined,
           display_currency: currency,
+          apply_referral_credit: applyReferral,
           txn_reference: btTxnRef || undefined,
           amount_paid: btAmountPaid || undefined,
           sender_name: btSender || undefined,
@@ -392,6 +435,46 @@ export default function CheckoutPage() {
                   </div>
                 )}
               </div>
+
+              {referralQuote && referralQuote.eligible && referralQuote.balanceUsd > 0 && (
+                <div className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-6">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Gift className="w-4 h-4 text-[#FF561E]" strokeWidth={2} />
+                    <h3 className="text-[16px] font-bold text-[#1A1D20]">Apply Referral Credits</h3>
+                  </div>
+                  <p className="text-[12.5px] text-[#6B7280] mb-4">
+                    You have {format(referralQuote.balanceUsd)} in referral credit. On this order you can redeem up to{" "}
+                    {referralQuote.percent}% of your balance.
+                  </p>
+                  {referralQuote.redeemableUsd > 0 ? (
+                    <div
+                      className={`flex items-center justify-between rounded-xl border px-4 py-3 transition-all ${
+                        applyReferral ? "bg-[#FFF4F0]/60 border-[#FF561E]/40 ring-1 ring-[#FF561E]/20" : "border-gray-200"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Gift className={`w-4 h-4 shrink-0 ${applyReferral ? "text-[#FF561E]" : "text-[#6B7280]"}`} />
+                        <span className="text-[13px] font-semibold text-[#1A1D20]">
+                          Redeem {format(referralQuote.redeemableUsd)}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setApplyReferral((v) => !v)}
+                        className={`px-4 py-2 rounded-xl text-[13px] font-bold transition-colors shrink-0 ${
+                          applyReferral
+                            ? "bg-white border border-[#FF561E]/30 text-[#FF561E] hover:bg-[#FFF4F0]"
+                            : "bg-[#FF561E] text-white hover:bg-[#E04B18]"
+                        }`}
+                      >
+                        {applyReferral ? "Remove" : "Apply"}
+                      </button>
+                    </div>
+                  ) : (
+                    <p className="text-[12.5px] text-[#6B7280]">No referral credit is redeemable on this order.</p>
+                  )}
+                </div>
+              )}
 
               <div className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-6">
                 <div className="flex items-center justify-between mb-4">
@@ -626,6 +709,12 @@ export default function CheckoutPage() {
                   <div className="flex items-center justify-between text-[14px] mb-2">
                     <span className="text-emerald-600">Discount</span>
                     <span className="font-semibold text-emerald-600">-{format(discountUsd)}</span>
+                  </div>
+                )}
+                {referralUsedUsd > 0 && (
+                  <div className="flex items-center justify-between text-[14px] mb-2">
+                    <span className="text-[#FF561E]">Referral credit</span>
+                    <span className="font-semibold text-[#FF561E]">-{format(referralUsedUsd)}</span>
                   </div>
                 )}
                 <div className="flex items-center justify-between pt-4 border-t border-gray-100 mb-5">

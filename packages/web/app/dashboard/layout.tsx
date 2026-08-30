@@ -1,4 +1,4 @@
-import DashboardSidebar from "@/components/dashboard/sidebar";
+import DashboardShell from "@/components/dashboard/dashboard-shell";
 import { CurrencyProvider } from "@/lib/currency-context";
 import { CartProvider } from "@/lib/cart-context";
 
@@ -6,12 +6,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <CurrencyProvider>
       <CartProvider>
-        <div className="min-h-screen bg-[#F8F9FB] font-sans">
-          <DashboardSidebar />
-          <div className="lg:ml-[260px] min-h-screen flex flex-col">
-            {children}
-          </div>
-        </div>
+        <DashboardShell>{children}</DashboardShell>
       </CartProvider>
     </CurrencyProvider>
   );

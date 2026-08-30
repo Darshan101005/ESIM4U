@@ -37,6 +37,8 @@ export async function ensureOrderPaymentColumns(): Promise<void> {
     ALTER TABLE cart_items ADD COLUMN IF NOT EXISTS topup_of_order_id INTEGER;
     ALTER TABLE cart_items ADD COLUMN IF NOT EXISTS previous_order_reference TEXT;
     ALTER TABLE cart_items ADD COLUMN IF NOT EXISTS previous_monty_order_id TEXT;
+    ALTER TABLE orders ADD COLUMN IF NOT EXISTS referral_credit_used NUMERIC(10,2) DEFAULT 0;
+    ALTER TABLE orders ADD COLUMN IF NOT EXISTS referral_credit_refunded BOOLEAN DEFAULT false;
   `);
   ensured = true;
 }

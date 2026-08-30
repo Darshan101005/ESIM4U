@@ -195,7 +195,7 @@ export default function AdminSettingsPage() {
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="admin@example.com"
+                    placeholder="admin@esim4u.uk"
                     autoFocus
                   />
                   <div className="mt-4 flex items-center gap-2">

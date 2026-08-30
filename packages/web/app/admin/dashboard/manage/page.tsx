@@ -313,7 +313,7 @@ export default function ManageAdminsPage() {
             <input className={inputCls} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Full name" />
 
             <label className={`${labelCls} mt-4`}>Email</label>
-            <input className={inputCls} type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="admin@example.com" />
+            <input className={inputCls} type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="admin@esim4u.uk" />
 
             <label className={`${labelCls} mt-4`}>{modalMode === "add" ? "Password" : "Reset password (optional)"}</label>
             <div className="relative">

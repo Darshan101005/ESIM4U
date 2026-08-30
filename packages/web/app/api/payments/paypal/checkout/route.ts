@@ -8,6 +8,12 @@ import { getFxRates, convertFromUsd, SupportedCurrency, SUPPORTED_CURRENCIES } f
 import { ensureOrderPaymentColumns, generateOrderReference } from "@/lib/orders-schema";
 import { expireStalePendingOrders, getActivePendingOrder } from "@/lib/order-lifecycle";
 import { PAYPAL_ENABLED, createPaypalOrder } from "@/lib/paypal";
+import {
+  getReferralBalanceUsd,
+  computeRedeemableUsd,
+  debitReferral,
+  REFERRAL_MIN_PURCHASE_USD,
+} from "@/lib/referral";
 
 function round(value: number): number {
   return Math.round(value * 100) / 100;
@@ -58,6 +64,7 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json().catch(() => ({}));
     const code = (body.code || "").trim();
+    const applyReferralCredit = body.apply_referral_credit === true;
     const rawCurrency = body.display_currency || "USD";
     const displayCurrency: SupportedCurrency = SUPPORTED_CURRENCIES.includes(rawCurrency as SupportedCurrency)
       ? (rawCurrency as SupportedCurrency)
@@ -99,13 +106,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Order total must be greater than zero for PayPal" }, { status: 400 });
     }
 
+    // Resolve redeemable referral credit. Leave at least $0.01 to charge.
+    let referralUsd = 0;
+    if (applyReferralCredit && subtotalUsd + 1e-9 >= REFERRAL_MIN_PURCHASE_USD) {
+      const balanceUsd = await getReferralBalanceUsd(userId);
+      referralUsd = computeRedeemableUsd(subtotalUsd, balanceUsd, round(finalUsd - 0.01));
+    }
+    const chargeableUsd = round(Math.max(0, finalUsd - referralUsd));
+
     // Charge in the customer's selected currency (same as Stripe).
     let displayRate = 1;
-    let chargeAmount = finalUsd;
+    let chargeAmount = chargeableUsd;
     try {
       const fx = await getFxRates();
       displayRate = fx.rates[displayCurrency] ?? 1;
-      chargeAmount = convertFromUsd(finalUsd, displayCurrency, fx);
+      chargeAmount = convertFromUsd(chargeableUsd, displayCurrency, fx);
     } catch {
       if (displayCurrency !== "USD") {
         return NextResponse.json({ error: "Pricing is temporarily unavailable. Please try again shortly." }, { status: 503 });
@@ -127,27 +142,49 @@ export async function POST(request: NextRequest) {
       cancelUrl: `${appUrl}/dashboard/checkout`,
     });
 
+    // Debit the referral ledger now (order creation). The refund path keys off
+    // the referral_credit_used stored on the order rows.
+    if (referralUsd > 0) {
+      try {
+        await debitReferral({
+          userId,
+          amountUsd: referralUsd,
+          reason: "redeemed",
+          reference: paypalOrder.id,
+          description: "Referral credit applied at checkout",
+        });
+      } catch {
+        return NextResponse.json({ error: "Referral credit is no longer available" }, { status: 409 });
+      }
+    }
+
     // Create pending order rows (one per cart item) linked to the PayPal order.
     let allocatedDiscount = 0;
+    let allocatedReferral = 0;
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
       const itemPrice = Number(item.price);
 
       let itemDiscount: number;
+      let itemReferral: number;
       if (i === items.length - 1) {
         itemDiscount = round(discountUsd - allocatedDiscount);
+        itemReferral = round(referralUsd - allocatedReferral);
       } else {
         itemDiscount = subtotalUsd > 0 ? round(discountUsd * (itemPrice / subtotalUsd)) : 0;
         allocatedDiscount = round(allocatedDiscount + itemDiscount);
+        itemReferral = subtotalUsd > 0 ? round(referralUsd * (itemPrice / subtotalUsd)) : 0;
+        allocatedReferral = round(allocatedReferral + itemReferral);
       }
-      const finalPrice = round(Math.max(0, itemPrice - itemDiscount));
+      const finalPrice = round(Math.max(0, itemPrice - itemDiscount - itemReferral));
+      const rowReferralUsed = i === 0 ? referralUsd : 0;
 
       await pool.query(
         `INSERT INTO orders (user_id, user_email, customer_name, bundle_code, bundle_name, country, country_code,
            data_amount, validity, price, currency, order_reference, cost_price, display_currency, display_rate,
            discount_amount, promo_code, affiliate_code, status, payment_source, paypal_order_id, payment_method_type,
-           topup_of_order_id, previous_order_reference, previous_monty_order_id)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25)`,
+           topup_of_order_id, previous_order_reference, previous_monty_order_id, referral_credit_used)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26)`,
         [
           userId,
           userEmail,
@@ -174,6 +211,7 @@ export async function POST(request: NextRequest) {
           item.topup_of_order_id,
           item.previous_order_reference,
           item.previous_monty_order_id,
+          rowReferralUsed,
         ]
       );
     }

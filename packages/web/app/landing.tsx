@@ -7,6 +7,7 @@ import { Globe, QrCode, Plane, Tag, Zap, ShieldCheck, Headphones, Smartphone, Ra
 import dynamic from 'next/dynamic';
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { authClient } from '@/lib/auth-client';
+import { flagUrl } from '@/lib/flags';
 
 const Flag = dynamic<any>(() => import('react-flagpack').then(m => m.default || m), { ssr: false });
 
@@ -1241,9 +1242,15 @@ export default function Landing() {
             </div>
           </div>
 
-          <div className="flex items-center justify-center gap-2">
-            <CheckCircle2 className="w-[18px] h-[18px] text-[#FF561E]" strokeWidth={2.5} />
-            <span className="text-[13px] text-[#1A1D20] font-semibold">No hidden conditions. Rewards are automatically applied after eligible purchases.</span>
+          <div className="flex items-center justify-center gap-2 text-center px-4">
+            <CheckCircle2 className="w-[18px] h-[18px] text-[#FF561E] shrink-0" strokeWidth={2.5} />
+            <span className="text-[13px] text-[#1A1D20] font-semibold">
+              Rewards are credited once your friend completes their first eligible purchase.{" "}
+              <Link href="/terms" className="text-[#FF561E] underline underline-offset-2 hover:text-[#E04B18]">
+                T&amp;C
+              </Link>{" "}
+              apply.
+            </span>
           </div>
 
         </div>
@@ -1277,9 +1284,12 @@ export default function Landing() {
                   <div className="min-w-0">
                     <p className="text-[14px] font-bold text-[#1A1D20] leading-tight">{r.name}</p>
                     <div className="flex items-center gap-2 mt-1.5">
-                      <div className="w-5 h-[14px] rounded-[2px] overflow-hidden border border-gray-100 shrink-0 relative">
-                        <Flag code={r.flag} size="l" hasBorder={false} hasBorderRadius={false} className="country-flag" />
-                      </div>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={flagUrl(r.flag, "l")}
+                        alt={`${r.country} flag`}
+                        className="h-3.5 w-auto rounded-[2px] border border-gray-100 shrink-0 block"
+                      />
                       <span className="text-[12px] text-[#6B7280]">{r.country}</span>
                     </div>
                   </div>

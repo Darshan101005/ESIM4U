@@ -18,7 +18,12 @@ const navItems = [
   { label: "Customers", href: "/admin/dashboard/users", icon: Users },
 ];
 
-export default function AdminSidebar() {
+interface AdminSidebarProps {
+  collapsed?: boolean;
+  onToggle?: () => void;
+}
+
+export default function AdminSidebar({ collapsed = false, onToggle }: AdminSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -57,15 +62,29 @@ export default function AdminSidebar() {
     return pathname.startsWith(href);
   };
 
-  const sidebarContent = (
+  // `isCollapsed` only applies on desktop; the mobile drawer always renders expanded.
+  const renderContent = (isCollapsed: boolean) => (
     <div className="flex flex-col h-full">
-      <div className="px-6 py-6 flex items-center gap-2">
-        <Link href="/admin/dashboard" className="flex items-center">
-          <Image src="/assets/esim4u-logo.png" alt="eSIM4U" width={110} height={32} className="object-contain" priority />
-        </Link>
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#FFF4F0] text-[#FF561E] text-[10px] font-bold uppercase tracking-wide">
-          <ShieldCheck className="w-3 h-3" /> Admin
-        </span>
+      <div className={`px-6 py-6 flex items-center gap-2 ${isCollapsed ? "justify-center px-2" : ""}`}>
+        {onToggle && (
+          <button
+            onClick={onToggle}
+            aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            className="hidden lg:flex w-9 h-9 rounded-lg items-center justify-center text-[#6B7280] hover:bg-[#FFF4F0] hover:text-[#FF561E] transition-colors shrink-0"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+        )}
+        {!isCollapsed && (
+          <>
+            <Link href="/admin/dashboard" className="flex items-center">
+              <Image src="/assets/esim4u-logo.png" alt="eSIM4U" width={110} height={32} className="object-contain" priority />
+            </Link>
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#FFF4F0] text-[#FF561E] text-[10px] font-bold uppercase tracking-wide">
+              <ShieldCheck className="w-3 h-3" /> Admin
+            </span>
+          </>
+        )}
       </div>
 
       <nav className="flex-1 px-3 py-2 space-y-1">
@@ -77,46 +96,76 @@ export default function AdminSidebar() {
               key={item.href}
               href={item.href}
               onClick={() => setMobileOpen(false)}
+              title={isCollapsed ? item.label : undefined}
               className={`flex items-center gap-3 px-4 py-3 rounded-xl text-[14px] font-medium transition-all duration-200 ${
+                isCollapsed ? "justify-center px-0" : ""
+              } ${
                 active
                   ? "bg-[#FF561E] text-white shadow-lg shadow-orange-500/20"
                   : "text-[#6B7280] hover:bg-[#FFF4F0] hover:text-[#FF561E]"
               }`}
             >
-              <Icon className="w-[18px] h-[18px]" strokeWidth={active ? 2.5 : 2} />
-              {item.label}
+              <Icon className="w-[18px] h-[18px] shrink-0" strokeWidth={active ? 2.5 : 2} />
+              {!isCollapsed && item.label}
             </Link>
           );
         })}
       </nav>
 
       <div className="px-3 pb-6 space-y-2">
-        <div className="flex items-center gap-3 px-3 py-3 rounded-xl bg-[#FFF4F0] border border-orange-100">
-          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#FF561E] to-[#FF7A45] flex items-center justify-center shrink-0">
-            <span className="text-white text-[14px] font-bold">{adminInitial}</span>
+        {isCollapsed ? (
+          <div className="flex flex-col items-center gap-1">
+            <div
+              title={`${admin.name} · ${roleLabel}`}
+              className="w-9 h-9 rounded-full bg-gradient-to-br from-[#FF561E] to-[#FF7A45] flex items-center justify-center shrink-0"
+            >
+              <span className="text-white text-[14px] font-bold">{adminInitial}</span>
+            </div>
+            <Link
+              href="/admin/dashboard/settings"
+              title="Settings"
+              className="w-9 h-9 rounded-lg flex items-center justify-center text-[#6B7280] hover:bg-[#FFF4F0] hover:text-[#FF561E] transition-colors"
+            >
+              <Settings className="w-4 h-4" strokeWidth={2} />
+            </Link>
+            <button
+              onClick={handleSignOut}
+              title="Sign Out"
+              className="w-9 h-9 rounded-lg flex items-center justify-center text-[#6B7280] hover:bg-red-50 hover:text-red-500 transition-colors"
+            >
+              <LogOut className="w-[18px] h-[18px]" strokeWidth={2} />
+            </button>
           </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-[13px] font-bold text-[#1A1D20] truncate">{admin.name}</p>
-            <span className="inline-flex items-center gap-1 text-[11.5px] font-semibold text-[#FF561E]">
-              <RoleIcon className="w-3.5 h-3.5" strokeWidth={2.2} /> {roleLabel}
-            </span>
-          </div>
-          <Link
-            href="/admin/dashboard/settings"
-            onClick={() => setMobileOpen(false)}
-            title="Settings"
-            className="w-8 h-8 rounded-lg bg-white border border-orange-100 flex items-center justify-center text-[#6B7280] hover:text-[#FF561E] hover:border-[#FF561E]/40 transition-colors shrink-0"
-          >
-            <Settings className="w-4 h-4" strokeWidth={2} />
-          </Link>
-        </div>
-        <button
-          onClick={handleSignOut}
-          className="flex items-center gap-3 px-4 py-3 rounded-xl text-[14px] font-medium text-[#6B7280] hover:bg-red-50 hover:text-red-500 transition-all duration-200 w-full"
-        >
-          <LogOut className="w-[18px] h-[18px]" strokeWidth={2} />
-          Sign Out
-        </button>
+        ) : (
+          <>
+            <div className="flex items-center gap-3 px-3 py-3 rounded-xl bg-[#FFF4F0] border border-orange-100">
+              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#FF561E] to-[#FF7A45] flex items-center justify-center shrink-0">
+                <span className="text-white text-[14px] font-bold">{adminInitial}</span>
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-[13px] font-bold text-[#1A1D20] truncate">{admin.name}</p>
+                <span className="inline-flex items-center gap-1 text-[11.5px] font-semibold text-[#FF561E]">
+                  <RoleIcon className="w-3.5 h-3.5" strokeWidth={2.2} /> {roleLabel}
+                </span>
+              </div>
+              <Link
+                href="/admin/dashboard/settings"
+                onClick={() => setMobileOpen(false)}
+                title="Settings"
+                className="w-8 h-8 rounded-lg bg-white border border-orange-100 flex items-center justify-center text-[#6B7280] hover:text-[#FF561E] hover:border-[#FF561E]/40 transition-colors shrink-0"
+              >
+                <Settings className="w-4 h-4" strokeWidth={2} />
+              </Link>
+            </div>
+            <button
+              onClick={handleSignOut}
+              className="flex items-center gap-3 px-4 py-3 rounded-xl text-[14px] font-medium text-[#6B7280] hover:bg-red-50 hover:text-red-500 transition-all duration-200 w-full"
+            >
+              <LogOut className="w-[18px] h-[18px]" strokeWidth={2} />
+              Sign Out
+            </button>
+          </>
+        )}
       </div>
     </div>
   );
@@ -140,13 +189,17 @@ export default function AdminSidebar() {
             >
               <X className="w-4 h-4 text-[#1A1D20]" />
             </button>
-            {sidebarContent}
+            {renderContent(false)}
           </div>
         </div>
       )}
 
-      <aside className="hidden lg:flex w-[260px] bg-white border-r border-gray-100 flex-col fixed left-0 top-0 bottom-0 z-40">
-        {sidebarContent}
+      <aside
+        className={`hidden lg:flex bg-white border-r border-gray-100 flex-col fixed left-0 top-0 bottom-0 z-40 transition-all duration-300 ${
+          collapsed ? "w-[76px]" : "w-[260px]"
+        }`}
+      >
+        {renderContent(collapsed)}
       </aside>
     </>
   );
