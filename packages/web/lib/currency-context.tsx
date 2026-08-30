@@ -24,10 +24,26 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState(false);
 
   useEffect(() => {
+    // 1. Apply the locally-cached choice immediately (avoids a flash).
     try {
       const saved = localStorage.getItem(STORAGE_KEY) as SupportedCurrency | null;
       if (saved && SUPPORTED_CURRENCIES.includes(saved)) setCurrencyState(saved);
     } catch {}
+
+    // 2. Reconcile with the customer's saved preference so every page loads in
+    //    their chosen currency (cross-device). Defaults to USD when none is set.
+    fetch("/api/profile", { cache: "no-store" })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        const pref = data?.profile?.preferred_currency as SupportedCurrency | undefined;
+        if (pref && SUPPORTED_CURRENCIES.includes(pref)) {
+          setCurrencyState(pref);
+          try {
+            localStorage.setItem(STORAGE_KEY, pref);
+          } catch {}
+        }
+      })
+      .catch(() => {});
 
     fetch("/api/fx")
       .then((res) => {
@@ -47,6 +63,12 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
     try {
       localStorage.setItem(STORAGE_KEY, c);
     } catch {}
+    // Persist the preference so it applies on the next load / other devices.
+    fetch("/api/profile", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ preferred_currency: c }),
+    }).catch(() => {});
   }, []);
 
   const convert = useCallback(

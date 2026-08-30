@@ -14,6 +14,7 @@ import {
   debitReferral,
   REFERRAL_MIN_PURCHASE_USD,
 } from "@/lib/referral";
+import { recordActivity } from "@/lib/activity";
 
 function round(value: number): number {
   return Math.round(value * 100) / 100;
@@ -215,6 +216,8 @@ export async function POST(request: NextRequest) {
         ]
       );
     }
+
+    recordActivity({ req: request, userId, email: userEmail, eventType: "purchase" }).catch(() => {});
 
     return NextResponse.json({ url: paypalOrder.approveUrl, orderId: paypalOrder.id });
   } catch (error: unknown) {

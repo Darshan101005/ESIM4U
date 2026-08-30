@@ -14,6 +14,7 @@ import {
   debitReferral,
   REFERRAL_MIN_PURCHASE_USD,
 } from "@/lib/referral";
+import { recordActivity } from "@/lib/activity";
 
 function round(value: number): number {
   return Math.round(value * 100) / 100;
@@ -246,6 +247,9 @@ export async function POST(request: NextRequest) {
         ]
       );
     }
+
+    // Audit the purchase (IP/device/geo) without blocking the checkout redirect.
+    recordActivity({ req: request, userId, email: userEmail, eventType: "purchase" }).catch(() => {});
 
     return NextResponse.json({ url: checkoutSession.url });
   } catch (error: unknown) {

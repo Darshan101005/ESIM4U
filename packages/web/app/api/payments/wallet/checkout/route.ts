@@ -16,6 +16,7 @@ import {
   creditReferral,
   REFERRAL_MIN_PURCHASE_USD,
 } from "@/lib/referral";
+import { recordActivity } from "@/lib/activity";
 
 function round(value: number): number {
   return Math.round(value * 100) / 100;
@@ -241,6 +242,8 @@ export async function POST(request: NextRequest) {
         throw err;
       }
     }
+
+    recordActivity({ req: request, userId, email: userEmail, eventType: "purchase" }).catch(() => {});
 
     const orders = await fulfillWalletSession(walletReference);
     return NextResponse.json({ orders });

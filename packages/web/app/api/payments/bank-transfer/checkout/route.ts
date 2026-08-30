@@ -15,6 +15,7 @@ import {
   debitReferral,
   REFERRAL_MIN_PURCHASE_USD,
 } from "@/lib/referral";
+import { recordActivity } from "@/lib/activity";
 
 function round(value: number): number {
   return Math.round(value * 100) / 100;
@@ -254,6 +255,8 @@ export async function POST(request: NextRequest) {
 
     // Clear the cart — the submission is recorded and awaiting verification.
     await pool.query(`DELETE FROM cart_items WHERE user_id = $1`, [userId]);
+
+    recordActivity({ req: request, userId, email: userEmail, eventType: "purchase" }).catch(() => {});
 
     return NextResponse.json({ reference, status: "pending_verification" });
   } catch (error: unknown) {
