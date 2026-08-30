@@ -20,6 +20,9 @@ interface Transaction {
   card_wallet?: string;
   payment_method_type?: string;
   receipt_url?: string;
+  paypal_order_id?: string;
+  paypal_capture_id?: string;
+  bank_transfer_reference?: string;
   price: string;
   status: string;
   created_at: string;
@@ -112,9 +115,24 @@ function lockedAmount(t: Transaction): string {
 
 // Builds "<method> · <gateway>" capturing maximum detail.
 // Gateway is derived from stored data (Stripe today, others later) — never hardcoded.
+/** Gateway-aware transaction reference (label + value) for the card. */
+function buildTxnRef(t: Transaction): { label: string; value: string | null } {
+  if (t.payment_method_type === "paypal") {
+    return { label: "PayPal Transaction ID", value: t.paypal_capture_id || t.paypal_order_id || null };
+  }
+  if (t.payment_method_type === "bank_transfer") {
+    return { label: "Bank Transfer Reference", value: t.bank_transfer_reference || null };
+  }
+  if (t.payment_method_type === "wallet") {
+    return { label: "Payment", value: "eSIM4U Wallet" };
+  }
+  return { label: "Stripe Transaction ID", value: t.stripe_payment_intent || null };
+}
+
 function buildMethodLabel(t: Transaction): string {
   if (t.payment_method_type === "bank_transfer") return "Bank Transfer · Monzo";
   if (t.payment_method_type === "wallet") return "eSIM4U Wallet";
+  if (t.payment_method_type === "paypal") return "PayPal";
 
   let method: string | null = null;
   if (t.card_wallet) {
@@ -212,7 +230,7 @@ export default function TransactionsPage() {
                 {filtered.map((t) => {
                   const pill = pillMeta(t.status);
                   const methodLabel = buildMethodLabel(t);
-                  const stripeTxn = t.stripe_payment_intent || null;
+                  const txn = buildTxnRef(t);
                   return (
                     <div key={t.id} className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-5">
                       <div className="flex items-center justify-between gap-3">
@@ -249,8 +267,8 @@ export default function TransactionsPage() {
                         <div className="flex items-center gap-2.5 sm:col-span-2">
                           <Receipt className="w-4 h-4 text-[#6B7280] shrink-0" strokeWidth={2} />
                           <div className="min-w-0">
-                            <p className="text-[11px] text-[#6B7280]">Stripe Transaction ID</p>
-                            <p className="text-[12.5px] font-semibold text-[#1A1D20] font-mono truncate">{stripeTxn || "—"}</p>
+                            <p className="text-[11px] text-[#6B7280]">{txn.label}</p>
+                            <p className="text-[12.5px] font-semibold text-[#1A1D20] font-mono truncate">{txn.value || "—"}</p>
                           </div>
                         </div>
                       </div>

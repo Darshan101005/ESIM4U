@@ -71,7 +71,7 @@ export default function CheckoutPage() {
   const { currency, format, rates } = useCurrency();
   const { items, loading, clearCart } = useCart();
   const [placing, setPlacing] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<"stripe" | "wallet" | "bank">("stripe");
+  const [paymentMethod, setPaymentMethod] = useState<"stripe" | "paypal" | "wallet" | "bank">("stripe");
 
   const [walletBalanceUsd, setWalletBalanceUsd] = useState<number | null>(null);
 
@@ -240,6 +240,23 @@ export default function CheckoutPage() {
     }
   };
 
+  const placePaypalOrder = async () => {
+    setPlacing(true);
+    try {
+      const res = await fetch("/api/payments/paypal/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: appliedCode || undefined, display_currency: currency }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.url) throw new Error(data.error || "Could not start PayPal checkout");
+      window.location.href = data.url;
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "PayPal checkout failed");
+      setPlacing(false);
+    }
+  };
+
   const placeBankTransferOrder = async () => {
     if (btProofs.length === 0) {
       toast.error("Please upload at least one payment screenshot");
@@ -276,6 +293,7 @@ export default function CheckoutPage() {
   const placeOrder = () => {
     if (paymentMethod === "wallet") return placeWalletOrder();
     if (paymentMethod === "bank") return placeBankTransferOrder();
+    if (paymentMethod === "paypal") return placePaypalOrder();
     return placeStripeOrder();
   };
 
@@ -373,7 +391,23 @@ export default function CheckoutPage() {
                     </span>
                     <div className="flex-1 min-w-0">
                       <Image src="/assets/stripe.svg" alt="Stripe" width={96} height={40} className="h-6 w-auto object-contain" />
-                      <p className="text-[12.5px] text-[#6B7280] mt-2">Pay by card, Google Pay, Apple Pay, PayPal and more.</p>
+                      <p className="text-[12.5px] text-[#6B7280] mt-2">Pay by card, Google Pay, Apple Pay and more.</p>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod("paypal")}
+                    className={`w-full flex items-center gap-4 rounded-xl border p-4 text-left transition-all ${
+                      paymentMethod === "paypal" ? "border-[#FF561E] bg-[#FFF4F0]/50 ring-1 ring-[#FF561E]/30" : "border-gray-200 hover:border-orange-200"
+                    }`}
+                  >
+                    <span className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${paymentMethod === "paypal" ? "border-[#FF561E]" : "border-gray-300"}`}>
+                      {paymentMethod === "paypal" && <span className="w-2.5 h-2.5 rounded-full bg-[#FF561E]" />}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <Image src="/assets/paypal.webp" alt="PayPal" width={96} height={40} className="h-6 w-auto object-contain" />
+                      <p className="text-[12.5px] text-[#6B7280] mt-2">Pay securely with your PayPal balance, card or bank.</p>
                     </div>
                   </button>
 
@@ -595,6 +629,10 @@ export default function CheckoutPage() {
                   ) : paymentMethod === "bank" ? (
                     <>
                       Submit for Verification <Landmark className="w-4 h-4" />
+                    </>
+                  ) : paymentMethod === "paypal" ? (
+                    <>
+                      Continue to PayPal <ArrowRight className="w-4 h-4" />
                     </>
                   ) : (
                     <>

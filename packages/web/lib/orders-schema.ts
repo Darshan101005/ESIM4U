@@ -23,6 +23,8 @@ export async function ensureOrderPaymentColumns(): Promise<void> {
     ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_source VARCHAR(20) DEFAULT 'stripe';
     ALTER TABLE orders ADD COLUMN IF NOT EXISTS wallet_reference TEXT;
     ALTER TABLE orders ADD COLUMN IF NOT EXISTS bank_transfer_reference TEXT;
+    ALTER TABLE orders ADD COLUMN IF NOT EXISTS paypal_order_id TEXT;
+    ALTER TABLE orders ADD COLUMN IF NOT EXISTS paypal_capture_id TEXT;
   `);
   ensured = true;
 }

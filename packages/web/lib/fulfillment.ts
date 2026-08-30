@@ -4,6 +4,7 @@ import { assignBundle, fetchOrderById } from "@/lib/montyesim";
 import { incrementPromoUsage } from "@/lib/promo";
 import { validateAffiliateCode, recordAffiliateSale } from "@/lib/affiliate";
 import { stripe, StripePaymentDetails } from "@/lib/stripe";
+import { refundPaypalCapture, PaypalPaymentDetails } from "@/lib/paypal";
 import { ensureOrderPaymentColumns } from "@/lib/orders-schema";
 import { creditWallet } from "@/lib/wallet";
 
@@ -429,6 +430,119 @@ export async function holdBankTransferOrders(bankTransferReference: string) {
 }
 
 /**
+ * Resolves a captured PayPal order: assigns each pending eSIM, marks each
+ * completed/failed, auto-refunds failed items back to PayPal, clears the cart.
+ * Idempotent — only acts on rows still in `pending`.
+ */
+export async function fulfillPaypalSession(paypalOrderId: string, payment: PaypalPaymentDetails) {
+  await ensureOrderPaymentColumns();
+
+  const res = await pool.query(`SELECT * FROM orders WHERE paypal_order_id = $1 ORDER BY id ASC`, [paypalOrderId]);
+  const rows = res.rows as OrderRow[];
+  if (rows.length === 0) return [];
+
+  const claim = await pool.query(
+    `UPDATE orders SET status = 'processing' WHERE paypal_order_id = $1 AND status = 'pending' RETURNING *`,
+    [paypalOrderId]
+  );
+  const pending = claim.rows as OrderRow[];
+
+  for (const row of pending) {
+    try {
+      const a = await performAssignment(row);
+      await pool.query(
+        `UPDATE orders SET monty_order_id = $1, iccid = $2, qr_code_url = $3, lpa_code = $4, smdp_address = $5,
+           matching_id = $6, activation_otp = $7, bundle_expiry_date = $8, status = 'completed',
+           paypal_capture_id = $9, payment_method_type = 'paypal'
+         WHERE id = $10`,
+        [
+          a.montyOrderId,
+          a.iccid,
+          a.qrCodeUrl,
+          a.activationCode,
+          a.smdpAddress,
+          a.matchingId,
+          a.activationOtp,
+          a.bundleExpiry,
+          payment.captureId,
+          row.id,
+        ]
+      );
+
+      await recordAffiliateForRow(row);
+    } catch (assignError: unknown) {
+      const errorMsg = assignError instanceof Error ? assignError.message : "Assignment failed";
+      await pool.query(
+        `UPDATE orders SET status = 'failed', paypal_capture_id = $1, payment_method_type = 'paypal' WHERE id = $2`,
+        [payment.captureId, row.id]
+      );
+      console.error(`PayPal fulfilment failed for order ${row.order_reference}: ${errorMsg}`);
+    }
+  }
+
+  if (pending.length > 0) {
+    await refundFailedPaypalItems(paypalOrderId, payment);
+  }
+
+  await finalizeSessionSideEffects("paypal_order_id", paypalOrderId, rows[0].user_id, pending.length > 0);
+
+  const final = await pool.query(`SELECT * FROM orders WHERE paypal_order_id = $1 ORDER BY id ASC`, [paypalOrderId]);
+  return final.rows as OrderRow[];
+}
+
+/** Refunds the value of failed PayPal-paid items back to the buyer's PayPal. */
+async function refundFailedPaypalItems(paypalOrderId: string, payment: PaypalPaymentDetails) {
+  if (!payment.captureId) return;
+
+  const res = await pool.query(
+    `SELECT id, price, status, refund_id, display_currency, display_rate FROM orders WHERE paypal_order_id = $1`,
+    [paypalOrderId]
+  );
+  const rows = res.rows as {
+    id: number;
+    price: string;
+    status: string;
+    refund_id: string | null;
+    display_currency: string | null;
+    display_rate: string | null;
+  }[];
+
+  const failedUnrefunded = rows.filter((r) => r.status === "failed" && !r.refund_id);
+  if (failedUnrefunded.length === 0) return;
+
+  const totalUsd = round(rows.reduce((sum, r) => sum + Number(r.price), 0));
+  const failedUsd = round(failedUnrefunded.reduce((sum, r) => sum + Number(r.price), 0));
+
+  // Refund in the currency the customer was charged (display currency/rate).
+  const currency = failedUnrefunded[0].display_currency || payment.capturedCurrency || "USD";
+  const rate = failedUnrefunded[0].display_rate != null ? Number(failedUnrefunded[0].display_rate) : 1;
+
+  try {
+    let refund;
+    if (failedUsd >= totalUsd) {
+      // All items failed — full refund (no amount = full).
+      refund = await refundPaypalCapture(payment.captureId);
+    } else {
+      const value = (Math.round(failedUsd * rate * 100) / 100).toFixed(2);
+      refund = await refundPaypalCapture(payment.captureId, { value, currency });
+    }
+    await pool.query(
+      `UPDATE orders SET status = 'refunded', refund_id = $1, refund_status = 'succeeded'
+       WHERE paypal_order_id = $2 AND status = 'failed' AND refund_id IS NULL`,
+      [refund.id, paypalOrderId]
+    );
+  } catch (refundError: unknown) {
+    const msg = refundError instanceof Error ? refundError.message : "Refund failed";
+    console.error(`PayPal refund failed for order ${paypalOrderId}: ${msg}`);
+    await pool.query(
+      `UPDATE orders SET status = 'refund_failed', refund_status = 'failed'
+       WHERE paypal_order_id = $1 AND status = 'failed' AND refund_id IS NULL`,
+      [paypalOrderId]
+    );
+  }
+}
+
+/**
  * Marks a session's still-pending orders as cancelled (expired / abandoned /
  * async payment failed). No money was captured, so nothing to refund. The cart
  * is left intact so the customer can retry.
@@ -436,4 +550,10 @@ export async function holdBankTransferOrders(bankTransferReference: string) {
 export async function cancelSession(stripeSessionId: string) {
   await ensureOrderPaymentColumns();
   await pool.query(`UPDATE orders SET status = 'cancelled' WHERE stripe_session_id = $1 AND status = 'pending'`, [stripeSessionId]);
+}
+
+/** Cancels a PayPal order's still-pending rows (buyer abandoned / not captured). */
+export async function cancelPaypalSession(paypalOrderId: string) {
+  await ensureOrderPaymentColumns();
+  await pool.query(`UPDATE orders SET status = 'cancelled' WHERE paypal_order_id = $1 AND status = 'pending'`, [paypalOrderId]);
 }
