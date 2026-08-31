@@ -14,6 +14,24 @@ export const auth = betterAuth({
     sendOnSignUp: false,
     sendVerificationEmail: async () => {},
   },
+  socialProviders: {
+    google: {
+      clientId: process.env.GOOGLE_CLIENT_ID || "",
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
+    },
+  },
+  account: {
+    accountLinking: {
+      // Link a social login to an existing account when the verified email
+      // matches — so "same email via Google" resolves to one account, no dupes.
+      enabled: true,
+      trustedProviders: ["google"],
+      // Keep the name/details already on the account when Google links in.
+      // So an email/password signup's name wins; only a first-time Google
+      // signup uses the Google name. Either way it's editable in Profile.
+      updateUserInfoOnLink: false,
+    },
+  },
   session: {
     cookieCache: {
       enabled: true,
