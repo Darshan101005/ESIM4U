@@ -78,6 +78,12 @@ export async function PUT(request: NextRequest) {
     const body = await request.json();
     const { phone, preferred_currency, country, date_of_birth, gender } = body;
 
+    // Name lives on the Better Auth "user" table.
+    const name = typeof body.name === "string" ? body.name.trim() : "";
+    if (name) {
+      await pool.query(`UPDATE "user" SET name = $1 WHERE id = $2`, [name, session.user.id]);
+    }
+
     // Partial update: only overwrite the fields that were actually provided, so
     // saving currency alone doesn't wipe personal details (and vice-versa).
     await pool.query(
