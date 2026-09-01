@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Globe, QrCode, Plane, Tag, Zap, ShieldCheck, Headphones, Smartphone, RadioTower, Search, ChevronRight, ChevronLeft, ArrowRight, X, Info, Wifi, Gift, CheckCircle2, XCircle, PhoneCall, Rocket, MapPin, BrickWallFire, Users, Star, Quote } from 'lucide-react';
+import { Globe, QrCode, Plane, Tag, Zap, ShieldCheck, Headphones, Smartphone, RadioTower, Search, ChevronRight, ChevronLeft, ArrowRight, X, Info, Wifi, Gift, CheckCircle2, XCircle, PhoneCall, Rocket, MapPin, BrickWallFire, Users, Star, Quote, Menu } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { authClient } from '@/lib/auth-client';
@@ -183,6 +183,7 @@ export default function Landing() {
   const [locationsFolder, setLocationsFolder] = useState('Locations');
   const [startingLoading, setStartingLoading] = useState(false);
   const [landingPrices, setLandingPrices] = useState<{ countries: Record<string, number | null>; regions: Record<string, number | null>; global: number | null } | null>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -404,7 +405,7 @@ export default function Landing() {
   return (
     <div className="min-h-screen w-full bg-white font-sans flex flex-col">
       <div className="h-screen w-full relative overflow-hidden flex flex-col shrink-0">
-        <div className="absolute inset-0 z-0 pointer-events-none flex justify-end overflow-hidden">
+        <div className="absolute inset-0 z-0 pointer-events-none flex justify-end overflow-hidden hidden md:flex">
           <div className="relative w-full h-full max-w-[1920px]">
             <Image
               src="/assets/hero-section.png"
@@ -417,7 +418,10 @@ export default function Landing() {
           </div>
         </div>
 
-        <div className="w-full px-8 md:px-12 xl:px-16 pt-8 flex items-center justify-between relative z-50">
+        {/* Mobile gradient background */}
+        <div className="absolute inset-0 z-0 pointer-events-none md:hidden" style={{ background: 'linear-gradient(135deg, #FFF8F5 0%, #FFF0EB 40%, #FFE4DB 100%)' }}></div>
+
+        <div className="w-full px-5 sm:px-8 md:px-12 xl:px-16 pt-5 sm:pt-8 flex items-center justify-between relative z-50">
           <div className="flex-1 flex justify-start">
             <Link href="/" className="flex items-center">
               <Image 
@@ -425,7 +429,7 @@ export default function Landing() {
                 alt="eSIM4U Logo" 
                 width={140} 
                 height={42}
-                className="object-contain"
+                className="object-contain w-[110px] sm:w-[140px]"
                 priority
               />
             </Link>
@@ -446,7 +450,7 @@ export default function Landing() {
           </div>
 
           <div className="flex-1 flex justify-end">
-            <div className="flex items-center gap-3">
+            <div className="hidden sm:flex items-center gap-3">
               <Link href="/login" className="px-6 py-2.5 rounded-full bg-white/80 backdrop-blur-sm border border-gray-100 text-[#FF561E] font-semibold text-[14px] hover:bg-white hover:scale-105 hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(255,86,30,0.15)] hover:border-orange-100 transition-all duration-300 shadow-sm">
                 Log in
               </Link>
@@ -454,35 +458,69 @@ export default function Landing() {
                 Sign up
               </Link>
             </div>
+            {/* Mobile hamburger */}
+            <button
+              onClick={() => setMobileMenuOpen(true)}
+              className="sm:hidden w-10 h-10 flex items-center justify-center rounded-full bg-white/80 backdrop-blur-sm border border-gray-100 shadow-sm"
+              aria-label="Open menu"
+            >
+              <Menu className="w-5 h-5 text-[#1A1D20]" />
+            </button>
           </div>
         </div>
 
-        <main className="flex-grow w-full px-8 md:px-12 xl:px-16 flex items-center relative z-10 pb-20">
+        {/* Mobile slide-out menu */}
+        {mobileMenuOpen && (
+          <div className="fixed inset-0 z-[100] sm:hidden">
+            <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setMobileMenuOpen(false)}></div>
+            <div className="absolute right-0 top-0 bottom-0 w-[280px] bg-white shadow-2xl flex flex-col animate-[slideInRight_0.3s_ease-out]">
+              <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-gray-100">
+                <Image src="/assets/esim4u-logo.png" alt="eSIM4U" width={100} height={30} className="object-contain" />
+                <button onClick={() => setMobileMenuOpen(false)} className="w-9 h-9 rounded-full bg-gray-50 flex items-center justify-center">
+                  <X className="w-5 h-5 text-[#1A1D20]" />
+                </button>
+              </div>
+              <nav className="flex flex-col px-5 py-4 gap-1">
+                <Link href="/" onClick={() => setMobileMenuOpen(false)} className="py-3 px-3 text-[15px] font-semibold text-[#FF561E] bg-orange-50 rounded-xl">Home</Link>
+                <button onClick={() => { scrollToId('how-it-works'); setMobileMenuOpen(false); }} className="py-3 px-3 text-[15px] font-medium text-[#1A1D20] text-left hover:bg-gray-50 rounded-xl transition-colors">How It Works</button>
+                <button onClick={() => { scrollToId('destinations'); setMobileMenuOpen(false); }} className="py-3 px-3 text-[15px] font-medium text-[#1A1D20] text-left hover:bg-gray-50 rounded-xl transition-colors">Destinations</button>
+                <Link href="/about-us" onClick={() => setMobileMenuOpen(false)} className="py-3 px-3 text-[15px] font-medium text-[#1A1D20] hover:bg-gray-50 rounded-xl transition-colors">About Us</Link>
+                <Link href="/faq" onClick={() => setMobileMenuOpen(false)} className="py-3 px-3 text-[15px] font-medium text-[#1A1D20] hover:bg-gray-50 rounded-xl transition-colors">FAQs</Link>
+              </nav>
+              <div className="mt-auto px-5 pb-6 flex flex-col gap-3">
+                <Link href="/login" className="w-full py-3 rounded-full border border-[#FF561E] text-[#FF561E] font-semibold text-[14px] text-center">Log in</Link>
+                <Link href="/signup" className="w-full py-3 rounded-full bg-[#FF561E] text-white font-semibold text-[14px] text-center shadow-lg shadow-orange-500/20">Sign up</Link>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <main className="flex-grow w-full px-5 sm:px-8 md:px-12 xl:px-16 flex items-center relative z-10 pb-10 sm:pb-20">
           <div className="w-full max-w-[650px] z-20 relative">
-            <div className="inline-flex items-center px-5 py-2 rounded-full bg-orange-50 border border-orange-100 shadow-[0_2px_10px_rgb(0,0,0,0.03)] mb-8">
-              <span className="text-[#FF561E] text-[13px] font-semibold tracking-wide">Global Travel eSIM</span>
+            <div className="inline-flex items-center px-4 sm:px-5 py-2 rounded-full bg-orange-50 border border-orange-100 shadow-[0_2px_10px_rgb(0,0,0,0.03)] mb-5 sm:mb-8">
+              <span className="text-[#FF561E] text-[12px] sm:text-[13px] font-semibold tracking-wide">Global Travel eSIM</span>
             </div>
             
-            <h1 className="text-[54px] lg:text-[70px] leading-[1.12] font-medium text-[#1A1D20] tracking-[-0.02em] mb-6">
+            <h1 className="text-[36px] sm:text-[44px] md:text-[54px] lg:text-[70px] leading-[1.12] font-medium text-[#1A1D20] tracking-[-0.02em] mb-4 sm:mb-6">
               Stay Connected<br />
               <span className="whitespace-nowrap">
-                Everywhere, <span className="text-[#FF561E] font-serif italic font-normal tracking-normal pr-4">Anytime.</span>
+                Everywhere, <span className="text-[#FF561E] font-serif italic font-normal tracking-normal sm:pr-4">Anytime.</span>
               </span>
             </h1>
             
-            <p className="text-[18px] lg:text-[20px] leading-[1.6] text-[#6B7280] mb-10 font-medium max-w-[420px]">
-              Travel smarter with instant eSIM activation<br />
+            <p className="text-[15px] sm:text-[18px] lg:text-[20px] leading-[1.6] text-[#6B7280] mb-7 sm:mb-10 font-medium max-w-[420px]">
+              Travel smarter with instant eSIM activation<br className="hidden sm:block" />
               in 200+ countries worldwide.
             </p>
             
-            <div className="flex items-center gap-4">
-              <button onClick={handleGetStarted} disabled={startingLoading} className="inline-flex items-center justify-center px-9 py-4 rounded-full bg-[#FF561E] text-white font-semibold text-[16px]  transition-all shadow-xl shadow-orange-500/25 gap-2 group disabled:opacity-80">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
+              <button onClick={handleGetStarted} disabled={startingLoading} className="inline-flex items-center justify-center px-7 sm:px-9 py-3.5 sm:py-4 rounded-full bg-[#FF561E] text-white font-semibold text-[15px] sm:text-[16px]  transition-all shadow-xl shadow-orange-500/25 gap-2 group disabled:opacity-80">
                 Get Started
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="transform transition-transform group-hover:translate-x-1">
                   <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
               </button>
-              <button onClick={() => scrollToId('where-next')} className="inline-flex items-center justify-center px-9 py-4 rounded-full bg-white/90 backdrop-blur-md text-[#FF561E] font-semibold text-[16px] hover:bg-white transition-all border border-gray-200 shadow-sm gap-2 group">
+              <button onClick={() => scrollToId('where-next')} className="inline-flex items-center justify-center px-7 sm:px-9 py-3.5 sm:py-4 rounded-full bg-white/90 backdrop-blur-md text-[#FF561E] font-semibold text-[15px] sm:text-[16px] hover:bg-white transition-all border border-gray-200 shadow-sm gap-2 group">
                 Explore Plans
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="transform transition-transform group-hover:translate-x-1">
                   <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
@@ -494,9 +532,9 @@ export default function Landing() {
       </div>
 
       <section
-        className="min-h-screen shrink-0 w-full px-8 md:px-12 xl:px-16 mt-20 md:mt-32 pb-24 bg-white flex flex-col items-center justify-center relative"
+        className="min-h-screen shrink-0 w-full px-5 sm:px-8 md:px-12 xl:px-16 mt-12 sm:mt-20 md:mt-32 pb-16 sm:pb-24 bg-white flex flex-col items-center justify-center relative"
       >
-        <div className="w-full max-w-[1400px] flex flex-col gap-20 xl:gap-24">
+        <div className="w-full max-w-[1400px] flex flex-col gap-14 sm:gap-20 xl:gap-24">
           
           <div ref={howRef} id="how-it-works" className="scroll-mt-28 flex flex-col lg:flex-row gap-10 lg:gap-6 items-center lg:items-start w-full relative">
             <div 
@@ -507,7 +545,7 @@ export default function Landing() {
               <div className="inline-flex items-center px-4 py-1.5 rounded-full bg-orange-50 border border-orange-100 mb-6 w-max">
                 <span className="text-[#FF561E] text-[13px] font-semibold">How eSIM4U Works</span>
               </div>
-              <h2 className="text-[40px] md:text-[46px] xl:text-[50px] leading-[1.12] font-semibold text-[#1A1D20] tracking-tight mb-5">
+              <h2 className="text-[28px] sm:text-[36px] md:text-[46px] xl:text-[50px] leading-[1.12] font-semibold text-[#1A1D20] tracking-tight mb-5">
                 Travel Connected in<br />
                 <span className="text-[#FF561E] font-serif italic font-medium lining-nums tracking-normal">3 Simple Steps</span>
               </h2>
@@ -593,15 +631,15 @@ export default function Landing() {
           <div 
             ref={whyRef}
             id="features"
-            className={`scroll-mt-28 w-full bg-[#FFF4F0] rounded-[40px] px-8 py-12 md:py-16 md:px-16 text-center shadow-sm transition-all duration-[1000ms] ease-out ${
+            className={`scroll-mt-28 w-full bg-[#FFF4F0] rounded-[24px] sm:rounded-[40px] px-5 py-10 sm:px-8 sm:py-12 md:py-16 md:px-16 text-center shadow-sm transition-all duration-[1000ms] ease-out ${
               whyVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
             }`}
           >
-            <h2 className="text-[32px] md:text-[36px] font-semibold text-[#1A1D20] mb-14 tracking-tight">
+            <h2 className="text-[24px] sm:text-[32px] md:text-[36px] font-semibold text-[#1A1D20] mb-8 sm:mb-14 tracking-tight">
               Why Travelers Choose <span className="text-[#FF561E] font-serif italic font-medium lining-nums tracking-normal">eSIM4U</span>
             </h2>
             
-            <div className="grid grid-cols-2 lg:grid-cols-6 gap-x-8 gap-y-12">
+            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-6 gap-x-6 sm:gap-x-8 gap-y-8 sm:gap-y-12">
               {[
                 { title: 'Global Coverage', desc: 'Stay connected in 200+ countries with reliable networks.', icon: <Globe className="w-[30px] h-[30px] text-[#FF561E]" strokeWidth={2} /> },
                 { title: 'Affordable Plans', desc: 'Flexible and budget-friendly plans for every traveler.', icon: <Tag className="w-[30px] h-[30px] text-[#FF561E]" strokeWidth={2} /> },
@@ -630,7 +668,7 @@ export default function Landing() {
         </div>
       </section>
 
-      <section id="coverage" className="scroll-mt-24 w-full px-8 md:px-12 xl:px-16 pt-4 pb-8 md:pt-6 md:pb-12 bg-white flex flex-col items-center justify-center relative">
+      <section id="coverage" className="scroll-mt-24 w-full px-5 sm:px-8 md:px-12 xl:px-16 pt-4 pb-8 md:pt-6 md:pb-12 bg-white flex flex-col items-center justify-center relative">
         <div ref={coverageRef} className="w-full max-w-[1400px] flex flex-col lg:flex-row gap-16 lg:gap-4 items-center justify-between lg:justify-center">
           
           <div 
@@ -642,7 +680,7 @@ export default function Landing() {
               <span className="text-[#FF561E] text-[13px] font-semibold">Global Coverage</span>
             </div>
             
-            <h2 className="text-[40px] md:text-[46px] xl:text-[54px] leading-[1.12] font-semibold text-[#1A1D20] tracking-tight mb-5">
+            <h2 className="text-[28px] sm:text-[36px] md:text-[46px] xl:text-[54px] leading-[1.12] font-semibold text-[#1A1D20] tracking-tight mb-5">
               Stay Connected in<br />
               <span className="text-[#FF561E] font-serif italic font-medium lining-nums tracking-normal">200+ Countries</span>
             </h2>
@@ -651,7 +689,7 @@ export default function Landing() {
               Enjoy reliable and high-speed data coverage in 200+ countries and regions around the world.
             </p>
             
-            <div className="flex items-center gap-10 md:gap-14">
+            <div className="flex items-center gap-6 sm:gap-10 md:gap-14">
               <div className="flex flex-col items-center">
                 <div className="w-12 h-12 rounded-full bg-[#FFF4F0] flex items-center justify-center mb-4">
                   <Globe className="w-[22px] h-[22px] text-[#FF561E]" strokeWidth={2.5} />
@@ -698,7 +736,7 @@ export default function Landing() {
 
       <section id="destinations" className="scroll-mt-24 w-full px-4 md:px-6 xl:px-8 pt-0 pb-4 md:pt-0 md:pb-6 bg-white flex flex-col items-center justify-center relative">
         <div className="w-full max-w-[1400px] flex flex-col items-center">
-          <h2 className="text-[40px] md:text-[46px] xl:text-[54px] leading-[1.12] font-semibold text-[#1A1D20] mb-5 tracking-tight text-center">
+          <h2 className="text-[28px] sm:text-[36px] md:text-[46px] xl:text-[54px] leading-[1.12] font-semibold text-[#1A1D20] mb-3 sm:mb-5 tracking-tight text-center px-2">
             Browse Popular <span className="text-[#FF561E] font-serif italic font-medium pr-1">Destinations</span>
           </h2>
           <p className="text-[16px] text-[#6B7280] font-medium mb-3 text-center">
@@ -750,9 +788,9 @@ export default function Landing() {
         </div>
       </section>
 
-      <section id="where-next" className="scroll-mt-4 w-full px-8 md:px-12 xl:px-16 pb-8 flex flex-col items-center justify-center relative">
-        <div className="w-full max-w-[1400px] bg-[#FFF4F0] rounded-[40px] px-8 py-12 md:py-16 md:px-12 flex flex-col items-center">
-          <h2 className="text-[32px] md:text-[36px] font-semibold text-[#1A1D20] mb-3 tracking-tight text-center">
+      <section id="where-next" className="scroll-mt-4 w-full px-4 sm:px-8 md:px-12 xl:px-16 pb-8 flex flex-col items-center justify-center relative">
+        <div className="w-full max-w-[1400px] bg-[#FFF4F0] rounded-[24px] sm:rounded-[40px] px-4 py-8 sm:px-8 sm:py-12 md:py-16 md:px-12 flex flex-col items-center">
+          <h2 className="text-[24px] sm:text-[32px] md:text-[36px] font-semibold text-[#1A1D20] mb-3 tracking-tight text-center">
             Where are you traveling <span className="text-[#FF561E] font-serif italic font-medium pr-1">next?</span>
           </h2>
           <p className="text-[16px] text-[#6B7280] font-medium mb-10 text-center">
@@ -855,7 +893,7 @@ export default function Landing() {
         </div>
       </section>
 
-      <section className="w-full bg-white overflow-hidden min-h-[820px] relative flex flex-col items-center pt-10 mt-6 pb-20">
+      <section className="hidden lg:flex w-full bg-white overflow-hidden min-h-[820px] relative flex-col items-center pt-10 mt-6 pb-20">
         <div className="z-10 flex flex-col items-center mb-24 px-4">
           <h2 className="text-[40px] md:text-[54px] xl:text-[60px] leading-[1.05] font-semibold text-[#05070A] tracking-tight text-center mb-4">
             Global eSIM <span className="text-[#FF561E] font-serif italic font-normal tracking-normal">Connectivity</span>
@@ -966,7 +1004,7 @@ export default function Landing() {
           }
         `}</style>
       </section>
-      <section id="comparison" className="scroll-mt-0 w-full px-8 md:px-12 xl:px-16 pt-12 pb-24 bg-white flex flex-col items-center justify-center relative z-10 text-[#1A1D20]">
+      <section id="comparison" className="hidden md:flex scroll-mt-0 w-full px-8 md:px-12 xl:px-16 pt-12 pb-24 bg-white flex-col items-center justify-center relative z-10 text-[#1A1D20]">
         <div className="w-full max-w-[1200px] flex flex-col items-center">
           <h2 className="text-[40px] md:text-[46px] xl:text-[54px] font-semibold mb-3 text-center tracking-tight">
             eSIM4U vs. Other <span className="text-[#FF561E] font-serif italic font-medium tracking-normal">eSIM Services</span>
@@ -1068,14 +1106,14 @@ export default function Landing() {
         </div>
       </section>
 
-      <section className="w-full px-8 md:px-12 xl:px-16 pb-8 flex flex-col items-center justify-center relative z-10 text-[#1A1D20]">
-        <div className="w-full max-w-[1400px] bg-[#FFF4F0] rounded-[40px] px-8 py-12 md:py-16 md:px-12 flex flex-col items-center shadow-sm relative overflow-hidden">
+      <section className="w-full px-4 sm:px-8 md:px-12 xl:px-16 pb-8 flex flex-col items-center justify-center relative z-10 text-[#1A1D20]">
+        <div className="w-full max-w-[1400px] bg-[#FFF4F0] rounded-[24px] sm:rounded-[40px] px-5 py-10 sm:px-8 sm:py-12 md:py-16 md:px-12 flex flex-col items-center shadow-sm relative overflow-hidden">
           
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-[0.03] pointer-events-none flex items-center justify-center">
             <ShieldCheck className="text-[#FF561E] w-[400px] h-[400px] md:w-[600px] md:h-[600px]" strokeWidth={0.8} />
           </div>
 
-          <h2 className="text-[32px] md:text-[36px] font-semibold text-[#1A1D20] mb-5 tracking-tight z-10 relative text-center">
+          <h2 className="text-[22px] sm:text-[28px] md:text-[36px] font-semibold text-[#1A1D20] mb-5 tracking-tight z-10 relative text-center leading-[1.2]">
             Free VPN Access for a Truly <span className="text-[#FF561E] font-serif italic font-medium tracking-normal pr-1">Open Internet</span>
           </h2>
           
@@ -1085,7 +1123,7 @@ export default function Landing() {
             That&apos;s why we include free VPN access with every plan so you can <span className="font-bold text-[#FF561E]">connect freely, everywhere.</span>
           </p>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 w-full relative z-10 gap-y-10 lg:gap-y-0">
+          <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-5 w-full relative z-10 gap-x-4 gap-y-8 sm:gap-y-10 lg:gap-y-0">
             {[
               {
                 title: "Open Internet\nAccess",
@@ -1140,7 +1178,7 @@ export default function Landing() {
         </div>
       </section>
 
-      <section className="w-full px-8 md:px-12 xl:px-16 pt-0 pb-12 bg-white flex flex-col items-center justify-center relative z-10 text-[#1A1D20]">
+      <section className="w-full px-4 sm:px-8 md:px-12 xl:px-16 pt-0 pb-12 bg-white flex flex-col items-center justify-center relative z-10 text-[#1A1D20]">
         <div className="w-full max-w-[1400px] flex flex-col items-center">
           
           <div className="w-full flex flex-col md:flex-row items-center justify-between gap-8 md:gap-4 mb-10 mt-4">
@@ -1151,7 +1189,7 @@ export default function Landing() {
                 <span className="text-[#FF561E] text-[13px] font-semibold tracking-wide">Refer & Earn</span>
               </div>
 
-              <h2 className="text-[46px] md:text-[56px] xl:text-[62px] leading-[1.12] font-semibold text-[#1A1D20] tracking-[-0.02em] mb-4">
+              <h2 className="text-[30px] sm:text-[40px] md:text-[56px] xl:text-[62px] leading-[1.12] font-semibold text-[#1A1D20] tracking-[-0.02em] mb-4">
                 Refer Friends,<br /> <span className="text-[#FF561E] font-serif italic font-medium lining-nums tracking-normal">Earn $3 Each</span>
               </h2>
 
@@ -1256,7 +1294,7 @@ export default function Landing() {
         </div>
       </section>
 
-      <section className="w-full px-8 md:px-12 xl:px-16 py-12 md:py-16 bg-white overflow-hidden">
+      <section className="w-full px-4 sm:px-8 md:px-12 xl:px-16 py-8 sm:py-12 md:py-16 bg-white overflow-hidden">
         <div className="w-full max-w-[1400px] mx-auto">
           <div ref={reviewsRef} className="flex gap-5 overflow-x-auto hide-scrollbar scroll-smooth pb-2 snap-x">
             {reviews.map((r, i) => (
@@ -1318,14 +1356,73 @@ export default function Landing() {
       </section>
 
       <footer className="w-full relative bg-[#FF561E] overflow-hidden pt-8 pb-3 md:pt-10 md:pb-5 font-sans">
-        <div className="absolute left-[-5%] md:left-[5%] top-8 bottom-4 w-[40%] md:w-[15%] opacity-15 pointer-events-none">
+        <div className="absolute left-[-5%] md:left-[5%] top-8 bottom-4 w-[40%] md:w-[15%] opacity-15 pointer-events-none hidden sm:block">
           <Image src="/assets/tower.svg" alt="Tower Background" fill className="object-contain object-bottom" />
         </div>
-        <div className="absolute right-[-5%] md:right-[5%] top-8 bottom-4 w-[40%] md:w-[15%] opacity-15 pointer-events-none">
+        <div className="absolute right-[-5%] md:right-[5%] top-8 bottom-4 w-[40%] md:w-[15%] opacity-15 pointer-events-none hidden sm:block">
           <Image src="/assets/tower.svg" alt="Tower Background" fill className="object-contain object-bottom" />
         </div>
 
-        <div className="w-full max-w-[1400px] mx-auto px-4 md:px-6 xl:px-8 flex flex-col xl:flex-row gap-12 xl:gap-10 relative z-10 mb-4 md:mb-6">
+        {/* Mobile footer - centered, simplified */}
+        <div className="sm:hidden flex flex-col items-center relative z-10 px-6 pb-4">
+          <div className="relative h-16 w-52 mb-4">
+            <Image src="/assets/esim4u-logo.png" alt="eSIM4U" fill className="object-contain brightness-0 invert" />
+          </div>
+
+          <div className="flex items-center justify-center gap-5 mb-8">
+            <a href="#" aria-label="Instagram" className="text-white hover:text-white/80 transition-colors">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <rect width="20" height="20" x="2" y="2" rx="6" ry="6" />
+                <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+                <line x1="17.5" x2="17.51" y1="6.5" y2="6.5" />
+              </svg>
+            </a>
+            <a href="#" aria-label="Facebook" className="text-white hover:text-white/80 transition-colors">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" />
+              </svg>
+            </a>
+            <a href="#" aria-label="X (Twitter)" className="text-white hover:text-white/80 transition-colors">
+              <img src="https://upload.wikimedia.org/wikipedia/commons/c/ce/X_logo_2023.svg" alt="X (Twitter)" width={18} height={18} className="brightness-0 invert opacity-100 hover:opacity-80 transition-opacity" />
+            </a>
+            <a href="#" aria-label="TikTok" className="text-white hover:text-white/80 transition-colors">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/>
+              </svg>
+            </a>
+            <a href="#" aria-label="YouTube" className="text-white hover:text-white/80 transition-colors">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M21.58 6.55a2.76 2.76 0 0 0-1.95-1.96C17.9 4.1 12 4.1 12 4.1s-5.9 0-7.63.49A2.76 2.76 0 0 0 2.42 6.55C1.94 8.28 1.94 12 1.94 12s0 3.72.48 5.45a2.76 2.76 0 0 0 1.95 1.96C6.1 19.9 12 19.9 12 19.9s5.9 0 7.63-.49a2.76 2.76 0 0 0 1.95-1.96C22.06 15.72 22.06 12 22.06 12s0-3.72-.48-5.45zM9.95 15.36V8.64L15.79 12z"/>
+              </svg>
+            </a>
+          </div>
+
+          <div className="grid grid-cols-2 gap-x-10 gap-y-6 text-center mb-8 w-full max-w-[320px]">
+            <div className="flex flex-col gap-3">
+              <h4 className="font-bold text-[13px] tracking-wide text-white/90">PRODUCT</h4>
+              <button onClick={() => goProtected('/dashboard/browse')} className="text-white/90 text-[13px] font-medium">Buy eSIM</button>
+              <button onClick={() => scrollToId('how-it-works')} className="text-white/90 text-[13px] font-medium">How it works</button>
+            </div>
+            <div className="flex flex-col gap-3">
+              <h4 className="font-bold text-[13px] tracking-wide text-white/90">COMPANY</h4>
+              <Link href="/about-us" className="text-white/90 text-[13px] font-medium">About us</Link>
+              <Link href="/faq" className="text-white/90 text-[13px] font-medium">FAQs</Link>
+            </div>
+            <div className="flex flex-col gap-3">
+              <h4 className="font-bold text-[13px] tracking-wide text-white/90">SUPPORT</h4>
+              <Link href="/help-center" className="text-white/90 text-[13px] font-medium">Help Center</Link>
+              <Link href="/privacy" className="text-white/90 text-[13px] font-medium">Privacy Policy</Link>
+            </div>
+            <div className="flex flex-col gap-3">
+              <h4 className="font-bold text-[13px] tracking-wide text-white/90">ACCOUNT</h4>
+              <Link href="/login" className="text-white/90 text-[13px] font-medium">Log in</Link>
+              <Link href="/signup" className="text-white/90 text-[13px] font-medium">Sign up</Link>
+            </div>
+          </div>
+        </div>
+
+        {/* Desktop footer - unchanged */}
+        <div className="hidden sm:flex w-full max-w-[1400px] mx-auto px-4 md:px-6 xl:px-8 flex-col xl:flex-row gap-12 xl:gap-10 relative z-10 mb-4 md:mb-6">
           <div className="w-full xl:w-[280px] flex flex-col items-start gap-4 shrink-0">
             <div className="relative h-20 w-64 md:h-[90px] md:w-[280px] -ml-4 lg:-ml-8">
               <Image src="/assets/esim4u-logo.png" alt="eSIM4U" fill className="object-contain object-left brightness-0 invert" />
