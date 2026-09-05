@@ -21,6 +21,12 @@ export const auth = betterAuth({
     },
   },
   account: {
+    // Better Auth 1.7 requires an explicit account identity strategy. Our
+    // existing production rows use real issuer namespaces (e.g. Google's
+    // "https://accounts.google.com" and "local:credential"), so we pin the
+    // "issuer" strategy to match that data. Omitting this triggers a
+    // deprecated 1.7 compatibility warning; setting it is warning-free.
+    identityStrategy: "issuer",
     accountLinking: {
       // Link a social login to an existing account when the verified email
       // matches — so "same email via Google" resolves to one account, no dupes.

@@ -10,13 +10,14 @@
     "lint": "next lint",
     "type-check": "tsc --noEmit",
     "postinstall": "react-flagpack",
-    "db:migrate": "npx @better-auth/cli@latest migrate",
-    "db:generate": "npx @better-auth/cli@latest generate"
+    "db:generate": "npx @better-auth/cli@1.7.2 generate",
+    "db:migrate:plan": "npx @better-auth/cli@1.7.2 migrate plan",
+    "db:migrate:apply": "npx @better-auth/cli@1.7.2 migrate apply"
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.2.4",
     "bcryptjs": "^3.0.3",
-    "better-auth": "^1.6.0",
+    "better-auth": "1.7.2",
     "class-variance-authority": "^0.7.0",
     "cloudinary": "^2.10.1",
     "clsx": "^2.0.0",

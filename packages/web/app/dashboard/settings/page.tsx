@@ -19,6 +19,7 @@ export default function SettingsPage() {
   const [signingOut, setSigningOut] = useState(false);
   const [email, setEmail] = useState("");
   const [googleConnected, setGoogleConnected] = useState(false);
+  const [googleAccountId, setGoogleAccountId] = useState<string | null>(null);
   const [linkBusy, setLinkBusy] = useState(false);
 
   const load = useCallback(async () => {
@@ -37,8 +38,10 @@ export default function SettingsPage() {
   const loadAccounts = useCallback(async () => {
     try {
       const res = await authClient.listAccounts();
-      const list = (res.data || []) as { providerId: string }[];
-      setGoogleConnected(list.some((a) => a.providerId === "google"));
+      const list = (res.data || []) as { id: string; providerId: string }[];
+      const google = list.find((a) => a.providerId === "google");
+      setGoogleConnected(!!google);
+      setGoogleAccountId(google?.id ?? null);
     } catch {}
   }, []);
 
@@ -59,9 +62,15 @@ export default function SettingsPage() {
   };
 
   const disconnectGoogle = async () => {
+    if (!googleAccountId) {
+      toast.error("Google account not found. Try refreshing the page.");
+      return;
+    }
     setLinkBusy(true);
     try {
-      const res = await authClient.unlinkAccount({ providerId: "google" });
+      // Better Auth 1.7: unlink selects by the local account row id (from
+      // listAccounts), not by providerId.
+      const res = await authClient.unlinkAccount({ accountId: googleAccountId });
       if (res.error) throw new Error();
       toast.success("Google disconnected");
       await loadAccounts();
