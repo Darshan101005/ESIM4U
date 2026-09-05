@@ -175,11 +175,11 @@ export default function ManageAdminsPage() {
     <>
       <AdminTopbar title="Manage Admins" />
       <main className="flex-1 px-4 lg:px-8 py-6 lg:py-8 max-w-6xl mx-auto w-full">
-        <div className="flex items-center justify-between gap-3 mb-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
           <p className="text-[14px] text-[#6B7280]">Enroll and manage admin accounts and their roles.</p>
           <button
             onClick={openAdd}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#FF561E] text-white text-[13px] font-bold hover:bg-[#E04B18] transition-colors shadow-sm shadow-orange-500/25 shrink-0"
+            className="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-2.5 rounded-xl bg-[#FF561E] text-white text-[13px] font-bold hover:bg-[#E04B18] transition-colors shadow-sm shadow-orange-500/25 shrink-0"
           >
             <Plus className="w-4 h-4" /> Add Admin
           </button>

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
-import { getNotifications, markNotificationsRead } from "@/lib/support";
+import { getNotifications, markNotificationsRead, clearNotifications } from "@/lib/support";
 
 async function requireUser() {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -31,6 +31,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Failed to update notifications";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
+export async function DELETE() {
+  try {
+    const user = await requireUser();
+    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    await clearNotifications("user", user.id);
+    return NextResponse.json({ ok: true });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Failed to clear notifications";
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

@@ -79,6 +79,12 @@ export default function NotificationBell() {
     else router.push("/dashboard/support/chat");
   };
 
+  const clearAll = async () => {
+    setItems([]);
+    setUnread(0);
+    await fetch("/api/support/notifications", { method: "DELETE" }).catch(() => {});
+  };
+
   return (
     <div className="relative" ref={ref}>
       <button
@@ -95,8 +101,16 @@ export default function NotificationBell() {
 
       {open && (
         <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl border border-gray-100 shadow-[0_8px_30px_rgba(0,0,0,0.12)] z-50 overflow-hidden">
-          <div className="px-4 py-3 border-b border-gray-100">
+          <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
             <p className="text-[14px] font-bold text-[#1A1D20]">Notifications</p>
+            {items.length > 0 && (
+              <button
+                onClick={clearAll}
+                className="text-[12px] font-semibold text-[#6B7280] hover:text-[#FF561E] transition-colors"
+              >
+                Clear all
+              </button>
+            )}
           </div>
           {items.length === 0 ? (
             <div className="px-4 py-8 text-center">

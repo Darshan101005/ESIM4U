@@ -79,9 +79,11 @@ export default function AdminDashboardPage() {
             {isSuperAdmin && (
               <Link
                 href="/admin/dashboard/manage"
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#FF561E] text-white text-[13px] font-bold hover:bg-[#E04B18] transition-colors shadow-sm shadow-orange-500/25"
+                title="Manage Admins"
+                className="inline-flex items-center gap-2 px-3 sm:px-4 py-2.5 rounded-xl bg-[#FF561E] text-white text-[13px] font-bold hover:bg-[#E04B18] transition-colors shadow-sm shadow-orange-500/25 shrink-0 whitespace-nowrap"
               >
-                <ShieldCheck className="w-4 h-4" /> Manage Admins
+                <ShieldCheck className="w-4 h-4 shrink-0" />
+                <span className="hidden sm:inline">Manage Admins</span>
               </Link>
             )}
           </>

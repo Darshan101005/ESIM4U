@@ -18,29 +18,8 @@
     "jsx": "react-native",
     "moduleResolution": "bundler",
     "paths": {
-      "@/app": [
-        "./app"
-      ],
-      "@/components": [
-        "./components"
-      ],
-      "@/screens": [
-        "./screens"
-      ],
-      "@/services": [
-        "./services"
-      ],
-      "@/types": [
-        "./types"
-      ],
-      "@/constants": [
-        "./constants"
-      ],
-      "@/utils": [
-        "./utils"
-      ],
-      "@/hooks": [
-        "./hooks"
+      "@/*": [
+        "./*"
       ]
     }
   },

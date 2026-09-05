@@ -41,7 +41,11 @@ export default function DashboardTopbar({ title }: { title?: string }) {
           <Sun className="w-[18px] h-[18px] theme-only-dark" strokeWidth={2} />
         </button>
 
-        <CurrencyDropdown />
+        {/* Currency switch is hidden on mobile to save header space; it can be
+            changed from Settings. Visible from the md breakpoint up. */}
+        <div className="hidden md:block">
+          <CurrencyDropdown />
+        </div>
 
         <NotificationBell />
       </div>

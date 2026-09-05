@@ -261,6 +261,11 @@ export default function LoginPage() {
               Sign up
             </Link>
           </p>
+          <p className="text-center mt-2.5">
+            <Link href="/admin" className="text-[13px] text-[#FF561E] font-bold hover:underline transition-all">
+              Admin login &rarr;
+            </Link>
+          </p>
         </div>
        </div>
       </div>

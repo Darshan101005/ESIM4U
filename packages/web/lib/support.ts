@@ -117,6 +117,16 @@ export async function markNotificationsRead(audience: Sender, userId?: string, k
   await pool.query(`UPDATE support_notifications SET read = true WHERE ${clauses.join(" AND ")} AND read = false`, params);
 }
 
+/** Permanently removes all notifications for a user/admin (the "Clear all" action). */
+export async function clearNotifications(audience: Sender, userId?: string): Promise<void> {
+  await ensureSupportSchema();
+  if (audience === "user") {
+    await pool.query(`DELETE FROM support_notifications WHERE audience = 'user' AND user_id = $1`, [userId]);
+  } else {
+    await pool.query(`DELETE FROM support_notifications WHERE audience = 'admin'`);
+  }
+}
+
 /* ------------------------------------------------------------------ */
 /* Live chat                                                           */
 /* ------------------------------------------------------------------ */
