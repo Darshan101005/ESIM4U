@@ -1,6 +1,7 @@
 "use client";
 
 import AdminTopbar from "@/components/admin/admin-topbar";
+import SelectMenu from "@/components/admin/select-menu";
 import { useEffect, useState, useCallback } from "react";
 import { Loader2, Plus, Trash2, Tag, Globe, MapPin, Percent, DollarSign, Save } from "lucide-react";
 import toast from "react-hot-toast";
@@ -224,38 +225,30 @@ export default function AdminPricingPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
                 <div>
                   <label className="block text-[12px] font-medium text-[#6B7280] mb-2">Scope</label>
-                  <select
+                  <SelectMenu
                     value={scopeType}
-                    onChange={(e) => {
-                      setScopeType(e.target.value as "country" | "region");
+                    onChange={(v) => {
+                      setScopeType(v as "country" | "region");
                       setScopeCode("");
                     }}
-                    className="w-full px-4 py-2.5 rounded-xl bg-white border border-gray-200 outline-none focus:border-[#FF561E] text-[14px]"
-                  >
-                    <option value="country">Country</option>
-                    <option value="region">Region</option>
-                  </select>
+                    options={[
+                      { value: "country", label: "Country" },
+                      { value: "region", label: "Region" },
+                    ]}
+                  />
                 </div>
                 <div>
                   <label className="block text-[12px] font-medium text-[#6B7280] mb-2">Destination</label>
-                  <select
+                  <SelectMenu
                     value={scopeCode}
-                    onChange={(e) => setScopeCode(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl bg-white border border-gray-200 outline-none focus:border-[#FF561E] text-[14px]"
-                  >
-                    <option value="">Select...</option>
-                    {scopeType === "country"
-                      ? countries.map((c) => (
-                          <option key={c.iso3_code} value={c.iso3_code}>
-                            {c.country_name}
-                          </option>
-                        ))
-                      : regions.map((r) => (
-                          <option key={r.region_code} value={r.region_code}>
-                            {r.region_name}
-                          </option>
-                        ))}
-                  </select>
+                    onChange={setScopeCode}
+                    placeholder="Select..."
+                    options={
+                      scopeType === "country"
+                        ? countries.map((c) => ({ value: c.iso3_code, label: c.country_name }))
+                        : regions.map((r) => ({ value: r.region_code, label: r.region_name }))
+                    }
+                  />
                 </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">

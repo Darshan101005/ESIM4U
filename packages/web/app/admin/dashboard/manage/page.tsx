@@ -4,6 +4,7 @@ import AdminTopbar from "@/components/admin/admin-topbar";
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Plus, Pencil, Trash2, Pause, Play, ShieldCheck, UserCog, X, Search, Eye, EyeOff } from "lucide-react";
+import ConfirmModal from "@/components/confirm-modal";
 import toast from "react-hot-toast";
 
 interface Admin {
@@ -33,6 +34,7 @@ export default function ManageAdminsPage() {
   const [showPw, setShowPw] = useState(false);
   const [saving, setSaving] = useState(false);
   const [busyId, setBusyId] = useState<number | null>(null);
+  const [toRemove, setToRemove] = useState<Admin | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -74,11 +76,13 @@ export default function ManageAdminsPage() {
   const save = async () => {
     const name = form.name.trim();
     const email = form.email.trim().toLowerCase();
-    if (!name) return toast.error("Name is required");
-    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return toast.error("Enter a valid email address");
-    if (modalMode === "add" && form.password.length < 8) return toast.error("Password must be at least 8 characters");
-    if (modalMode === "edit" && form.password.length > 0 && form.password.length < 8)
-      return toast.error("New password must be at least 8 characters");
+    if (!name) { toast.error("Name is required"); return; }
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { toast.error("Enter a valid email address"); return; }
+    if (modalMode === "add" && form.password.length < 8) { toast.error("Password must be at least 8 characters"); return; }
+    if (modalMode === "edit" && form.password.length > 0 && form.password.length < 8) {
+      toast.error("New password must be at least 8 characters");
+      return;
+    }
 
     setSaving(true);
     try {
@@ -130,13 +134,13 @@ export default function ManageAdminsPage() {
   };
 
   const remove = async (a: Admin) => {
-    if (!confirm(`Delete admin "${a.name}"? This cannot be undone.`)) return;
     setBusyId(a.id);
     try {
       const res = await fetch(`/api/admin/manage/${a.id}`, { method: "DELETE" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to delete");
       toast.success("Admin deleted");
+      setToRemove(null);
       await load();
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Failed to delete");
@@ -281,7 +285,7 @@ export default function ManageAdminsPage() {
                       <Pencil className="w-4 h-4" />
                     </button>
                     <button
-                      onClick={() => remove(a)}
+                      onClick={() => setToRemove(a)}
                       disabled={busyId === a.id || isSelf}
                       title={isSelf ? "You can't delete yourself" : "Delete"}
                       className="w-9 h-9 rounded-lg border border-gray-200 flex items-center justify-center text-[#6B7280] hover:text-red-500 hover:border-red-200 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
@@ -374,6 +378,16 @@ export default function ManageAdminsPage() {
           </div>
         </div>
       )}
+
+      <ConfirmModal
+        open={!!toRemove}
+        title="Delete this admin?"
+        message={toRemove ? `"${(toRemove.name || "This admin").toUpperCase()}" will lose access immediately. This cannot be undone.` : undefined}
+        confirmLabel="Delete admin"
+        loading={busyId !== null && toRemove !== null && busyId === toRemove.id}
+        onConfirm={() => toRemove && remove(toRemove)}
+        onCancel={() => setToRemove(null)}
+      />
     </>
   );
 }

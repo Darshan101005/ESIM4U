@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ChevronDown, RefreshCw, Loader2, CalendarClock, Database, ArrowRight, Smartphone } from "lucide-react";
 import UsageDonut, { fmtGb } from "@/components/dashboard/usage-donut";
+import { esimStatusTone } from "@/lib/esim-status";
 
 interface UsageOrder {
   id: number;
@@ -19,6 +20,7 @@ interface Consumption {
   data_unit?: string;
   unlimited?: boolean;
   plan_status?: string;
+  profile_status?: string;
   bundle_expiry_date?: string;
 }
 
@@ -142,10 +144,18 @@ export default function UsageOverview({ orders }: { orders: UsageOrder[] }) {
           <UsageDonut usedMb={used} allocatedMb={allocated} unlimited={unlimited} />
 
           <div className="flex-1 w-full min-w-0">
-            <div className="flex items-center gap-2 mb-4">
+            <div className="flex items-center gap-2 mb-4 flex-wrap">
               <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold ${tone.className}`}>
                 {tone.label}
               </span>
+              {(() => {
+                const est = esimStatusTone(consumption?.profile_status);
+                return est ? (
+                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border ${est.className}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${est.dot}`} /> eSIM {est.label}
+                  </span>
+                ) : null;
+              })()}
             </div>
 
             <div className="space-y-3">

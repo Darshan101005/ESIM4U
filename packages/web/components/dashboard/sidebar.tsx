@@ -185,7 +185,7 @@ export default function DashboardSidebar({ collapsed = false, onToggle }: Dashbo
                       <span className="text-white text-[14px] font-bold">{initial}</span>
                     </div>
                     <div className="min-w-0">
-                      <p className="text-[13px] font-semibold text-[#1A1D20] truncate leading-tight">{user?.name || "My Profile"}</p>
+                      <p className="text-[13px] font-semibold text-[#1A1D20] truncate leading-tight">{user?.name ? user.name.toUpperCase() : "My Profile"}</p>
                       <p className="text-[11px] text-[#6B7280] truncate leading-tight">{user?.email || ""}</p>
                     </div>
                   </Link>

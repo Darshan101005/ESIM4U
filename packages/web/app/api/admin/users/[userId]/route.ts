@@ -128,3 +128,64 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
+
+/**
+ * Admin edit of a customer's identity + personal details. The email is
+ * intentionally NOT editable here (changing it means changing the login/account
+ * itself), only the name and profile fields. The name is normalised to
+ * UPPERCASE so it renders consistently in caps across the app.
+ */
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ userId: string }> }) {
+  try {
+    const admin = getAdmin(request);
+    if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const { userId } = await params;
+
+    await ensureUserAdminColumns();
+    const body = await request.json().catch(() => ({}));
+
+    const exists = await pool.query(`SELECT id FROM "user" WHERE id = $1`, [userId]);
+    if (exists.rows.length === 0) return NextResponse.json({ error: "Customer not found" }, { status: 404 });
+
+    // Name lives on the Better Auth "user" table.
+    if (typeof body.name === "string") {
+      const name = body.name.trim().toUpperCase();
+      if (!name) return NextResponse.json({ error: "Name cannot be empty" }, { status: 400 });
+      await pool.query(`UPDATE "user" SET name = $1 WHERE id = $2`, [name, userId]);
+    }
+
+    // Profile personal details (phone / DOB / gender / country). The edit form
+    // submits all of these together, so a provided field is set exactly (an
+    // empty value clears it). Fields absent from the payload are left untouched.
+    const hasPhone = typeof body.phone === "string";
+    const hasGender = typeof body.gender === "string";
+    const hasCountry = typeof body.country === "string";
+    const hasDob = typeof body.date_of_birth === "string";
+
+    if (hasPhone || hasGender || hasCountry || hasDob) {
+      const phone = hasPhone ? (body.phone as string).trim() || null : null;
+      const gender = hasGender ? (body.gender as string).trim() || null : null;
+      const country = hasCountry ? (body.country as string).trim() || null : null;
+      const dob = hasDob ? (body.date_of_birth as string).trim() || null : null;
+
+      // Ensure a profile row exists, then update only the provided columns.
+      await pool.query(`INSERT INTO user_profiles (user_id) VALUES ($1) ON CONFLICT (user_id) DO NOTHING`, [userId]);
+
+      const sets: string[] = [];
+      const vals: unknown[] = [];
+      let i = 1;
+      if (hasPhone) { sets.push(`phone = $${i++}`); vals.push(phone); }
+      if (hasCountry) { sets.push(`country = $${i++}`); vals.push(country); }
+      if (hasDob) { sets.push(`date_of_birth = $${i++}`); vals.push(dob); }
+      if (hasGender) { sets.push(`gender = $${i++}`); vals.push(gender); }
+      sets.push(`updated_at = NOW()`);
+      vals.push(userId);
+      await pool.query(`UPDATE user_profiles SET ${sets.join(", ")} WHERE user_id = $${i}`, vals);
+    }
+
+    return NextResponse.json({ ok: true });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Failed to update customer";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}

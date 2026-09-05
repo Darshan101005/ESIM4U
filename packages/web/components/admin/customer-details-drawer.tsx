@@ -349,7 +349,7 @@ export default function CustomerDetailsDrawer({ userId, onClose }: { userId: str
                 {(u.name || u.email || "?").trim().charAt(0).toUpperCase()}
               </div>
               <div className="min-w-0">
-                <p className="text-[16px] font-bold text-[#1A1D20] truncate">{u.name || "Customer"}</p>
+                <p className="text-[16px] font-bold text-[#1A1D20] truncate">{u.name ? u.name.toUpperCase() : "Customer"}</p>
                 <p className="text-[12px] text-[#6B7280]">Joined {fmtDate(u.createdAt)}</p>
               </div>
             </div>

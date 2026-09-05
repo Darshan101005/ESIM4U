@@ -162,7 +162,7 @@ export default function AdminUsersPage() {
                             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#FF561E] to-[#FF7A45] flex items-center justify-center shrink-0">
                               <span className="text-white text-[13px] font-bold">{(user.name || user.email).charAt(0).toUpperCase()}</span>
                             </div>
-                            <span className="text-[13px] font-semibold text-[#1A1D20]">{user.name || "—"}</span>
+                            <span className="text-[13px] font-semibold text-[#1A1D20]">{user.name ? user.name.toUpperCase() : "—"}</span>
                           </div>
                         </td>
                         <td className="px-5 py-4 text-[13px] text-[#6B7280] max-w-[220px] truncate">{user.email}</td>

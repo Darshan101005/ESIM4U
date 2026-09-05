@@ -6,10 +6,12 @@ import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, Loader2, XCircle, Mail, Hash, Calendar, Database, Clock, CheckCircle2, Ban, RotateCcw, CreditCard, Info, ExternalLink, Receipt } from "lucide-react";
 import toast from "react-hot-toast";
 import QrDisplay from "@/components/dashboard/qr-display";
-import DataUsage from "@/components/dashboard/data-usage";
+import UsageDonut, { fmtGb } from "@/components/dashboard/usage-donut";
 import { CURRENCY_SYMBOLS } from "@/lib/fx";
 import { isPaidStatus, statusLabel, statusPillClass } from "@/lib/order-status";
 import { buildPaymentRows, type PaymentRow } from "@/lib/payment-details";
+import { esimStatusTone } from "@/lib/esim-status";
+import { CalendarClock } from "lucide-react";
 
 interface Order {
   id: number;
@@ -42,9 +44,19 @@ interface Order {
 interface Consumption {
   data_allocated?: number;
   data_used?: number;
+  data_remaining?: number;
   data_unit?: string;
   unlimited?: boolean;
   plan_status?: string;
+  profile_status?: string;
+  bundle_expiry_date?: string;
+}
+
+function formatValidTill(raw?: string): string | null {
+  if (!raw) return null;
+  const d = new Date(raw.replace(" ", "T").slice(0, 19));
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric" });
 }
 
 export default function AdminOrderDetailPage() {
@@ -286,13 +298,39 @@ export default function AdminOrderDetailPage() {
 
         {consumption && isCompleted && (
           <div className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-6">
-            <h3 className="text-[16px] font-bold text-[#1A1D20] mb-4">Data Usage</h3>
-            <DataUsage
-              used={consumption.data_used ?? 0}
-              allocated={consumption.data_allocated ?? 0}
-              unit={consumption.data_unit || "GB"}
-              unlimited={consumption.unlimited}
-            />
+            <div className="flex items-center justify-between mb-5 flex-wrap gap-2">
+              <h3 className="text-[16px] font-bold text-[#1A1D20]">Data Usage</h3>
+              <div className="flex items-center gap-2 flex-wrap">
+                {consumption.plan_status && (
+                  <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold bg-gray-100 text-[#6B7280]">{consumption.plan_status}</span>
+                )}
+                {(() => {
+                  const est = esimStatusTone(consumption.profile_status);
+                  return est ? (
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border ${est.className}`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${est.dot}`} /> eSIM {est.label}
+                    </span>
+                  ) : null;
+                })()}
+              </div>
+            </div>
+            <div className="flex flex-col sm:flex-row items-center gap-6 sm:gap-8">
+              <UsageDonut usedMb={consumption.data_used ?? 0} allocatedMb={consumption.data_allocated ?? 0} unlimited={consumption.unlimited} />
+              <div className="flex-1 w-full min-w-0 space-y-3">
+                <div className="flex items-center justify-between py-2.5 border-b border-gray-50">
+                  <span className="flex items-center gap-2 text-[13px] text-[#6B7280]"><Database className="w-4 h-4 text-[#FF561E]" strokeWidth={2} /> Used</span>
+                  <span className="text-[13.5px] font-bold text-[#1A1D20]">{consumption.unlimited ? "—" : `${fmtGb(consumption.data_used ?? 0)} / ${fmtGb(consumption.data_allocated ?? 0)}`}</span>
+                </div>
+                <div className="flex items-center justify-between py-2.5 border-b border-gray-50">
+                  <span className="flex items-center gap-2 text-[13px] text-[#6B7280]"><Database className="w-4 h-4 text-emerald-500" strokeWidth={2} /> Remaining</span>
+                  <span className="text-[13.5px] font-bold text-[#1A1D20]">{consumption.unlimited ? "Unlimited" : fmtGb(Math.max(0, (consumption.data_allocated ?? 0) - (consumption.data_used ?? 0)))}</span>
+                </div>
+                <div className="flex items-center justify-between py-2.5">
+                  <span className="flex items-center gap-2 text-[13px] text-[#6B7280]"><CalendarClock className="w-4 h-4 text-[#FF561E]" strokeWidth={2} /> Valid Until</span>
+                  <span className="text-[13.5px] font-bold text-[#1A1D20]">{formatValidTill(consumption.bundle_expiry_date) || "—"}</span>
+                </div>
+              </div>
+            </div>
           </div>
         )}
       </main>

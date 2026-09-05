@@ -78,8 +78,9 @@ export async function PUT(request: NextRequest) {
     const body = await request.json();
     const { phone, preferred_currency, country, date_of_birth, gender } = body;
 
-    // Name lives on the Better Auth "user" table.
-    const name = typeof body.name === "string" ? body.name.trim() : "";
+    // Name lives on the Better Auth "user" table. Stored UPPERCASE so it renders
+    // consistently in caps everywhere regardless of how the user typed it.
+    const name = typeof body.name === "string" ? body.name.trim().toUpperCase() : "";
     if (name) {
       await pool.query(`UPDATE "user" SET name = $1 WHERE id = $2`, [name, session.user.id]);
     }

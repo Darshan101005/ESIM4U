@@ -130,3 +130,79 @@ export async function sendOrderReadyEmail(params: OrderReadyEmailParams) {
       : {}),
   });
 }
+
+export interface ContactMessageParams {
+  name: string;
+  email: string;
+  subject?: string | null;
+  message: string;
+  ref: string;
+}
+
+/**
+ * Sends a guest/contact-form submission to the support inbox. The customer's
+ * own email is set as replyTo so the team can reply to them directly from the
+ * received email.
+ */
+export async function sendContactEmail(params: ContactMessageParams) {
+  const safe = (s: string) =>
+    s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const subject = params.subject?.trim() || "General enquiry";
+  const html = `
+    <div style="font-family:Arial,sans-serif;font-size:14px;color:#1A1D20;line-height:1.6">
+      <h2 style="color:#FF561E;margin:0 0 12px">New contact message</h2>
+      <p style="margin:0 0 4px"><strong>Reference:</strong> ${safe(params.ref)}</p>
+      <p style="margin:0 0 4px"><strong>Name:</strong> ${safe(params.name)}</p>
+      <p style="margin:0 0 4px"><strong>Email:</strong> ${safe(params.email)}</p>
+      <p style="margin:0 0 12px"><strong>Subject:</strong> ${safe(subject)}</p>
+      <div style="padding:14px 16px;background:#FFF4F0;border:1px solid #ffd9c9;border-radius:12px;white-space:pre-wrap">${safe(params.message)}</div>
+      <p style="margin:16px 0 0;color:#6B7280;font-size:12px">Reply directly to this email to respond to ${safe(params.name)}.</p>
+    </div>`;
+
+  const { error } = await resend.emails.send({
+    from: EMAIL_FROM,
+    replyTo: params.email,
+    to: [EMAIL_REPLY_TO],
+    subject: `[Contact] ${subject} — ${params.name}`,
+    html,
+  });
+
+  if (error) {
+    console.error("Resend contact error:", error);
+    throw new Error("SEND_FAILED");
+  }
+}
+
+/**
+ * Sends a password-reset verification code. Reuses the OTP look but with
+ * reset-specific copy.
+ */
+export async function sendPasswordResetOTP(email: string, otp: string, name: string) {
+  const html = `
+    <div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;color:#1A1D20">
+      <div style="text-align:center;padding:24px 0">
+        <h1 style="color:#FF561E;margin:0;font-size:22px">eSIM4U</h1>
+      </div>
+      <div style="background:#fff;border:1px solid #eee;border-radius:16px;padding:28px">
+        <h2 style="font-size:18px;margin:0 0 8px">Reset your password</h2>
+        <p style="font-size:14px;color:#6B7280;margin:0 0 20px">Hi ${name || "there"}, use this code to reset your eSIM4U password. It expires in 5 minutes.</p>
+        <div style="text-align:center;margin:24px 0">
+          <span style="display:inline-block;font-size:32px;font-weight:bold;letter-spacing:8px;color:#1A1D20;background:#FFF4F0;border:1px solid #ffd9c9;border-radius:12px;padding:16px 24px">${otp}</span>
+        </div>
+        <p style="font-size:13px;color:#9CA3AF;margin:0">If you didn't request this, you can safely ignore this email — your password won't change.</p>
+      </div>
+    </div>`;
+
+  const { error } = await resend.emails.send({
+    from: EMAIL_FROM,
+    replyTo: EMAIL_REPLY_TO,
+    to: [email],
+    subject: "Your password reset code - eSIM4U",
+    html,
+  });
+
+  if (error) {
+    console.error("Resend reset error:", error);
+    throw new Error("SEND_FAILED");
+  }
+}

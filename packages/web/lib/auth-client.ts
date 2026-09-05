@@ -50,6 +50,38 @@ export function clearSessionCache() {
   } catch {}
 }
 
+export interface CachedUser {
+  name?: string;
+  email?: string;
+}
+
+/**
+ * Synchronously read the cached logged-in user (or null) from localStorage.
+ * Used by public headers to render the right auth state on the first client
+ * paint, avoiding a Login → Dashboard flip for returning users. Safe on the
+ * server (returns null when localStorage is unavailable).
+ */
+export function getCachedUser(): CachedUser | null {
+  const cached = getCachedSession();
+  const user = cached?.data?.user as CachedUser | undefined;
+  return user ?? null;
+}
+
+/**
+ * Fetch the live session, refresh the cache, and return the current user.
+ * Public headers call this once on mount to confirm/replace the cached state.
+ */
+export async function fetchAndCacheUser(): Promise<CachedUser | null> {
+  try {
+    const result = await authClient.getSession();
+    const data = (result as { data: Record<string, unknown> | null })?.data || null;
+    setCachedSession(data);
+    return (data?.user as CachedUser | undefined) ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export async function signOutAndClear() {
   clearSessionCache();
   await authClient.signOut();

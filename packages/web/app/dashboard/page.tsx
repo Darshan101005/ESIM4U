@@ -170,7 +170,7 @@ export default function DashboardPage() {
         <div className="mb-8">
           <p className="text-[14px] text-[#6B7280] font-medium">Welcome back,</p>
           <h2 className="text-[26px] lg:text-[30px] font-bold text-[#1A1D20] tracking-tight">
-            {user?.name || "Traveller"}
+            {user?.name ? user.name.toUpperCase() : "Traveller"}
             <span className="text-[#1A1D20]">,</span>
           </h2>
           <p className="text-[14px] text-[#6B7280] font-medium mt-1">Here&apos;s what&apos;s happening with your eSIM activity today.</p>

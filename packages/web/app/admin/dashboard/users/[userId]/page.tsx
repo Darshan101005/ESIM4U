@@ -6,9 +6,11 @@ import Link from "next/link";
 import AdminTopbar from "@/components/admin/admin-topbar";
 import {
   ArrowLeft, Loader2, Mail, Phone, MapPin, User, Calendar, Copy, Check, Cake, Users, Globe, Monitor,
-  Wifi, ShieldAlert, Clock, BadgeCheck, Wallet, Gift, ShoppingBag, Ban, ShieldCheck, Trash2, ChevronRight,
+  Wifi, ShieldAlert, Clock, BadgeCheck, Wallet, Gift, ShoppingBag, Ban, ShieldCheck, Trash2, ChevronRight, Pencil, X,
 } from "lucide-react";
 import toast from "react-hot-toast";
+import ConfirmModal from "@/components/confirm-modal";
+import SelectMenu from "@/components/admin/select-menu";
 
 /* ---------------- helpers ---------------- */
 
@@ -120,6 +122,14 @@ export default function AdminCustomerPage() {
   const [notFound, setNotFound] = useState(false);
   const [busy, setBusy] = useState(false);
 
+  // Confirm modal (block / delete) — replaces native window.confirm().
+  const [confirmAction, setConfirmAction] = useState<"block" | "delete" | null>(null);
+
+  // Edit customer (name + personal details, NOT email).
+  const [editOpen, setEditOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({ name: "", phone: "", date_of_birth: "", gender: "", country: "" });
+
   const load = useCallback(async () => {
     try {
       const res = await fetch(`/api/admin/users/${encodeURIComponent(userId)}`, { cache: "no-store" });
@@ -134,8 +144,6 @@ export default function AdminCustomerPage() {
   useEffect(() => { load(); }, [load]);
 
   const doAction = async (action: "block" | "unblock" | "delete") => {
-    if (action === "delete" && !window.confirm("Permanently delete this customer's account? This removes their login, profile and sessions. Order history is retained. This cannot be undone.")) return;
-    if (action === "block" && !window.confirm("Block this customer? They will be signed out and unable to log in.")) return;
     setBusy(true);
     try {
       const res = await fetch(`/api/admin/users/${encodeURIComponent(userId)}`, {
@@ -144,6 +152,7 @@ export default function AdminCustomerPage() {
         body: JSON.stringify({ action }),
       });
       if (!res.ok) throw new Error();
+      setConfirmAction(null);
       if (action === "delete") {
         toast.success("Customer deleted");
         router.push("/admin/dashboard/users");
@@ -155,6 +164,44 @@ export default function AdminCustomerPage() {
       toast.error("Action failed");
     } finally {
       setBusy(false);
+    }
+  };
+
+  const openEdit = () => {
+    if (!data) return;
+    setForm({
+      name: data.user.name || "",
+      phone: data.profile.phone || "",
+      date_of_birth: data.profile.date_of_birth ? String(data.profile.date_of_birth).slice(0, 10) : "",
+      gender: data.profile.gender || "",
+      country: data.profile.country || "",
+    });
+    setEditOpen(true);
+  };
+
+  const saveEdit = async () => {
+    if (!form.name.trim()) { toast.error("Name is required"); return; }
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/admin/users/${encodeURIComponent(userId)}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: form.name,
+          phone: form.phone,
+          date_of_birth: form.date_of_birth,
+          gender: form.gender,
+          country: form.country,
+        }),
+      });
+      if (!res.ok) throw new Error();
+      toast.success("Customer updated");
+      setEditOpen(false);
+      await load();
+    } catch {
+      toast.error("Could not save changes");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -194,23 +241,26 @@ export default function AdminCustomerPage() {
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h2 className="text-[20px] font-bold text-[#1A1D20]">{u.name || "Customer"}</h2>
+                  <h2 className="text-[20px] font-bold text-[#1A1D20]">{u.name ? u.name.toUpperCase() : "Customer"}</h2>
                   {u.emailVerified && <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 text-[11px] font-semibold"><BadgeCheck className="w-3.5 h-3.5" /> Verified</span>}
                   {u.banned && <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-50 text-red-500 text-[11px] font-semibold"><Ban className="w-3.5 h-3.5" /> Blocked</span>}
                 </div>
                 <p className="text-[13px] text-[#6B7280] mt-0.5">{u.email} · Member since {fmtDate(u.createdAt)}</p>
               </div>
               <div className="flex items-center gap-2 shrink-0">
+                <button onClick={openEdit} disabled={busy} className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-gray-200 text-[13px] font-bold text-[#6B7280] hover:text-[#FF561E] hover:border-orange-200 transition-colors disabled:opacity-60">
+                  <Pencil className="w-4 h-4" /> Edit
+                </button>
                 {u.banned ? (
                   <button onClick={() => doAction("unblock")} disabled={busy} className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-gray-200 text-[13px] font-bold text-[#6B7280] hover:text-emerald-600 hover:border-emerald-200 transition-colors disabled:opacity-60">
                     <ShieldCheck className="w-4 h-4" /> Unblock
                   </button>
                 ) : (
-                  <button onClick={() => doAction("block")} disabled={busy} className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-gray-200 text-[13px] font-bold text-[#6B7280] hover:text-amber-600 hover:border-amber-200 transition-colors disabled:opacity-60">
+                  <button onClick={() => setConfirmAction("block")} disabled={busy} className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-gray-200 text-[13px] font-bold text-[#6B7280] hover:text-amber-600 hover:border-amber-200 transition-colors disabled:opacity-60">
                     <Ban className="w-4 h-4" /> Block
                   </button>
                 )}
-                <button onClick={() => doAction("delete")} disabled={busy} className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-red-50 border border-red-100 text-[13px] font-bold text-red-500 hover:bg-red-100 transition-colors disabled:opacity-60">
+                <button onClick={() => setConfirmAction("delete")} disabled={busy} className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-red-50 border border-red-100 text-[13px] font-bold text-red-500 hover:bg-red-100 transition-colors disabled:opacity-60">
                   <Trash2 className="w-4 h-4" /> Delete
                 </button>
               </div>
@@ -309,6 +359,133 @@ export default function AdminCustomerPage() {
           </>
         )}
       </main>
+
+      {/* Block / delete confirmation */}
+      <ConfirmModal
+        open={confirmAction === "block"}
+        title="Block this customer?"
+        message="They will be signed out immediately and unable to log in until you unblock them."
+        confirmLabel="Block customer"
+        danger={false}
+        loading={busy}
+        onConfirm={() => doAction("block")}
+        onCancel={() => setConfirmAction(null)}
+      />
+      <ConfirmModal
+        open={confirmAction === "delete"}
+        title="Delete this customer?"
+        message="This permanently removes their login, profile and sessions. Order history is retained. This cannot be undone."
+        confirmLabel="Delete customer"
+        loading={busy}
+        onConfirm={() => doAction("delete")}
+        onCancel={() => setConfirmAction(null)}
+      />
+
+      {/* Edit customer */}
+      {editOpen && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => !saving && setEditOpen(false)} />
+          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
+            <button
+              onClick={() => !saving && setEditOpen(false)}
+              className="absolute top-4 right-4 w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors"
+              aria-label="Close"
+            >
+              <X className="w-4 h-4 text-[#1A1D20]" />
+            </button>
+
+            <h3 className="text-[17px] font-bold text-[#1A1D20] mb-1">Edit customer</h3>
+            <p className="text-[12.5px] text-[#6B7280] mb-5">Update the customer&apos;s name and personal details.</p>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-[12px] font-semibold text-[#6B7280] mb-1.5">Full name</label>
+                <input
+                  value={form.name}
+                  onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                  placeholder="Customer name"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-[#F9FAFB] border border-gray-200 text-[13px] font-medium text-[#1A1D20] outline-none focus:border-[#FF561E] focus:ring-2 focus:ring-[#FF561E]/10 transition-all uppercase"
+                />
+                <p className="text-[11px] text-[#9CA3AF] mt-1">Names are stored and shown in uppercase.</p>
+              </div>
+
+              <div>
+                <label className="block text-[12px] font-semibold text-[#6B7280] mb-1.5">Email</label>
+                <input
+                  value={u?.email || ""}
+                  disabled
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-gray-100 border border-gray-200 text-[13px] font-medium text-[#9CA3AF] outline-none cursor-not-allowed"
+                />
+                <p className="text-[11px] text-[#9CA3AF] mt-1">Email is the login and can&apos;t be changed here.</p>
+              </div>
+
+              <div>
+                <label className="block text-[12px] font-semibold text-[#6B7280] mb-1.5">Mobile</label>
+                <input
+                  value={form.phone}
+                  onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
+                  placeholder="e.g. +44 7700 900000"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-[#F9FAFB] border border-gray-200 text-[13px] font-medium text-[#1A1D20] outline-none focus:border-[#FF561E] focus:ring-2 focus:ring-[#FF561E]/10 transition-all"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[12px] font-semibold text-[#6B7280] mb-1.5">Date of birth</label>
+                  <input
+                    type="date"
+                    value={form.date_of_birth}
+                    onChange={(e) => setForm((f) => ({ ...f, date_of_birth: e.target.value }))}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#F9FAFB] border border-gray-200 text-[13px] font-medium text-[#1A1D20] outline-none focus:border-[#FF561E] focus:ring-2 focus:ring-[#FF561E]/10 transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[12px] font-semibold text-[#6B7280] mb-1.5">Gender</label>
+                  <SelectMenu
+                    value={form.gender}
+                    onChange={(v) => setForm((f) => ({ ...f, gender: v }))}
+                    placeholder="Select"
+                    options={[
+                      { value: "Male", label: "Male" },
+                      { value: "Female", label: "Female" },
+                      { value: "Other", label: "Other" },
+                      { value: "Prefer not to say", label: "Prefer not to say" },
+                    ]}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[12px] font-semibold text-[#6B7280] mb-1.5">Country</label>
+                <input
+                  value={form.country}
+                  onChange={(e) => setForm((f) => ({ ...f, country: e.target.value }))}
+                  placeholder="Country"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-[#F9FAFB] border border-gray-200 text-[13px] font-medium text-[#1A1D20] outline-none focus:border-[#FF561E] focus:ring-2 focus:ring-[#FF561E]/10 transition-all"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2.5 mt-6">
+              <button
+                onClick={saveEdit}
+                disabled={saving}
+                className="inline-flex items-center justify-center gap-2 flex-1 px-4 py-2.5 rounded-xl text-[14px] font-bold text-white bg-[#FF561E] hover:bg-[#E04B18] transition-colors disabled:opacity-70"
+              >
+                {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+                Save changes
+              </button>
+              <button
+                onClick={() => !saving && setEditOpen(false)}
+                disabled={saving}
+                className="px-4 py-2.5 rounded-xl border border-gray-200 text-[14px] font-semibold text-[#6B7280] hover:bg-gray-50 transition-colors disabled:opacity-70"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

@@ -120,7 +120,7 @@ export default function ProfilePage() {
                   <span className="text-white text-[24px] font-bold">{(name || data.user.email).charAt(0).toUpperCase()}</span>
                 </div>
                 <div className="min-w-0">
-                  <h2 className="text-[20px] font-bold text-[#1A1D20] truncate">{name || "Customer"}</h2>
+                  <h2 className="text-[20px] font-bold text-[#1A1D20] truncate">{name ? name.toUpperCase() : "Customer"}</h2>
                   <p className="text-[14px] text-[#6B7280] truncate">{data.user.email}</p>
                 </div>
               </div>

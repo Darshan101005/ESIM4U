@@ -25,9 +25,12 @@ dist-ssr
 *.orig.*
 web-build
 
-# React Native
-android
-ios
+# React Native native folders — scope to the mobile package ONLY.
+# (Bare "android"/"ios" previously matched web routes like
+#  app/dashboard/support/android and assets like public/assets/Installation/Ios,
+#  silently excluding them from git so they 404'd on Vercel.)
+/packages/mobile/android/
+/packages/mobile/ios/
 .env.local
 .env.*.local
 

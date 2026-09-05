@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import DashboardTopbar from "@/components/dashboard/topbar";
+import SelectMenu from "@/components/admin/select-menu";
 import { ArrowLeft, Loader2, Paperclip, X, FileText, ImageIcon, Send } from "lucide-react";
 import toast from "react-hot-toast";
 import { TICKET_CATEGORIES, TICKET_DEPARTMENTS } from "@/lib/support-constants";
@@ -47,8 +48,8 @@ export default function NewTicketPage() {
 
   const submit = async () => {
     const finalCategory = category === "Other" ? otherCategory.trim() || "Other" : category;
-    if (!title.trim()) return toast.error("Please add a title");
-    if (!message.trim()) return toast.error("Please describe your issue");
+    if (!title.trim()) { toast.error("Please add a title"); return; }
+    if (!message.trim()) { toast.error("Please describe your issue"); return; }
     setSubmitting(true);
     try {
       const res = await fetch("/api/support/tickets", {
@@ -99,21 +100,21 @@ export default function NewTicketPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className={labelCls}>Problem</label>
-              <select value={category} onChange={(e) => setCategory(e.target.value)} className={inputCls}>
-                <option value="">Select a problem…</option>
-                {TICKET_CATEGORIES.map((c) => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </select>
+              <SelectMenu
+                value={category}
+                onChange={setCategory}
+                placeholder="Select a problem…"
+                options={TICKET_CATEGORIES.map((c) => ({ value: c, label: c }))}
+              />
             </div>
             <div>
               <label className={labelCls}>Department</label>
-              <select value={department} onChange={(e) => setDepartment(e.target.value)} className={inputCls}>
-                <option value="">Select a department…</option>
-                {TICKET_DEPARTMENTS.map((d) => (
-                  <option key={d} value={d}>{d}</option>
-                ))}
-              </select>
+              <SelectMenu
+                value={department}
+                onChange={setDepartment}
+                placeholder="Select a department…"
+                options={TICKET_DEPARTMENTS.map((d) => ({ value: d, label: d }))}
+              />
             </div>
           </div>
 

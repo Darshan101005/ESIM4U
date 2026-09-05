@@ -1,8 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import AdminTopbar from "@/components/admin/admin-topbar";
-import { Loader2, MessageSquare, Ticket as TicketIcon, CheckCircle2, RotateCcw, Search, User, Headset, ArrowLeft, Maximize2, Minimize2, Trash2, Eye } from "lucide-react";
+import SelectMenu from "@/components/admin/select-menu";
+import { Loader2, MessageSquare, Ticket as TicketIcon, CheckCircle2, RotateCcw, Search, User, Headset, ArrowLeft, Maximize2, Minimize2, Trash2, Eye, Mail } from "lucide-react";
 import toast from "react-hot-toast";
 import {
   ChatThread,
@@ -21,6 +23,7 @@ import {
 } from "@/components/support/shared";
 import { ticketStatusPill } from "@/app/dashboard/support/tickets/page";
 import AdminNotificationBell from "@/components/admin/admin-notification-bell";
+import ConfirmModal from "@/components/confirm-modal";
 import CustomerDetailsDrawer from "@/components/admin/customer-details-drawer";
 
 type Tab = "chats" | "tickets";
@@ -76,7 +79,7 @@ export default function AdminSupportPage() {
       <main className="flex-1 flex flex-col min-h-0">
         {/* The tab switcher is hidden while a chat is expanded, to give it more room. */}
         {!expanded && (
-          <div className="px-4 lg:px-8 pt-4">
+          <div className="px-4 lg:px-8 pt-4 flex items-center justify-between gap-3 flex-wrap">
             <div className="inline-flex rounded-xl bg-gray-100 p-1">
               <button
                 onClick={() => setTab("chats")}
@@ -95,6 +98,12 @@ export default function AdminSupportPage() {
                 <TicketIcon className="w-4 h-4" /> Tickets
               </button>
             </div>
+            <Link
+              href="/admin/dashboard/messages"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl border border-gray-200 bg-white text-[13px] font-semibold text-[#6B7280] hover:border-[#FF561E]/40 hover:text-[#FF561E] transition-colors"
+            >
+              <Mail className="w-4 h-4" /> Contact Messages
+            </Link>
           </div>
         )}
 
@@ -259,6 +268,8 @@ function AdminChatPanel({
   const [loading, setLoading] = useState(true);
   const [replyTo, setReplyTo] = useState<ReplyTarget | null>(null);
   const [showDetails, setShowDetails] = useState(false);
+  const [confirmDeleteChat, setConfirmDeleteChat] = useState(false);
+  const [deletingChat, setDeletingChat] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const lastCountRef = useRef(0);
   const userId = conversation.user_id;
@@ -284,14 +295,17 @@ function AdminChatPanel({
   };
 
   const deleteEntireChat = async () => {
-    if (!window.confirm("Delete this entire conversation? This removes all messages and files permanently.")) return;
+    setDeletingChat(true);
     try {
       const res = await fetch(`/api/admin/support/chat/${encodeURIComponent(userId)}`, { method: "DELETE" });
       if (!res.ok) throw new Error();
       toast.success("Conversation deleted");
+      setConfirmDeleteChat(false);
       onDeleted();
     } catch {
       toast.error("Could not delete the conversation");
+    } finally {
+      setDeletingChat(false);
     }
   };
 
@@ -373,7 +387,7 @@ function AdminChatPanel({
             {initialOf(conversation.customer_name, conversation.user_email)}
           </div>
           <div className="min-w-0">
-            <p className="text-[14px] font-bold text-[#1A1D20] truncate group-hover/name:text-[#FF561E] transition-colors">{conversation.customer_name || "Customer"}</p>
+            <p className="text-[14px] font-bold text-[#1A1D20] truncate group-hover/name:text-[#FF561E] transition-colors">{conversation.customer_name ? conversation.customer_name.toUpperCase() : "Customer"}</p>
             <p className="text-[12px] text-[#6B7280] truncate">{conversation.user_email}</p>
           </div>
         </button>
@@ -390,7 +404,7 @@ function AdminChatPanel({
           <button onClick={onToggleExpand} title={expanded ? "Minimize" : "Expand"} className="w-9 h-9 rounded-xl flex items-center justify-center text-[#6B7280] hover:bg-[#FFF4F0] hover:text-[#FF561E] transition-colors">
             {expanded ? <Minimize2 className="w-[17px] h-[17px]" /> : <Maximize2 className="w-[17px] h-[17px]" />}
           </button>
-          <button onClick={deleteEntireChat} title="Delete entire chat" className="w-9 h-9 rounded-xl flex items-center justify-center text-[#6B7280] hover:bg-red-50 hover:text-red-500 transition-colors">
+          <button onClick={() => setConfirmDeleteChat(true)} title="Delete entire chat" className="w-9 h-9 rounded-xl flex items-center justify-center text-[#6B7280] hover:bg-red-50 hover:text-red-500 transition-colors">
             <Trash2 className="w-[17px] h-[17px]" />
           </button>
         </div>
@@ -418,6 +432,16 @@ function AdminChatPanel({
       )}
 
       {showDetails && <CustomerDetailsDrawer userId={userId} onClose={() => setShowDetails(false)} />}
+
+      <ConfirmModal
+        open={confirmDeleteChat}
+        title="Delete this conversation?"
+        message="This removes all messages and files in this chat permanently. This cannot be undone."
+        confirmLabel="Delete conversation"
+        loading={deletingChat}
+        onConfirm={deleteEntireChat}
+        onCancel={() => setConfirmDeleteChat(false)}
+      />
     </>
   );
 }
@@ -607,15 +631,13 @@ function AdminTicketPanel({ ticketId, onBack, onChanged }: { ticketId: number; o
             </button>
           )}
           {ticket && (
-            <select
-              value={ticket.status}
-              onChange={(e) => changeStatus(e.target.value)}
-              className="px-2.5 py-1.5 rounded-lg border border-gray-200 text-[12px] font-semibold text-[#374151] outline-none focus:border-[#FF561E] capitalize shrink-0"
-            >
-              {["open", "answered", "resolved", "closed"].map((s) => (
-                <option key={s} value={s}>{s}</option>
-              ))}
-            </select>
+            <div className="w-36 shrink-0">
+              <SelectMenu
+                value={ticket.status}
+                onChange={changeStatus}
+                options={["open", "answered", "resolved", "closed"].map((s) => ({ value: s, label: s.charAt(0).toUpperCase() + s.slice(1) }))}
+              />
+            </div>
           )}
         </div>
         {ticket && (ticket.category || ticket.department || ticket.subject) && (
@@ -650,7 +672,7 @@ function AdminTicketPanel({ ticketId, onBack, onChanged }: { ticketId: number; o
                     <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${admin ? "bg-[#FF561E]" : "bg-gray-200"}`}>
                       {admin ? <Headset className="w-3 h-3 text-white" /> : <User className="w-3 h-3 text-[#6B7280]" />}
                     </div>
-                    <span className="text-[12.5px] font-bold text-[#1A1D20]">{admin ? m.sender_name || "You" : ticket?.customer_name || "Customer"}</span>
+                    <span className="text-[12.5px] font-bold text-[#1A1D20]">{admin ? m.sender_name || "You" : (ticket?.customer_name ? ticket.customer_name.toUpperCase() : "Customer")}</span>
                     <span className="text-[11px] text-gray-400 ml-auto">{formatTime(m.created_at)}</span>
                   </div>
                   {m.body && <FormattedText body={m.body} className="text-[13.5px] leading-relaxed text-[#374151] whitespace-pre-wrap break-words" />}

@@ -51,7 +51,7 @@ export default function AdminSettingsPage() {
 
   const saveName = async () => {
     const trimmed = name.trim();
-    if (!trimmed) return toast.error("Name is required");
+    if (!trimmed) { toast.error("Name is required"); return; }
     setSavingName(true);
     try {
       const res = await fetch("/api/admin/profile", {
@@ -72,14 +72,14 @@ export default function AdminSettingsPage() {
 
   const openEmailPrompt = () => {
     const trimmed = email.trim().toLowerCase();
-    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(trimmed)) return toast.error("Enter a valid email address");
-    if (trimmed === savedEmail) return toast.error("This is already your email");
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(trimmed)) { toast.error("Enter a valid email address"); return; }
+    if (trimmed === savedEmail) { toast.error("This is already your email"); return; }
     setEmailPassword("");
     setPwPrompt(true);
   };
 
   const confirmEmail = async () => {
-    if (!emailPassword) return toast.error("Enter your current password");
+    if (!emailPassword) { toast.error("Enter your current password"); return; }
     setSavingEmail(true);
     try {
       const res = await fetch("/api/admin/profile", {
@@ -111,9 +111,9 @@ export default function AdminSettingsPage() {
   const passwordsMismatch = confirmPassword.length > 0 && newPassword !== confirmPassword;
 
   const savePassword = async () => {
-    if (!oldPassword || !newPassword || !confirmPassword) return toast.error("All password fields are required");
-    if (newPassword.length < 8) return toast.error("New password must be at least 8 characters");
-    if (newPassword !== confirmPassword) return toast.error("Passwords not matching");
+    if (!oldPassword || !newPassword || !confirmPassword) { toast.error("All password fields are required"); return; }
+    if (newPassword.length < 8) { toast.error("New password must be at least 8 characters"); return; }
+    if (newPassword !== confirmPassword) { toast.error("Passwords not matching"); return; }
     setSavingPw(true);
     try {
       const res = await fetch("/api/admin/profile", {
@@ -161,7 +161,7 @@ export default function AdminSettingsPage() {
               <label className={labelCls}>Name</label>
               <input className={inputCls} value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" />
               <div className="mt-4">
-                <button onClick={saveName} disabled={savingName || !name.trim()} className={btnCls}>
+                <button onClick={saveName} disabled={savingName || !name.trim() || name.trim() === savedName} className={btnCls}>
                   {savingName ? <Loader2 className="w-4 h-4 animate-spin" /> : "Save Name"}
                 </button>
               </div>

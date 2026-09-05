@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Landing from './landing';
 import LandingMobile from './landing-mobile';
+import CookieConsent from '@/components/cookie-consent';
 
 const MOBILE_QUERY = '(max-width: 767px)';
 
@@ -20,5 +21,10 @@ export default function LandingSwitch({ initialIsMobile }: { initialIsMobile: bo
     return () => mq.removeEventListener('change', update);
   }, []);
 
-  return isMobile ? <LandingMobile /> : <Landing />;
+  return (
+    <>
+      {isMobile ? <LandingMobile /> : <Landing />}
+      <CookieConsent />
+    </>
+  );
 }

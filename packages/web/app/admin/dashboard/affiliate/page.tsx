@@ -1,29 +1,45 @@
 "use client";
 
 import AdminTopbar from "@/components/admin/admin-topbar";
+import SelectMenu from "@/components/admin/select-menu";
 import { useEffect, useState, useCallback } from "react";
-import { Loader2, Plus, Trash2, Megaphone, Pencil, X, Percent, DollarSign } from "lucide-react";
+import { Loader2, Plus, Trash2, Megaphone, Pencil, X, Percent, DollarSign, Wallet, Link2, Copy, Check, CheckCircle2, Clock } from "lucide-react";
 import toast from "react-hot-toast";
 
 interface Affiliate {
   id: number;
   code: string;
   name: string;
+  email: string | null;
   platform: string | null;
   contact: string | null;
   commission_rate: string;
   customer_discount_type: "percent" | "fixed";
   customer_discount_value: string;
   is_active: boolean;
+  access_token: string | null;
   sales_count: number;
   total_sales: string;
   total_commission: string;
+  total_paid: string;
+  balance_owed: string;
+}
+
+interface Payout {
+  id: number;
+  amount: string;
+  status: "pending" | "completed";
+  method: string | null;
+  note: string | null;
+  paid_at: string | null;
+  created_at: string;
 }
 
 const EMPTY = {
   id: 0,
   code: "",
   name: "",
+  email: "",
   platform: "",
   contact: "",
   commission_rate: "",
@@ -39,6 +55,87 @@ export default function AdminAffiliatePage() {
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({ ...EMPTY });
   const [deletingId, setDeletingId] = useState<number | null>(null);
+
+  // Payout management
+  const [payoutFor, setPayoutFor] = useState<Affiliate | null>(null);
+  const [payouts, setPayouts] = useState<Payout[]>([]);
+  const [payoutLoading, setPayoutLoading] = useState(false);
+  const [payoutAmount, setPayoutAmount] = useState("");
+  const [payoutStatus, setPayoutStatus] = useState<"pending" | "completed">("completed");
+  const [payoutNote, setPayoutNote] = useState("");
+  const [copiedId, setCopiedId] = useState<number | null>(null);
+
+  const refreshPayouts = useCallback(async (id: number) => {
+    const res = await fetch(`/api/admin/affiliate/payouts?affiliateId=${id}`, { cache: "no-store" });
+    const data = await res.json();
+    setPayouts(data.payouts || []);
+  }, []);
+
+  const openPayouts = async (a: Affiliate) => {
+    setPayoutFor(a);
+    setPayouts([]);
+    setPayoutAmount(Number(a.balance_owed) > 0 ? Number(a.balance_owed).toFixed(2) : "");
+    setPayoutStatus("completed");
+    setPayoutNote("");
+    setPayoutLoading(true);
+    try {
+      await refreshPayouts(a.id);
+    } catch {
+      toast.error("Failed to load payouts");
+    } finally {
+      setPayoutLoading(false);
+    }
+  };
+
+  const recordPayout = async () => {
+    if (!payoutFor) return;
+    const amt = Number(payoutAmount);
+    if (!(amt > 0)) {
+      toast.error("Enter a valid amount");
+      return;
+    }
+    try {
+      const res = await fetch("/api/admin/affiliate/payouts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ affiliateId: payoutFor.id, amount: amt, status: payoutStatus, note: payoutNote || null }),
+      });
+      if (!res.ok) throw new Error();
+      toast.success("Payout recorded");
+      setPayoutAmount("");
+      setPayoutNote("");
+      await refreshPayouts(payoutFor.id);
+      await load();
+    } catch {
+      toast.error("Failed to record payout");
+    }
+  };
+
+  const togglePayout = async (p: Payout) => {
+    if (!payoutFor) return;
+    const next = p.status === "completed" ? "pending" : "completed";
+    try {
+      await fetch("/api/admin/affiliate/payouts", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: p.id, status: next }),
+      });
+      await refreshPayouts(payoutFor.id);
+      await load();
+    } catch {
+      toast.error("Failed to update payout");
+    }
+  };
+
+  const copyLink = (a: Affiliate) => {
+    if (!a.access_token) return;
+    const link = `${window.location.origin}/partner/${a.access_token}`;
+    navigator.clipboard?.writeText(link).then(() => {
+      setCopiedId(a.id);
+      toast.success("Dashboard link copied");
+      setTimeout(() => setCopiedId(null), 1600);
+    });
+  };
 
   const load = useCallback(async () => {
     try {
@@ -67,6 +164,7 @@ export default function AdminAffiliatePage() {
       id: a.id,
       code: a.code,
       name: a.name,
+      email: a.email || "",
       platform: a.platform || "",
       contact: a.contact || "",
       commission_rate: String(a.commission_rate),
@@ -174,7 +272,10 @@ export default function AdminAffiliatePage() {
                       <td className="px-5 py-4 text-[13px] text-[#6B7280] text-right">
                         {a.sales_count} · ${parseFloat(a.total_sales || "0").toFixed(2)}
                       </td>
-                      <td className="px-5 py-4 text-[13px] font-bold text-[#1A1D20] text-right">${parseFloat(a.total_commission || "0").toFixed(2)}</td>
+                      <td className="px-5 py-4 text-right">
+                        <p className="text-[13px] font-bold text-[#1A1D20]">${parseFloat(a.balance_owed || "0").toFixed(2)}</p>
+                        <p className="text-[11px] text-[#9CA3AF]">${parseFloat(a.total_paid || "0").toFixed(2)} paid</p>
+                      </td>
                       <td className="px-5 py-4">
                         <span className={`inline-flex px-2.5 py-1 rounded-full text-[11px] font-semibold ${a.is_active ? "bg-emerald-50 text-emerald-600" : "bg-gray-100 text-[#6B7280]"}`}>
                           {a.is_active ? "Active" : "Inactive"}
@@ -182,10 +283,16 @@ export default function AdminAffiliatePage() {
                       </td>
                       <td className="px-5 py-4">
                         <div className="flex items-center justify-end gap-2">
-                          <button onClick={() => openEdit(a)} className="w-9 h-9 rounded-lg bg-gray-50 border border-gray-100 flex items-center justify-center hover:bg-[#FFF4F0] transition-colors">
+                          <button onClick={() => copyLink(a)} title="Copy affiliate's dashboard link" className="w-9 h-9 rounded-lg bg-gray-50 border border-gray-100 flex items-center justify-center hover:bg-[#FFF4F0] transition-colors">
+                            {copiedId === a.id ? <Check className="w-4 h-4 text-emerald-600" /> : <Link2 className="w-4 h-4 text-[#6B7280]" />}
+                          </button>
+                          <button onClick={() => openPayouts(a)} title="Payouts" className="w-9 h-9 rounded-lg bg-gray-50 border border-gray-100 flex items-center justify-center hover:bg-[#FFF4F0] transition-colors">
+                            <Wallet className="w-4 h-4 text-[#6B7280]" />
+                          </button>
+                          <button onClick={() => openEdit(a)} title="Edit" className="w-9 h-9 rounded-lg bg-gray-50 border border-gray-100 flex items-center justify-center hover:bg-[#FFF4F0] transition-colors">
                             <Pencil className="w-4 h-4 text-[#6B7280]" />
                           </button>
-                          <button onClick={() => remove(a.id)} disabled={deletingId === a.id} className="w-9 h-9 rounded-lg bg-gray-50 border border-gray-100 flex items-center justify-center hover:bg-red-50 transition-colors">
+                          <button onClick={() => remove(a.id)} disabled={deletingId === a.id} title="Delete" className="w-9 h-9 rounded-lg bg-gray-50 border border-gray-100 flex items-center justify-center hover:bg-red-50 transition-colors">
                             {deletingId === a.id ? <Loader2 className="w-4 h-4 text-[#6B7280] animate-spin" /> : <Trash2 className="w-4 h-4 text-[#6B7280]" />}
                           </button>
                         </div>
@@ -212,6 +319,9 @@ export default function AdminAffiliatePage() {
             <div className="space-y-4">
               <Field label="Affiliate Name">
                 <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="John's Travel Channel" className="input-base" />
+              </Field>
+              <Field label="Email">
+                <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="affiliate@example.com" className="input-base" />
               </Field>
               <Field label="Code">
                 <input value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })} placeholder="JOHN10" className="input-base font-mono" />
@@ -251,6 +361,91 @@ export default function AdminAffiliatePage() {
                 {form.id > 0 ? "Save Changes" : "Create Affiliate"}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {payoutFor && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setPayoutFor(null)} />
+          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-[18px] font-bold text-[#1A1D20]">Payouts</h3>
+                <p className="text-[12px] text-[#6B7280]">{payoutFor.name} · {payoutFor.code}</p>
+              </div>
+              <button onClick={() => setPayoutFor(null)} className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center">
+                <X className="w-4 h-4 text-[#1A1D20]" />
+              </button>
+            </div>
+
+            <div className="rounded-xl bg-[#FFF4F0] border border-orange-100 p-3 mb-4 flex items-center justify-between gap-2">
+              <span className="text-[12px] text-[#6B7280] truncate">
+                Dashboard link: <span className="font-mono text-[#1A1D20]">/partner/{payoutFor.access_token?.slice(0, 10)}…</span>
+              </span>
+              <button onClick={() => copyLink(payoutFor)} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-orange-100 text-[12px] font-semibold text-[#FF561E] shrink-0">
+                {copiedId === payoutFor.id ? <><Check className="w-3.5 h-3.5" /> Copied</> : <><Copy className="w-3.5 h-3.5" /> Copy</>}
+              </button>
+            </div>
+
+            <div className="grid grid-cols-3 gap-3 mb-5">
+              <div className="rounded-xl border border-gray-100 p-3 text-center">
+                <p className="text-[16px] font-bold text-[#1A1D20]">${parseFloat(payoutFor.total_commission || "0").toFixed(2)}</p>
+                <p className="text-[11px] text-[#6B7280]">Earned</p>
+              </div>
+              <div className="rounded-xl border border-gray-100 p-3 text-center">
+                <p className="text-[16px] font-bold text-emerald-600">${parseFloat(payoutFor.total_paid || "0").toFixed(2)}</p>
+                <p className="text-[11px] text-[#6B7280]">Paid</p>
+              </div>
+              <div className="rounded-xl border border-gray-100 p-3 text-center">
+                <p className="text-[16px] font-bold text-[#FF561E]">${parseFloat(payoutFor.balance_owed || "0").toFixed(2)}</p>
+                <p className="text-[11px] text-[#6B7280]">Owed</p>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-gray-100 p-4 mb-5">
+              <p className="text-[13px] font-bold text-[#1A1D20] mb-3">Record a payout</p>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <input type="number" min="0" step="0.01" value={payoutAmount} onChange={(e) => setPayoutAmount(e.target.value)} placeholder="Amount ($)" className="input-base sm:w-32" />
+                <div className="sm:w-48">
+                  <SelectMenu
+                    value={payoutStatus}
+                    onChange={(v) => setPayoutStatus(v as "pending" | "completed")}
+                    options={[
+                      { value: "completed", label: "Completed (paid)" },
+                      { value: "pending", label: "Pending" },
+                    ]}
+                  />
+                </div>
+                <button onClick={recordPayout} className="px-4 py-2.5 rounded-xl bg-[#FF561E] text-white text-[13px] font-bold hover:bg-[#E04B18] transition-colors shrink-0">Add</button>
+              </div>
+              <input value={payoutNote} onChange={(e) => setPayoutNote(e.target.value)} placeholder="Note (optional, e.g. PayPal txn id)" className="input-base mt-2" />
+            </div>
+
+            <p className="text-[13px] font-bold text-[#1A1D20] mb-2">History</p>
+            {payoutLoading ? (
+              <div className="flex justify-center py-6"><Loader2 className="w-6 h-6 text-[#FF561E] animate-spin" /></div>
+            ) : payouts.length === 0 ? (
+              <p className="text-[13px] text-[#6B7280] py-3">No payouts recorded yet.</p>
+            ) : (
+              <div className="divide-y divide-gray-50">
+                {payouts.map((p) => (
+                  <div key={p.id} className="flex items-center justify-between py-2.5">
+                    <div>
+                      <p className="text-[13px] font-bold text-[#1A1D20]">${parseFloat(p.amount).toFixed(2)}</p>
+                      <p className="text-[11px] text-[#9CA3AF]">
+                        {p.status === "completed" && p.paid_at ? new Date(p.paid_at).toLocaleDateString() : new Date(p.created_at).toLocaleDateString()}
+                        {p.note ? ` · ${p.note}` : ""}
+                      </p>
+                    </div>
+                    <button onClick={() => togglePayout(p)} title="Toggle status" className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold ${p.status === "completed" ? "bg-emerald-50 text-emerald-600" : "bg-amber-50 text-amber-600"}`}>
+                      {p.status === "completed" ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Clock className="w-3.5 h-3.5" />}
+                      {p.status === "completed" ? "Completed" : "Pending"}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}

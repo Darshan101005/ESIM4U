@@ -258,7 +258,7 @@ export default function VerifyPaymentsPage() {
                   <div className="flex items-start justify-between gap-3 flex-wrap">
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-[14px] font-bold text-[#1A1D20]">{t.customer_name || "Customer"}</span>
+                        <span className="text-[14px] font-bold text-[#1A1D20]">{t.customer_name ? t.customer_name.toUpperCase() : "Customer"}</span>
                         <span className={`inline-flex px-2.5 py-1 rounded-full text-[11px] font-semibold ${meta.cls}`}>{meta.label}</span>
                       </div>
                       <p className="text-[12.5px] text-[#6B7280] mt-0.5">{t.user_email}</p>

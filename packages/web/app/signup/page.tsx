@@ -87,7 +87,7 @@ export default function SignupPage() {
       const { error, data } = await signUp.email({
         email,
         password,
-        name: fullName,
+        name: fullName.trim().toUpperCase(),
       });
 
       if (error) {

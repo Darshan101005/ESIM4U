@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { authClient } from '@/lib/auth-client';
+import { authClient, signOutAndClear, getCachedUser, fetchAndCacheUser } from '@/lib/auth-client';
 import { flagUrl } from '@/lib/flags';
 
 const Flag = dynamic<any>(() => import('react-flagpack').then(m => m.default || m), { ssr: false });
@@ -97,12 +97,23 @@ export default function LandingMobile() {
   const [activeTab, setActiveTab] = useState<Tab>('Countries');
   const [startingLoading, setStartingLoading] = useState(false);
   const [prices, setPrices] = useState<{ countries: Record<string, number | null>; regions: Record<string, number | null>; global: number | null } | null>(null);
+  const [authUser, setAuthUser] = useState<{ name?: string; email?: string } | null>(null);
+  const [authChecked, setAuthChecked] = useState(false);
 
   useEffect(() => {
     fetch('/api/landing-prices')
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => { if (d && !d.error) setPrices(d); })
       .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    // Show cached auth instantly for returning users, then confirm.
+    const cached = getCachedUser();
+    if (cached) { setAuthUser(cached); setAuthChecked(true); }
+    fetchAndCacheUser()
+      .then((u) => { setAuthUser(u); setAuthChecked(true); })
+      .catch(() => setAuthChecked(true));
   }, []);
 
   useEffect(() => {
@@ -228,9 +239,17 @@ export default function LandingMobile() {
             <Image src="/assets/esim4u-logo.png" alt="eSIM4U" width={110} height={34} className="object-contain w-[104px]" priority />
           </Link>
           <div className="flex items-center gap-2.5">
-            <Link href="/login" className="px-4 py-2 rounded-full text-[#FF561E] font-semibold text-[13px] border border-orange-100 bg-orange-50/60">
-              Log in
-            </Link>
+            <div className={`transition-opacity duration-200 ${authChecked ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+              {authUser ? (
+                <Link href="/dashboard" className="px-4 py-2 rounded-full text-white font-semibold text-[13px] bg-[#FF561E] shadow-sm">
+                  Dashboard
+                </Link>
+              ) : (
+                <Link href="/login" className="px-4 py-2 rounded-full text-[#FF561E] font-semibold text-[13px] border border-orange-100 bg-orange-50/60">
+                  Log in
+                </Link>
+              )}
+            </div>
             <button
               onClick={() => setMenuOpen(true)}
               aria-label="Open menu"
@@ -260,8 +279,28 @@ export default function LandingMobile() {
             <Link href="/faq" onClick={() => setMenuOpen(false)} className="py-3 px-3 text-[15px] font-medium text-[#1A1D20] rounded-xl active:bg-gray-50">FAQs</Link>
           </nav>
           <div className="mt-auto px-4 pb-6 flex flex-col gap-3">
-            <Link href="/login" className="w-full py-3 rounded-full border border-[#FF561E] text-[#FF561E] font-semibold text-[14px] text-center">Log in</Link>
-            <Link href="/signup" className="w-full py-3 rounded-full bg-[#FF561E] text-white font-semibold text-[14px] text-center shadow-lg shadow-orange-500/20">Sign up</Link>
+            {authUser ? (
+              <>
+                <div className="px-1 pb-1 text-center">
+                  <p className="text-[14px] font-bold text-[#1A1D20] truncate">{(authUser.name || 'Account').toUpperCase()}</p>
+                  {authUser.email && <p className="text-[12px] text-[#6B7280] truncate">{authUser.email}</p>}
+                </div>
+                <Link href="/dashboard" className="w-full py-3 rounded-full bg-[#FF561E] text-white font-semibold text-[14px] text-center shadow-lg shadow-orange-500/20">Go to Dashboard</Link>
+                <Link href="/dashboard/profile" className="w-full py-3 rounded-full border border-[#FF561E] text-[#FF561E] font-semibold text-[14px] text-center">My Profile</Link>
+                <button
+                  type="button"
+                  onClick={async () => { await signOutAndClear(); router.push('/'); router.refresh(); }}
+                  className="w-full py-3 rounded-full border border-red-200 text-red-500 font-semibold text-[14px] text-center"
+                >
+                  Logout
+                </button>
+              </>
+            ) : (
+              <>
+                <Link href="/login" className="w-full py-3 rounded-full border border-[#FF561E] text-[#FF561E] font-semibold text-[14px] text-center">Log in</Link>
+                <Link href="/signup" className="w-full py-3 rounded-full bg-[#FF561E] text-white font-semibold text-[14px] text-center shadow-lg shadow-orange-500/20">Sign up</Link>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -683,8 +722,17 @@ export default function LandingMobile() {
             </div>
             <div className="flex flex-col gap-3">
               <h4 className="font-bold text-[13px] tracking-wide text-white/90">ACCOUNT</h4>
-              <Link href="/login" className="text-white/90 text-[13px] font-medium">Log in</Link>
-              <Link href="/signup" className="text-white/90 text-[13px] font-medium">Sign up</Link>
+              {authUser ? (
+                <>
+                  <Link href="/dashboard" className="text-white/90 text-[13px] font-medium">Dashboard</Link>
+                  <Link href="/dashboard/profile" className="text-white/90 text-[13px] font-medium">My Profile</Link>
+                </>
+              ) : (
+                <>
+                  <Link href="/login" className="text-white/90 text-[13px] font-medium">Log in</Link>
+                  <Link href="/signup" className="text-white/90 text-[13px] font-medium">Sign up</Link>
+                </>
+              )}
             </div>
           </div>
 
