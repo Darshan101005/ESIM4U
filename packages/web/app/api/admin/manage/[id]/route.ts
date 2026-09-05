@@ -87,12 +87,20 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
 
     const targetId = parseInt(params.id, 10);
     if (Number.isNaN(targetId)) return NextResponse.json({ error: "Invalid admin id" }, { status: 400 });
-    if (targetId === requester.id) return NextResponse.json({ error: "You cannot delete your own account" }, { status: 400 });
+
+    // Any admin can be removed — including your own/seeded account — as long as
+    // at least one admin account always remains (never lock everyone out).
+    const countRes = await pool.query(`SELECT COUNT(*)::int AS c FROM admin_users`);
+    if ((countRes.rows[0]?.c ?? 0) <= 1) {
+      return NextResponse.json({ error: "At least one admin account must remain" }, { status: 400 });
+    }
 
     const result = await pool.query(`DELETE FROM admin_users WHERE id = $1 RETURNING id`, [targetId]);
     if (result.rows.length === 0) return NextResponse.json({ error: "Admin not found" }, { status: 404 });
 
-    return NextResponse.json({ success: true });
+    // Signal to the client whether the requester just deleted themselves so it
+    // can sign them out.
+    return NextResponse.json({ success: true, selfDeleted: targetId === requester.id });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Failed to delete admin";
     return NextResponse.json({ error: message }, { status: 500 });

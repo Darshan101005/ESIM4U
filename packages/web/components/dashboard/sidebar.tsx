@@ -70,7 +70,7 @@ export default function DashboardSidebar({ collapsed = false, onToggle }: Dashbo
         )}
         {!isCollapsed && (
           <Link href="/" className="flex items-center">
-            <Image src="/assets/esim4u-logo.png" alt="eSIM4U" width={120} height={36} className="object-contain" priority />
+            <Image src="/assets/esim4u-logo.png" alt="eSIM4U" width={120} height={36} className="object-contain h-auto w-[120px]" priority />
           </Link>
         )}
       </div>

@@ -32,7 +32,7 @@ export default async function PartnerPage({ params }: { params: { token: string 
     <div className="min-h-screen flex flex-col bg-[#FAFAFA] font-sans">
       <header className="w-full bg-white border-b border-gray-100">
         <div className="max-w-[1000px] mx-auto px-5 sm:px-8 h-16 flex items-center justify-between">
-          <Image src="/assets/esim4u-logo.png" alt="eSIM4U" width={110} height={34} className="object-contain w-[104px]" />
+          <Image src="/assets/esim4u-logo.png" alt="eSIM4U" width={110} height={34} className="object-contain h-auto w-[104px]" />
           <span className="text-[12px] font-semibold text-[#6B7280]">Affiliate Dashboard</span>
         </div>
       </header>

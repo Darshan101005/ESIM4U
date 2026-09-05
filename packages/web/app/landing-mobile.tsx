@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import {
   Globe, QrCode, Plane, Tag, Zap, ShieldCheck, Headphones, Smartphone,
   RadioTower, Search, ChevronRight, ArrowRight, X, Menu, CheckCircle2,
-  XCircle, Wifi, Gift, Star, Quote, PhoneCall, Rocket, Users,
+  XCircle, Wifi, Gift, Star, Quote, PhoneCall, Rocket, Users, Loader2,
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -99,6 +99,10 @@ export default function LandingMobile() {
   const [prices, setPrices] = useState<{ countries: Record<string, number | null>; regions: Record<string, number | null>; global: number | null } | null>(null);
   const [authUser, setAuthUser] = useState<{ name?: string; email?: string } | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
+  const [destSearch, setDestSearch] = useState('');
+  const [allCountries, setAllCountries] = useState<{ country_name: string; iso2_code: string; iso3_code: string }[]>([]);
+  const [countriesLoading, setCountriesLoading] = useState(false);
+  const [countriesFetched, setCountriesFetched] = useState(false);
 
   useEffect(() => {
     fetch('/api/landing-prices')
@@ -190,12 +194,46 @@ export default function LandingMobile() {
     setTimeout(() => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
   }, []);
 
+  // Lazily load the full country list the first time someone searches.
+  const ensureCountries = useCallback(async () => {
+    if (countriesFetched || countriesLoading) return;
+    setCountriesLoading(true);
+    try {
+      const res = await fetch('/api/montyesim/countries');
+      if (res.ok) {
+        const data = await res.json();
+        setAllCountries(data.countries || []);
+      }
+    } catch {
+      // falls back to popular destinations
+    } finally {
+      setCountriesLoading(false);
+      setCountriesFetched(true);
+    }
+  }, [countriesFetched, countriesLoading]);
+
+  useEffect(() => { setDestSearch(''); }, [activeTab]);
+
+  useEffect(() => {
+    if (activeTab === 'Countries' && destSearch.trim() && !countriesFetched) {
+      ensureCountries();
+    }
+  }, [activeTab, destSearch, countriesFetched, ensureCountries]);
+
+  // Prices show only for curated popular countries; searched ones show name only.
+  const popularCountryIso3 = useMemo(() => new Set(countriesList.map((c) => c.iso3)), []);
+
   const tabList = useMemo(() => {
+    const q = destSearch.trim().toLowerCase();
     if (activeTab === 'Countries') {
-      return countriesList.map((c) => ({
+      const source = q && allCountries.length > 0
+        ? allCountries.map((c) => ({ name: c.country_name, flag: c.iso2_code, iso3: c.iso3_code }))
+        : countriesList;
+      const list = q ? source.filter((c) => c.name.toLowerCase().includes(q) || c.iso3.toLowerCase().includes(q) || c.flag.toLowerCase().includes(q)) : countriesList;
+      return list.map((c) => ({
         key: c.iso3,
         name: c.name,
-        price: priceText(prices?.countries[c.iso3]),
+        price: popularCountryIso3.has(c.iso3) ? priceText(prices?.countries[c.iso3]) : null,
         onClick: () => goProtected(`/dashboard/browse/${c.iso3}?name=${encodeURIComponent(c.name)}`),
         media: (
           <div className="w-11 h-8 rounded-md overflow-hidden border border-gray-100 shrink-0 relative">
@@ -205,7 +243,8 @@ export default function LandingMobile() {
       }));
     }
     if (activeTab === 'Regions') {
-      return regionsList.map((r) => ({
+      const list = q ? regionsList.filter((r) => r.name.toLowerCase().includes(q) || r.code.toLowerCase().includes(q)) : regionsList;
+      return list.map((r) => ({
         key: r.code,
         name: r.name,
         price: priceText(prices?.regions[r.code]),
@@ -228,7 +267,7 @@ export default function LandingMobile() {
         </div>
       ),
     }];
-  }, [activeTab, prices, priceText, goProtected]);
+  }, [activeTab, prices, priceText, goProtected, destSearch, allCountries, popularCountryIso3]);
 
   return (
     <div className="w-full bg-white font-sans overflow-x-hidden">
@@ -236,7 +275,7 @@ export default function LandingMobile() {
       <header className="sticky top-0 z-40 w-full bg-white/85 backdrop-blur-xl border-b border-gray-100">
         <div className="flex items-center justify-between px-5 h-16">
           <Link href="/" className="flex items-center">
-            <Image src="/assets/esim4u-logo.png" alt="eSIM4U" width={110} height={34} className="object-contain w-[104px]" priority />
+            <Image src="/assets/esim4u-logo.png" alt="eSIM4U" width={110} height={34} className="object-contain h-auto w-[104px]" priority />
           </Link>
           <div className="flex items-center gap-2.5">
             <div className={`transition-opacity duration-200 ${authChecked ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
@@ -454,24 +493,37 @@ export default function LandingMobile() {
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
               type="text"
+              value={destSearch}
+              onChange={(e) => setDestSearch(e.target.value)}
               placeholder={`Search ${activeTab.toLowerCase()}`}
               className="w-full pl-11 pr-4 py-3 rounded-full bg-white border border-gray-100 shadow-sm outline-none focus:border-[#FF561E] focus:ring-1 focus:ring-[#FF561E]/20 text-[14px]"
             />
           </div>
 
           <div className="flex flex-col gap-3 mb-6">
-            {tabList.map((row) => (
-              <div key={row.key} onClick={row.onClick} className="flex items-center justify-between p-3.5 rounded-2xl bg-white border border-gray-100 shadow-sm active:scale-[0.99] transition-transform cursor-pointer">
-                <div className="flex items-center gap-3.5 min-w-0">
-                  {row.media}
-                  <div className="flex flex-col min-w-0">
-                    <span className="text-[14px] font-bold text-[#1A1D20] truncate">{row.name}</span>
-                    <span className="text-[12px] text-[#FF561E] font-medium">{row.price}</span>
-                  </div>
-                </div>
-                <ChevronRight className="w-5 h-5 text-gray-300 shrink-0" />
+            {activeTab === 'Countries' && countriesLoading && tabList.length === 0 ? (
+              <div className="flex items-center justify-center py-10">
+                <Loader2 className="w-6 h-6 text-[#FF561E] animate-spin" />
               </div>
-            ))}
+            ) : tabList.length === 0 ? (
+              <div className="text-center py-10">
+                <p className="text-[14px] font-semibold text-[#1A1D20]">{activeTab === 'Regions' ? 'Region not found' : 'Country not found'}</p>
+                <p className="text-[12px] text-[#6B7280] mt-1">Try a different name, or browse all destinations below.</p>
+              </div>
+            ) : (
+              tabList.map((row) => (
+                <div key={row.key} onClick={row.onClick} className="flex items-center justify-between p-3.5 rounded-2xl bg-white border border-gray-100 shadow-sm active:scale-[0.99] transition-transform cursor-pointer">
+                  <div className="flex items-center gap-3.5 min-w-0">
+                    {row.media}
+                    <div className="flex flex-col min-w-0">
+                      <span className="text-[14px] font-bold text-[#1A1D20] truncate">{row.name}</span>
+                      {row.price && <span className="text-[12px] text-[#FF561E] font-medium">{row.price}</span>}
+                    </div>
+                  </div>
+                  <ChevronRight className="w-5 h-5 text-gray-300 shrink-0" />
+                </div>
+              ))
+            )}
           </div>
 
           <button onClick={() => goProtected('/dashboard/browse')} className="w-full inline-flex items-center justify-center px-6 py-3.5 rounded-full bg-[#FF561E] text-white font-semibold text-[15px] gap-2 shadow-md shadow-orange-500/20 active:scale-[0.98] transition-transform">

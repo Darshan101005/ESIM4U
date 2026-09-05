@@ -32,7 +32,7 @@ export default function SiteHeader({ active }: { active?: string }) {
     <header className="w-full px-5 sm:px-8 md:px-12 xl:px-16 pt-6 sm:pt-8 flex items-center justify-between relative z-50">
       <div className="flex-1 flex justify-start">
         <Link href="/" className="flex items-center">
-          <Image src="/assets/esim4u-logo.png" alt="eSIM4U Logo" width={140} height={42} className="object-contain w-[110px] sm:w-[140px]" priority />
+          <Image src="/assets/esim4u-logo.png" alt="eSIM4U Logo" width={140} height={42} className="object-contain h-auto w-[110px] sm:w-[140px]" priority />
         </Link>
       </div>
 

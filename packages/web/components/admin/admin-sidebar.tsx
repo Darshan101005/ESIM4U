@@ -29,10 +29,11 @@ export default function AdminSidebar({ collapsed = false, onToggle }: AdminSideb
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [admin, setAdmin] = useState<{ name: string; email: string; role: string }>({
-    name: "Darshan V",
+    name: "",
     email: "",
     role: "admin",
   });
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     fetch("/api/admin/me", { cache: "no-store" })
@@ -40,7 +41,8 @@ export default function AdminSidebar({ collapsed = false, onToggle }: AdminSideb
       .then((data) => {
         if (data?.name) setAdmin({ name: data.name, email: data.email || "", role: data.role || "admin" });
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setLoaded(true));
   }, []);
 
   const isSuper = admin.role === "super_admin";
@@ -116,12 +118,16 @@ export default function AdminSidebar({ collapsed = false, onToggle }: AdminSideb
       <div className="px-3 pb-6 space-y-2">
         {isCollapsed ? (
           <div className="flex flex-col items-center gap-1">
-            <div
-              title={`${admin.name} · ${roleLabel}`}
-              className="w-9 h-9 rounded-full bg-gradient-to-br from-[#FF561E] to-[#FF7A45] flex items-center justify-center shrink-0"
-            >
-              <span className="text-white text-[14px] font-bold">{adminInitial}</span>
-            </div>
+            {loaded ? (
+              <div
+                title={`${admin.name} · ${roleLabel}`}
+                className="w-9 h-9 rounded-full bg-gradient-to-br from-[#FF561E] to-[#FF7A45] flex items-center justify-center shrink-0"
+              >
+                <span className="text-white text-[14px] font-bold">{adminInitial}</span>
+              </div>
+            ) : (
+              <div className="w-9 h-9 rounded-full skeleton shrink-0" />
+            )}
             <Link
               href="/admin/dashboard/settings"
               title="Settings"
@@ -140,14 +146,27 @@ export default function AdminSidebar({ collapsed = false, onToggle }: AdminSideb
         ) : (
           <>
             <div className="flex items-center gap-3 px-3 py-3 rounded-xl bg-[#FFF4F0] border border-orange-100">
-              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#FF561E] to-[#FF7A45] flex items-center justify-center shrink-0">
-                <span className="text-white text-[14px] font-bold">{adminInitial}</span>
-              </div>
+              {loaded ? (
+                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#FF561E] to-[#FF7A45] flex items-center justify-center shrink-0">
+                  <span className="text-white text-[14px] font-bold">{adminInitial}</span>
+                </div>
+              ) : (
+                <div className="w-9 h-9 rounded-full skeleton shrink-0" />
+              )}
               <div className="min-w-0 flex-1">
-                <p className="text-[13px] font-bold text-[#1A1D20] truncate">{admin.name}</p>
-                <span className="inline-flex items-center gap-1 text-[11.5px] font-semibold text-[#FF561E]">
-                  <RoleIcon className="w-3.5 h-3.5" strokeWidth={2.2} /> {roleLabel}
-                </span>
+                {loaded ? (
+                  <>
+                    <p className="text-[13px] font-bold text-[#1A1D20] truncate">{admin.name}</p>
+                    <span className="inline-flex items-center gap-1 text-[11.5px] font-semibold text-[#FF561E]">
+                      <RoleIcon className="w-3.5 h-3.5" strokeWidth={2.2} /> {roleLabel}
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <div className="skeleton h-[13px] w-24 rounded mb-1.5" />
+                    <div className="skeleton h-[11px] w-16 rounded" />
+                  </>
+                )}
               </div>
               <Link
                 href="/admin/dashboard/settings"

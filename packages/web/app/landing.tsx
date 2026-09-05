@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Globe, QrCode, Plane, Tag, Zap, ShieldCheck, Headphones, Smartphone, RadioTower, Search, ChevronRight, ChevronLeft, ArrowRight, X, Info, Wifi, Gift, CheckCircle2, XCircle, PhoneCall, Rocket, MapPin, BrickWallFire, Users, Star, Quote } from 'lucide-react';
+import { Globe, QrCode, Plane, Tag, Zap, ShieldCheck, Headphones, Smartphone, RadioTower, Search, ChevronRight, ChevronLeft, ArrowRight, X, Info, Wifi, Gift, CheckCircle2, XCircle, PhoneCall, Rocket, MapPin, BrickWallFire, Users, Star, Quote, Loader2 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { authClient, getCachedUser, fetchAndCacheUser } from '@/lib/auth-client';
@@ -187,6 +187,10 @@ export default function Landing() {
   const [landingPrices, setLandingPrices] = useState<{ countries: Record<string, number | null>; regions: Record<string, number | null>; global: number | null } | null>(null);
   const [authUser, setAuthUser] = useState<{ name?: string; email?: string } | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
+  const [destSearch, setDestSearch] = useState('');
+  const [allCountries, setAllCountries] = useState<{ country_name: string; iso2_code: string; iso3_code: string }[]>([]);
+  const [countriesLoading, setCountriesLoading] = useState(false);
+  const [countriesFetched, setCountriesFetched] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -226,6 +230,93 @@ export default function Landing() {
       router.push(`/login?redirect=${encodeURIComponent(target)}`);
     }
   }, [router]);
+
+  // Curated popular destinations shown when there's no search query.
+  const popularCountries = useMemo(
+    () => [
+      { name: 'India', flag: 'IN', iso3: 'IND' },
+      { name: 'United Kingdom', flag: 'GBR', iso3: 'GBR' },
+      { name: 'Greece', flag: 'GR', iso3: 'GRC' },
+      { name: 'Turkey', flag: 'TR', iso3: 'TUR' },
+      { name: 'Germany', flag: 'DE', iso3: 'DEU' },
+      { name: 'Switzerland', flag: 'CH', iso3: 'CHE' },
+      { name: 'France', flag: 'FR', iso3: 'FRA' },
+      { name: 'Italy', flag: 'IT', iso3: 'ITA' },
+      { name: 'Netherlands', flag: 'NL', iso3: 'NLD' },
+      { name: 'Spain', flag: 'ES', iso3: 'ESP' },
+      { name: 'Portugal', flag: 'PT', iso3: 'PRT' },
+      { name: 'United States', flag: 'US', iso3: 'USA' },
+      { name: 'Thailand', flag: 'TH', iso3: 'THA' },
+      { name: 'Indonesia', flag: 'ID', iso3: 'IDN' },
+      { name: 'South Korea', flag: 'KR', iso3: 'KOR' },
+    ],
+    []
+  );
+
+  const popularRegions = useMemo(
+    () => [
+      { name: 'North America', image: 'north america_map.png', code: 'na' },
+      { name: 'Europe', image: 'europe_map.png', code: 'eu' },
+      { name: 'Asia', image: 'asia_map.png', code: 'as' },
+      { name: 'Africa', image: 'africa_map.png', code: 'af' },
+      { name: 'Middle East & North Africa', image: 'middle east &north africa_map.png', code: 'me' },
+      { name: 'South America', image: 'southamerica_map.png', code: 'sa' },
+    ],
+    []
+  );
+
+  // Lazily load the full country list the first time someone searches, so any
+  // country (not just the popular ones) can be found.
+  const ensureCountries = useCallback(async () => {
+    if (countriesFetched || countriesLoading) return;
+    setCountriesLoading(true);
+    try {
+      const res = await fetch('/api/montyesim/countries');
+      if (res.ok) {
+        const data = await res.json();
+        setAllCountries(data.countries || []);
+      }
+    } catch {
+      // leave list empty; search falls back to popular destinations
+    } finally {
+      setCountriesLoading(false);
+      setCountriesFetched(true);
+    }
+  }, [countriesFetched, countriesLoading]);
+
+  // Clear the search when switching tabs.
+  useEffect(() => {
+    setDestSearch('');
+  }, [activeTab]);
+
+  // Fetch the full list when the user starts searching countries.
+  useEffect(() => {
+    if (activeTab === 'Countries' && destSearch.trim() && !countriesFetched) {
+      ensureCountries();
+    }
+  }, [activeTab, destSearch, countriesFetched, ensureCountries]);
+
+  // Prices are only shown for the curated popular countries; searched ones just
+  // show the name (users open the country to see plans/prices).
+  const popularCountryIso3 = useMemo(() => new Set(popularCountries.map((c) => c.iso3)), [popularCountries]);
+
+  const countryResults = useMemo(() => {
+    const q = destSearch.trim().toLowerCase();
+    if (!q) return popularCountries;
+    const source =
+      allCountries.length > 0
+        ? allCountries.map((c) => ({ name: c.country_name, flag: c.iso2_code, iso3: c.iso3_code }))
+        : popularCountries;
+    return source.filter(
+      (c) => c.name.toLowerCase().includes(q) || c.iso3.toLowerCase().includes(q) || c.flag.toLowerCase().includes(q)
+    );
+  }, [destSearch, allCountries, popularCountries]);
+
+  const regionResults = useMemo(() => {
+    const q = destSearch.trim().toLowerCase();
+    if (!q) return popularRegions;
+    return popularRegions.filter((r) => r.name.toLowerCase().includes(q) || r.code.toLowerCase().includes(q));
+  }, [destSearch, popularRegions]);
 
   const reviewsRef = useRef<HTMLDivElement>(null);
   const scrollReviews = useCallback((dir: number) => {
@@ -795,6 +886,8 @@ export default function Landing() {
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input 
                 type="text" 
+                value={destSearch}
+                onChange={(e) => setDestSearch(e.target.value)}
                 placeholder={`Search ${activeTab.toLowerCase()}`} 
                 className="w-full pl-11 pr-4 py-3 rounded-full bg-white border border-gray-100 shadow-sm outline-none focus:border-[#FF561E] focus:ring-1 focus:ring-[#FF561E]/20 text-[14px] transition-all"
               />
@@ -802,58 +895,59 @@ export default function Landing() {
           </div>
 
           <div className="w-full max-w-[1000px] grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4 mb-12">
-            {activeTab === 'Countries' && [
-              { name: 'India', flag: 'IN', iso3: 'IND', price: '3.99' },
-              { name: 'United Kingdom', flag: 'GBR', iso3: 'GBR', price: '4.49' },
-              { name: 'Greece', flag: 'GR', iso3: 'GRC', price: '4.49' },
-              { name: 'Turkey', flag: 'TR', iso3: 'TUR', price: '3.99' },
-              { name: 'Germany', flag: 'DE', iso3: 'DEU', price: '4.49' },
-              { name: 'Switzerland', flag: 'CH', iso3: 'CHE', price: '4.49' },
-              { name: 'France', flag: 'FR', iso3: 'FRA', price: '3.99' },
-              { name: 'Italy', flag: 'IT', iso3: 'ITA', price: '3.99' },
-              { name: 'Netherlands', flag: 'NL', iso3: 'NLD', price: '3.99' },
-              { name: 'Spain', flag: 'ES', iso3: 'ESP', price: '3.99' },
-              { name: 'Portugal', flag: 'PT', iso3: 'PRT', price: '3.99' },
-              { name: 'United States', flag: 'US', iso3: 'USA', price: '4.49' },
-              { name: 'Thailand', flag: 'TH', iso3: 'THA', price: '3.99' },
-              { name: 'Indonesia', flag: 'ID', iso3: 'IDN', price: '3.99' },
-              { name: 'South Korea', flag: 'KR', iso3: 'KOR', price: '4.49' },
-            ].map((country, i) => (
-              <div key={i} onClick={() => goProtected(`/dashboard/browse/${country.iso3}?name=${encodeURIComponent(country.name)}`)} className="flex items-center justify-between p-4 rounded-2xl bg-white border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer group">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-9 rounded-md overflow-hidden border border-gray-100 shrink-0 relative">
-                    <Flag code={country.flag} size="l" hasBorder={false} hasBorderRadius={false} className="country-flag" />
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-[15px] font-bold text-[#1A1D20]">{country.name}</span>
-                    <span className="text-[13px] text-[#FF561E] font-medium">{priceText(landingPrices?.countries[country.iso3])}</span>
-                  </div>
+            {activeTab === 'Countries' && (
+              countriesLoading && countryResults.length === 0 ? (
+                <div className="col-span-full flex items-center justify-center py-12">
+                  <Loader2 className="w-6 h-6 text-[#FF561E] animate-spin" />
                 </div>
-                <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-[#FF561E] transition-colors" />
-              </div>
-            ))}
+              ) : countryResults.length === 0 ? (
+                <div className="col-span-full text-center py-12">
+                  <p className="text-[15px] font-semibold text-[#1A1D20]">Country not found</p>
+                  <p className="text-[13px] text-[#6B7280] mt-1">Try a different name, or browse all destinations below.</p>
+                </div>
+              ) : (
+                countryResults.map((country) => (
+                  <div key={country.iso3} onClick={() => goProtected(`/dashboard/browse/${country.iso3}?name=${encodeURIComponent(country.name)}`)} className="flex items-center justify-between p-4 rounded-2xl bg-white border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer group">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-9 rounded-md overflow-hidden border border-gray-100 shrink-0 relative">
+                        <Flag code={country.flag} size="l" hasBorder={false} hasBorderRadius={false} className="country-flag" />
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-[15px] font-bold text-[#1A1D20]">{country.name}</span>
+                        {popularCountryIso3.has(country.iso3) && (
+                          <span className="text-[13px] text-[#FF561E] font-medium">{priceText(landingPrices?.countries[country.iso3])}</span>
+                        )}
+                      </div>
+                    </div>
+                    <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-[#FF561E] transition-colors" />
+                  </div>
+                ))
+              )
+            )}
             
-            {activeTab === 'Regions' && [
-              { name: 'North America', image: 'north america_map.png', code: 'na', price: '4.49' },
-              { name: 'Europe', image: 'europe_map.png', code: 'eu', price: '4.49' },
-              { name: 'Asia', image: 'asia_map.png', code: 'as', price: '4.49' },
-              { name: 'Africa', image: 'africa_map.png', code: 'af', price: '3.99' },
-              { name: 'Middle East & North Africa', image: 'middle east &north africa_map.png', code: 'me', price: '3.99' },
-              { name: 'South America', image: 'southamerica_map.png', code: 'sa', price: '4.49' },
-            ].map((region, i) => (
-              <div key={i} onClick={() => goProtected(`/dashboard/browse/region/${region.code}?name=${encodeURIComponent(region.name)}`)} className="flex items-center justify-between p-4 rounded-2xl bg-white border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer group">
-                <div className="flex items-center gap-4">
-                  <div className="w-[54px] h-[36px] rounded-md overflow-hidden border border-gray-100 shrink-0 relative bg-[#FFF4F0]">
-                    <Image src={`/assets/Regions/${region.image}`} alt={region.name} fill className="object-cover" />
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-[15px] font-bold text-[#1A1D20]">{region.name}</span>
-                    <span className="text-[13px] text-[#FF561E] font-medium">{priceText(landingPrices?.regions[region.code])}</span>
-                  </div>
+            {activeTab === 'Regions' && (
+              regionResults.length === 0 ? (
+                <div className="col-span-full text-center py-12">
+                  <p className="text-[15px] font-semibold text-[#1A1D20]">Region not found</p>
+                  <p className="text-[13px] text-[#6B7280] mt-1">Try a different name.</p>
                 </div>
-                <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-[#FF561E] transition-colors" />
-              </div>
-            ))}
+              ) : (
+                regionResults.map((region) => (
+                  <div key={region.code} onClick={() => goProtected(`/dashboard/browse/region/${region.code}?name=${encodeURIComponent(region.name)}`)} className="flex items-center justify-between p-4 rounded-2xl bg-white border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer group">
+                    <div className="flex items-center gap-4">
+                      <div className="w-[54px] h-[36px] rounded-md overflow-hidden border border-gray-100 shrink-0 relative bg-[#FFF4F0]">
+                        <Image src={`/assets/Regions/${region.image}`} alt={region.name} fill className="object-cover" />
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-[15px] font-bold text-[#1A1D20]">{region.name}</span>
+                        <span className="text-[13px] text-[#FF561E] font-medium">{priceText(landingPrices?.regions[region.code])}</span>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-[#FF561E] transition-colors" />
+                  </div>
+                ))
+              )
+            )}
 
             {activeTab === 'Global' && [
               { name: 'Global', image: 'world_map.png', price: '6.99', desc: '130+ countries' },

@@ -113,14 +113,14 @@ export default function BrowsePage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2 mb-6">
+        <div className="flex items-center gap-2 mb-6 overflow-x-auto hide-scrollbar -mx-4 px-4 lg:mx-0 lg:px-0 [mask-image:linear-gradient(to_right,#000_82%,transparent)] lg:[mask-image:none]">
           {tabs.map((t) => {
             const Icon = t.icon;
             return (
               <button
                 key={t.key}
                 onClick={() => setTab(t.key)}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-[13px] font-semibold transition-all ${
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-[13px] font-semibold transition-all shrink-0 whitespace-nowrap ${
                   tab === t.key ? "bg-[#FF561E] text-white shadow-sm" : "bg-white border border-gray-200 text-[#6B7280] hover:text-[#FF561E]"
                 }`}
               >

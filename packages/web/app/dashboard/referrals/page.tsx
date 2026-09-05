@@ -100,10 +100,11 @@ export default function ReferralsPage() {
             <button
               onClick={copy}
               disabled={!link}
-              className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-[#FF561E] text-white text-[13px] font-bold hover:bg-[#E04B18] transition-colors shrink-0 disabled:opacity-50"
+              title={copied ? "Copied" : "Copy"}
+              className="inline-flex items-center justify-center gap-2 px-3.5 sm:px-5 py-3 rounded-xl bg-[#FF561E] text-white text-[13px] font-bold hover:bg-[#E04B18] transition-colors shrink-0 disabled:opacity-50"
             >
               {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-              {copied ? "Copied" : "Copy"}
+              <span className="hidden sm:inline">{copied ? "Copied" : "Copy"}</span>
             </button>
           </div>
           <div className="flex items-center gap-2 mt-3 text-[12px] text-[#6B7280]">

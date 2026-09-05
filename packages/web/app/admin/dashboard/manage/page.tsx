@@ -139,8 +139,15 @@ export default function ManageAdminsPage() {
       const res = await fetch(`/api/admin/manage/${a.id}`, { method: "DELETE" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to delete");
-      toast.success("Admin deleted");
       setToRemove(null);
+      if (data.selfDeleted) {
+        // You deleted your own account — end the session and go to login.
+        toast.success("Your admin account was deleted");
+        try { await fetch("/api/admin/logout", { method: "POST" }); } catch {}
+        router.push("/admin");
+        return;
+      }
+      toast.success("Admin deleted");
       await load();
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Failed to delete");
@@ -286,8 +293,8 @@ export default function ManageAdminsPage() {
                     </button>
                     <button
                       onClick={() => setToRemove(a)}
-                      disabled={busyId === a.id || isSelf}
-                      title={isSelf ? "You can't delete yourself" : "Delete"}
+                      disabled={busyId === a.id}
+                      title={isSelf ? "Delete my account" : "Delete"}
                       className="w-9 h-9 rounded-lg border border-gray-200 flex items-center justify-center text-[#6B7280] hover:text-red-500 hover:border-red-200 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -382,7 +389,13 @@ export default function ManageAdminsPage() {
       <ConfirmModal
         open={!!toRemove}
         title="Delete this admin?"
-        message={toRemove ? `"${(toRemove.name || "This admin").toUpperCase()}" will lose access immediately. This cannot be undone.` : undefined}
+        message={
+          toRemove
+            ? toRemove.id === currentAdminId
+              ? `This will delete your own admin account ("${(toRemove.name || "You").toUpperCase()}") and sign you out immediately. This cannot be undone.`
+              : `"${(toRemove.name || "This admin").toUpperCase()}" will lose access immediately. This cannot be undone.`
+            : undefined
+        }
         confirmLabel="Delete admin"
         loading={busyId !== null && toRemove !== null && busyId === toRemove.id}
         onConfirm={() => toRemove && remove(toRemove)}
