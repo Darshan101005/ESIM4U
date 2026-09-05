@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Globe, QrCode, Plane, Tag, Zap, ShieldCheck, Headphones, Smartphone, RadioTower, Search, ChevronRight, ChevronLeft, ArrowRight, X, Info, Wifi, Gift, CheckCircle2, XCircle, PhoneCall, Rocket, MapPin, BrickWallFire, Users, Star, Quote, Menu } from 'lucide-react';
+import { Globe, QrCode, Plane, Tag, Zap, ShieldCheck, Headphones, Smartphone, RadioTower, Search, ChevronRight, ChevronLeft, ArrowRight, X, Info, Wifi, Gift, CheckCircle2, XCircle, PhoneCall, Rocket, MapPin, BrickWallFire, Users, Star, Quote } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { authClient } from '@/lib/auth-client';
@@ -183,7 +183,6 @@ export default function Landing() {
   const [locationsFolder, setLocationsFolder] = useState('Locations');
   const [startingLoading, setStartingLoading] = useState(false);
   const [landingPrices, setLandingPrices] = useState<{ countries: Record<string, number | null>; regions: Record<string, number | null>; global: number | null } | null>(null);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -405,7 +404,7 @@ export default function Landing() {
   return (
     <div className="min-h-screen w-full bg-white font-sans flex flex-col">
       <div className="h-screen w-full relative overflow-hidden flex flex-col shrink-0">
-        <div className="absolute inset-0 z-0 pointer-events-none flex justify-end overflow-hidden hidden md:flex">
+        <div className="absolute inset-0 z-0 pointer-events-none flex justify-end overflow-hidden">
           <div className="relative w-full h-full max-w-[1920px]">
             <Image
               src="/assets/hero-section.png"
@@ -417,9 +416,6 @@ export default function Landing() {
             />
           </div>
         </div>
-
-        {/* Mobile gradient background */}
-        <div className="absolute inset-0 z-0 pointer-events-none md:hidden" style={{ background: 'linear-gradient(135deg, #FFF8F5 0%, #FFF0EB 40%, #FFE4DB 100%)' }}></div>
 
         <div className="w-full px-5 sm:px-8 md:px-12 xl:px-16 pt-5 sm:pt-8 flex items-center justify-between relative z-50">
           <div className="flex-1 flex justify-start">
@@ -450,7 +446,7 @@ export default function Landing() {
           </div>
 
           <div className="flex-1 flex justify-end">
-            <div className="hidden sm:flex items-center gap-3">
+            <div className="flex items-center gap-3">
               <Link href="/login" className="px-6 py-2.5 rounded-full bg-white/80 backdrop-blur-sm border border-gray-100 text-[#FF561E] font-semibold text-[14px] hover:bg-white hover:scale-105 hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(255,86,30,0.15)] hover:border-orange-100 transition-all duration-300 shadow-sm">
                 Log in
               </Link>
@@ -458,42 +454,8 @@ export default function Landing() {
                 Sign up
               </Link>
             </div>
-            {/* Mobile hamburger */}
-            <button
-              onClick={() => setMobileMenuOpen(true)}
-              className="sm:hidden w-10 h-10 flex items-center justify-center rounded-full bg-white/80 backdrop-blur-sm border border-gray-100 shadow-sm"
-              aria-label="Open menu"
-            >
-              <Menu className="w-5 h-5 text-[#1A1D20]" />
-            </button>
           </div>
         </div>
-
-        {/* Mobile slide-out menu */}
-        {mobileMenuOpen && (
-          <div className="fixed inset-0 z-[100] sm:hidden">
-            <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setMobileMenuOpen(false)}></div>
-            <div className="absolute right-0 top-0 bottom-0 w-[280px] bg-white shadow-2xl flex flex-col animate-[slideInRight_0.3s_ease-out]">
-              <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-gray-100">
-                <Image src="/assets/esim4u-logo.png" alt="eSIM4U" width={100} height={30} className="object-contain" />
-                <button onClick={() => setMobileMenuOpen(false)} className="w-9 h-9 rounded-full bg-gray-50 flex items-center justify-center">
-                  <X className="w-5 h-5 text-[#1A1D20]" />
-                </button>
-              </div>
-              <nav className="flex flex-col px-5 py-4 gap-1">
-                <Link href="/" onClick={() => setMobileMenuOpen(false)} className="py-3 px-3 text-[15px] font-semibold text-[#FF561E] bg-orange-50 rounded-xl">Home</Link>
-                <button onClick={() => { scrollToId('how-it-works'); setMobileMenuOpen(false); }} className="py-3 px-3 text-[15px] font-medium text-[#1A1D20] text-left hover:bg-gray-50 rounded-xl transition-colors">How It Works</button>
-                <button onClick={() => { scrollToId('destinations'); setMobileMenuOpen(false); }} className="py-3 px-3 text-[15px] font-medium text-[#1A1D20] text-left hover:bg-gray-50 rounded-xl transition-colors">Destinations</button>
-                <Link href="/about-us" onClick={() => setMobileMenuOpen(false)} className="py-3 px-3 text-[15px] font-medium text-[#1A1D20] hover:bg-gray-50 rounded-xl transition-colors">About Us</Link>
-                <Link href="/faq" onClick={() => setMobileMenuOpen(false)} className="py-3 px-3 text-[15px] font-medium text-[#1A1D20] hover:bg-gray-50 rounded-xl transition-colors">FAQs</Link>
-              </nav>
-              <div className="mt-auto px-5 pb-6 flex flex-col gap-3">
-                <Link href="/login" className="w-full py-3 rounded-full border border-[#FF561E] text-[#FF561E] font-semibold text-[14px] text-center">Log in</Link>
-                <Link href="/signup" className="w-full py-3 rounded-full bg-[#FF561E] text-white font-semibold text-[14px] text-center shadow-lg shadow-orange-500/20">Sign up</Link>
-              </div>
-            </div>
-          </div>
-        )}
 
         <main className="flex-grow w-full px-5 sm:px-8 md:px-12 xl:px-16 flex items-center relative z-10 pb-10 sm:pb-20">
           <div className="w-full max-w-[650px] z-20 relative">
@@ -1356,73 +1318,14 @@ export default function Landing() {
       </section>
 
       <footer className="w-full relative bg-[#FF561E] overflow-hidden pt-8 pb-3 md:pt-10 md:pb-5 font-sans">
-        <div className="absolute left-[-5%] md:left-[5%] top-8 bottom-4 w-[40%] md:w-[15%] opacity-15 pointer-events-none hidden sm:block">
+        <div className="absolute left-[5%] top-8 bottom-4 w-[15%] opacity-15 pointer-events-none">
           <Image src="/assets/tower.svg" alt="Tower Background" fill className="object-contain object-bottom" />
         </div>
-        <div className="absolute right-[-5%] md:right-[5%] top-8 bottom-4 w-[40%] md:w-[15%] opacity-15 pointer-events-none hidden sm:block">
+        <div className="absolute right-[5%] top-8 bottom-4 w-[15%] opacity-15 pointer-events-none">
           <Image src="/assets/tower.svg" alt="Tower Background" fill className="object-contain object-bottom" />
         </div>
 
-        {/* Mobile footer - centered, simplified */}
-        <div className="sm:hidden flex flex-col items-center relative z-10 px-6 pb-4">
-          <div className="relative h-16 w-52 mb-4">
-            <Image src="/assets/esim4u-logo.png" alt="eSIM4U" fill className="object-contain brightness-0 invert" />
-          </div>
-
-          <div className="flex items-center justify-center gap-5 mb-8">
-            <a href="#" aria-label="Instagram" className="text-white hover:text-white/80 transition-colors">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <rect width="20" height="20" x="2" y="2" rx="6" ry="6" />
-                <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
-                <line x1="17.5" x2="17.51" y1="6.5" y2="6.5" />
-              </svg>
-            </a>
-            <a href="#" aria-label="Facebook" className="text-white hover:text-white/80 transition-colors">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="none">
-                <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" />
-              </svg>
-            </a>
-            <a href="#" aria-label="X (Twitter)" className="text-white hover:text-white/80 transition-colors">
-              <img src="https://upload.wikimedia.org/wikipedia/commons/c/ce/X_logo_2023.svg" alt="X (Twitter)" width={18} height={18} className="brightness-0 invert opacity-100 hover:opacity-80 transition-opacity" />
-            </a>
-            <a href="#" aria-label="TikTok" className="text-white hover:text-white/80 transition-colors">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/>
-              </svg>
-            </a>
-            <a href="#" aria-label="YouTube" className="text-white hover:text-white/80 transition-colors">
-              <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M21.58 6.55a2.76 2.76 0 0 0-1.95-1.96C17.9 4.1 12 4.1 12 4.1s-5.9 0-7.63.49A2.76 2.76 0 0 0 2.42 6.55C1.94 8.28 1.94 12 1.94 12s0 3.72.48 5.45a2.76 2.76 0 0 0 1.95 1.96C6.1 19.9 12 19.9 12 19.9s5.9 0 7.63-.49a2.76 2.76 0 0 0 1.95-1.96C22.06 15.72 22.06 12 22.06 12s0-3.72-.48-5.45zM9.95 15.36V8.64L15.79 12z"/>
-              </svg>
-            </a>
-          </div>
-
-          <div className="grid grid-cols-2 gap-x-10 gap-y-6 text-center mb-8 w-full max-w-[320px]">
-            <div className="flex flex-col gap-3">
-              <h4 className="font-bold text-[13px] tracking-wide text-white/90">PRODUCT</h4>
-              <button onClick={() => goProtected('/dashboard/browse')} className="text-white/90 text-[13px] font-medium">Buy eSIM</button>
-              <button onClick={() => scrollToId('how-it-works')} className="text-white/90 text-[13px] font-medium">How it works</button>
-            </div>
-            <div className="flex flex-col gap-3">
-              <h4 className="font-bold text-[13px] tracking-wide text-white/90">COMPANY</h4>
-              <Link href="/about-us" className="text-white/90 text-[13px] font-medium">About us</Link>
-              <Link href="/faq" className="text-white/90 text-[13px] font-medium">FAQs</Link>
-            </div>
-            <div className="flex flex-col gap-3">
-              <h4 className="font-bold text-[13px] tracking-wide text-white/90">SUPPORT</h4>
-              <Link href="/help-center" className="text-white/90 text-[13px] font-medium">Help Center</Link>
-              <Link href="/privacy" className="text-white/90 text-[13px] font-medium">Privacy Policy</Link>
-            </div>
-            <div className="flex flex-col gap-3">
-              <h4 className="font-bold text-[13px] tracking-wide text-white/90">ACCOUNT</h4>
-              <Link href="/login" className="text-white/90 text-[13px] font-medium">Log in</Link>
-              <Link href="/signup" className="text-white/90 text-[13px] font-medium">Sign up</Link>
-            </div>
-          </div>
-        </div>
-
-        {/* Desktop footer - unchanged */}
-        <div className="hidden sm:flex w-full max-w-[1400px] mx-auto px-4 md:px-6 xl:px-8 flex-col xl:flex-row gap-12 xl:gap-10 relative z-10 mb-4 md:mb-6">
+        <div className="flex w-full max-w-[1400px] mx-auto px-4 md:px-6 xl:px-8 flex-col xl:flex-row gap-12 xl:gap-10 relative z-10 mb-4 md:mb-6">
           <div className="w-full xl:w-[280px] flex flex-col items-start gap-4 shrink-0">
             <div className="relative h-20 w-64 md:h-[90px] md:w-[280px] -ml-4 lg:-ml-8">
               <Image src="/assets/esim4u-logo.png" alt="eSIM4U" fill className="object-contain object-left brightness-0 invert" />
