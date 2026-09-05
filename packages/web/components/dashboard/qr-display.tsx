@@ -52,7 +52,9 @@ export default function QrDisplay({ qrCodeUrl, activationCode, smdpAddress, matc
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <div className="flex flex-col items-center justify-center rounded-2xl border border-gray-100 bg-white p-6">
         {qrCodeUrl ? (
-          <img src={qrCodeUrl} alt="eSIM QR Code" className="w-56 h-56" />
+          <div className="keep-light bg-white rounded-xl p-2">
+            <img src={qrCodeUrl} alt="eSIM QR Code" className="w-56 h-56 block" />
+          </div>
         ) : (
           <div className="w-56 h-56 flex items-center justify-center bg-gray-50 rounded-xl">
             <Smartphone className="w-12 h-12 text-gray-300" />

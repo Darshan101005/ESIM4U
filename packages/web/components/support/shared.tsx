@@ -482,3 +482,14 @@ function MessageActions({
     </div>
   );
 }
+
+/** Badge styling for a support ticket status. Shared by customer + admin views. */
+export function ticketStatusPill(status: string) {
+  const map: Record<string, string> = {
+    open: "bg-amber-50 text-amber-600",
+    answered: "bg-sky-50 text-sky-600",
+    resolved: "bg-emerald-50 text-emerald-600",
+    closed: "bg-gray-100 text-gray-500",
+  };
+  return map[status] || "bg-gray-100 text-gray-500";
+}

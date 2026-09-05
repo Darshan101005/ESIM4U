@@ -4,13 +4,14 @@ import AdminTopbar from "@/components/admin/admin-topbar";
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Loader2, ShoppingBag, ChevronLeft, ChevronRight, Trash2, Trash, X, UserX, Globe } from "lucide-react";
+import { Loader2, ShoppingBag, ChevronLeft, ChevronRight, Trash2, Trash, X, UserX, Globe, Search } from "lucide-react";
 import toast from "react-hot-toast";
 import { statusLabel, statusPillClass } from "@/lib/order-status";
 
 interface Order {
   id: number;
   user_email: string;
+  customer_name?: string | null;
   bundle_name?: string;
   country?: string;
   data_amount?: string;
@@ -40,17 +41,29 @@ export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState("");
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [deleteTarget, setDeleteTarget] = useState<Order | null>(null);
   const [deleting, setDeleting] = useState(false);
   const limit = 20;
 
+  // Debounce the search box so we don't hit the API on every keystroke.
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setDebouncedSearch(search.trim());
+      setPage(1);
+    }, 350);
+    return () => clearTimeout(t);
+  }, [search]);
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams({ page: String(page), limit: String(limit) });
       if (status) params.set("status", status);
+      if (debouncedSearch) params.set("q", debouncedSearch);
       const res = await fetch(`/api/admin/orders?${params.toString()}`, { cache: "no-store" });
       if (!res.ok) throw new Error();
       const data = await res.json();
@@ -61,7 +74,7 @@ export default function AdminOrdersPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, status]);
+  }, [page, status, debouncedSearch]);
 
   useEffect(() => {
     load();
@@ -93,6 +106,25 @@ export default function AdminOrdersPage() {
     <>
       <AdminTopbar title="Orders" />
       <main className="flex-1 px-4 lg:px-8 py-6 lg:py-8 max-w-6xl mx-auto w-full">
+        <div className="relative mb-4">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-[16px] h-[16px] text-[#9CA3AF]" strokeWidth={2} />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search by name, email, country or plan (e.g. 1GB)"
+            className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-white border border-gray-200 text-[13px] text-[#1A1D20] placeholder:text-[#9CA3AF] outline-none focus:border-[#FF561E] focus:ring-2 focus:ring-[#FF561E]/10 transition-all"
+          />
+          {search && (
+            <button
+              onClick={() => setSearch("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-md flex items-center justify-center text-gray-400 hover:bg-gray-100 hover:text-[#1A1D20] transition-colors"
+              aria-label="Clear search"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+
         <div className="flex items-start justify-between gap-3 mb-6 flex-wrap">
           <div className="flex items-center gap-2 flex-wrap">
             {STATUSES.map((s) => (
@@ -149,7 +181,10 @@ export default function AdminOrdersPage() {
                         onClick={() => router.push(`/admin/dashboard/orders/${order.id}`)}
                         className="group hover:bg-gray-50/40 transition-colors cursor-pointer"
                       >
-                        <td className="px-5 py-4 text-[13px] text-[#1A1D20] truncate max-w-[200px]">{order.user_email}</td>
+                        <td className="px-5 py-4 max-w-[220px]">
+                          <p className="text-[13px] font-semibold text-[#1A1D20] truncate">{order.customer_name ? order.customer_name.toUpperCase() : "—"}</p>
+                          <p className="text-[12px] text-[#6B7280] truncate">{order.user_email}</p>
+                        </td>
                         <td className="px-5 py-4 text-[13px] font-semibold text-[#1A1D20]">{order.bundle_name || order.country || "eSIM Plan"}</td>
                         <td className="px-5 py-4 text-[13px] text-[#6B7280]">
                           {new Date(order.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}

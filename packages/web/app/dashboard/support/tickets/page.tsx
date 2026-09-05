@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import DashboardTopbar from "@/components/dashboard/topbar";
 import { Loader2, Plus, Ticket as TicketIcon, ChevronRight, ArrowLeft } from "lucide-react";
+import { ticketStatusPill } from "@/components/support/shared";
 
 interface TicketRow {
   id: number;
@@ -17,16 +18,6 @@ interface TicketRow {
   last_reply_at: string | null;
   created_at: string;
   unread: boolean;
-}
-
-export function ticketStatusPill(status: string) {
-  const map: Record<string, string> = {
-    open: "bg-amber-50 text-amber-600",
-    answered: "bg-sky-50 text-sky-600",
-    resolved: "bg-emerald-50 text-emerald-600",
-    closed: "bg-gray-100 text-gray-500",
-  };
-  return map[status] || "bg-gray-100 text-gray-500";
 }
 
 export default function TicketsPage() {

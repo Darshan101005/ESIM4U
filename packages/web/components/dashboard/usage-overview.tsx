@@ -3,7 +3,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ChevronDown, RefreshCw, Loader2, CalendarClock, Database, ArrowRight, Smartphone } from "lucide-react";
-import UsageDonut, { fmtGb } from "@/components/dashboard/usage-donut";
+import UsageDonut from "@/components/dashboard/usage-donut";
+import DataUnitToggle from "@/components/dashboard/data-unit-toggle";
+import { formatData, toMb, type DataUnit } from "@/lib/data-units";
 import { esimStatusTone } from "@/lib/esim-status";
 
 interface UsageOrder {
@@ -45,6 +47,7 @@ export default function UsageOverview({ orders }: { orders: UsageOrder[] }) {
   const [consumption, setConsumption] = useState<Consumption | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
+  const [unit, setUnit] = useState<DataUnit>("MB");
   const cache = useRef<Map<number, Consumption | null>>(new Map());
 
   const load = useCallback(async (id: number, force = false) => {
@@ -73,8 +76,9 @@ export default function UsageOverview({ orders }: { orders: UsageOrder[] }) {
   }, [selectedId, load]);
 
   const selected = orders.find((o) => o.id === selectedId);
-  const allocated = consumption?.data_allocated ?? 0;
-  const used = consumption?.data_used ?? 0;
+  // Normalise MontyeSIM values to MB (its unit is usually "MB") so display is exact.
+  const allocated = toMb(consumption?.data_allocated, consumption?.data_unit);
+  const used = toMb(consumption?.data_used, consumption?.data_unit);
   const unlimited = consumption?.unlimited;
   const validTill = formatValidTill(consumption?.bundle_expiry_date);
   const tone = statusTone(consumption?.plan_status);
@@ -102,6 +106,7 @@ export default function UsageOverview({ orders }: { orders: UsageOrder[] }) {
       <div className="flex items-center justify-between mb-5 gap-3 flex-wrap">
         <h3 className="text-[16px] font-bold text-[#1A1D20]">Data Usage Overview</h3>
         <div className="flex items-center gap-2">
+          <DataUnitToggle unit={unit} onChange={setUnit} />
           <div className="relative">
             <select
               value={selectedId ?? ""}
@@ -141,7 +146,7 @@ export default function UsageOverview({ orders }: { orders: UsageOrder[] }) {
         </div>
       ) : (
         <div className="flex flex-col sm:flex-row items-center gap-6 sm:gap-8">
-          <UsageDonut usedMb={used} allocatedMb={allocated} unlimited={unlimited} />
+          <UsageDonut usedMb={used} allocatedMb={allocated} unlimited={unlimited} unit={unit} />
 
           <div className="flex-1 w-full min-w-0">
             <div className="flex items-center gap-2 mb-4 flex-wrap">
@@ -164,7 +169,7 @@ export default function UsageOverview({ orders }: { orders: UsageOrder[] }) {
                   <Database className="w-4 h-4 text-[#FF561E]" strokeWidth={2} /> Used
                 </span>
                 <span className="text-[13.5px] font-bold text-[#1A1D20]">
-                  {unlimited ? "—" : `${fmtGb(used)} / ${fmtGb(allocated)}`}
+                  {unlimited ? "—" : `${formatData(used, unit)} / ${formatData(allocated, unit)}`}
                 </span>
               </div>
               <div className="flex items-center justify-between py-2.5 border-b border-gray-50">
@@ -172,7 +177,7 @@ export default function UsageOverview({ orders }: { orders: UsageOrder[] }) {
                   <Database className="w-4 h-4 text-emerald-500" strokeWidth={2} /> Remaining
                 </span>
                 <span className="text-[13.5px] font-bold text-[#1A1D20]">
-                  {unlimited ? "Unlimited" : fmtGb(Math.max(0, allocated - used))}
+                  {unlimited ? "Unlimited" : formatData(Math.max(0, allocated - used), unit)}
                 </span>
               </div>
               <div className="flex items-center justify-between py-2.5">

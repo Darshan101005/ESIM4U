@@ -7,7 +7,9 @@ import Link from "next/link";
 import { ArrowLeft, Loader2, Database, Clock, Calendar, Hash, XCircle, RotateCcw, Ban, RefreshCw } from "lucide-react";
 import toast from "react-hot-toast";
 import QrDisplay from "@/components/dashboard/qr-display";
-import UsageDonut, { fmtGb } from "@/components/dashboard/usage-donut";
+import UsageDonut from "@/components/dashboard/usage-donut";
+import DataUnitToggle from "@/components/dashboard/data-unit-toggle";
+import { formatData, toMb, type DataUnit } from "@/lib/data-units";
 import Flag from "@/components/dashboard/flag";
 import { CURRENCY_SYMBOLS } from "@/lib/fx";
 import { isPaidStatus, isRetryable, amountLabel, statusLabel, statusPillClass } from "@/lib/order-status";
@@ -97,6 +99,7 @@ export default function OrderDetailPage() {
   const [consumption, setConsumption] = useState<Consumption | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [dataUnit, setDataUnit] = useState<DataUnit>("MB");
   const [acting, setActing] = useState(false);
 
   const load = useCallback(async () => {
@@ -278,31 +281,35 @@ export default function OrderDetailPage() {
 
         {consumption && isCompleted && (
           <div className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-6 mb-6">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
               <h3 className="text-[16px] font-bold text-[#1A1D20]">Data Usage</h3>
-              {consumption.plan_status && (
-                <span className={`px-2.5 py-1 rounded-full text-[11px] font-semibold ${planTone(consumption.plan_status)}`}>
-                  {consumption.plan_status}
-                </span>
-              )}
+              <div className="flex items-center gap-2 flex-wrap">
+                <DataUnitToggle unit={dataUnit} onChange={setDataUnit} />
+                {consumption.plan_status && (
+                  <span className={`px-2.5 py-1 rounded-full text-[11px] font-semibold ${planTone(consumption.plan_status)}`}>
+                    {consumption.plan_status}
+                  </span>
+                )}
+              </div>
             </div>
             <div className="flex flex-col sm:flex-row items-center gap-6 sm:gap-8">
               <UsageDonut
-                usedMb={consumption.data_used ?? 0}
-                allocatedMb={consumption.data_allocated ?? 0}
+                usedMb={toMb(consumption.data_used, consumption.data_unit)}
+                allocatedMb={toMb(consumption.data_allocated, consumption.data_unit)}
                 unlimited={consumption.unlimited}
+                unit={dataUnit}
               />
               <div className="flex-1 w-full space-y-3">
                 <div className="flex items-center justify-between py-2.5 border-b border-gray-50">
                   <span className="text-[13px] text-[#6B7280]">Used</span>
                   <span className="text-[13.5px] font-bold text-[#1A1D20]">
-                    {consumption.unlimited ? "—" : `${fmtGb(consumption.data_used ?? 0)} / ${fmtGb(consumption.data_allocated ?? 0)}`}
+                    {consumption.unlimited ? "—" : `${formatData(toMb(consumption.data_used, consumption.data_unit), dataUnit)} / ${formatData(toMb(consumption.data_allocated, consumption.data_unit), dataUnit)}`}
                   </span>
                 </div>
                 <div className="flex items-center justify-between py-2.5 border-b border-gray-50">
                   <span className="text-[13px] text-[#6B7280]">Remaining</span>
                   <span className="text-[13.5px] font-bold text-[#1A1D20]">
-                    {consumption.unlimited ? "Unlimited" : fmtGb(Math.max(0, (consumption.data_allocated ?? 0) - (consumption.data_used ?? 0)))}
+                    {consumption.unlimited ? "Unlimited" : formatData(Math.max(0, toMb(consumption.data_allocated, consumption.data_unit) - toMb(consumption.data_used, consumption.data_unit)), dataUnit)}
                   </span>
                 </div>
                 {validUntil && (

@@ -1,13 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { ShoppingCart } from "lucide-react";
+import { ShoppingCart, Moon, Sun } from "lucide-react";
 import CurrencyDropdown from "@/components/dashboard/currency-dropdown";
 import NotificationBell from "@/components/dashboard/notification-bell";
 import { useCart } from "@/lib/cart-context";
+import { useTheme } from "@/lib/theme-context";
 
 export default function DashboardTopbar({ title }: { title?: string }) {
   const { count } = useCart();
+  const { toggleTheme } = useTheme();
 
   return (
     <header className="h-[70px] bg-white/80 backdrop-blur-xl border-b border-gray-100 flex items-center justify-between px-6 lg:px-8 sticky top-0 z-30">
@@ -28,6 +30,16 @@ export default function DashboardTopbar({ title }: { title?: string }) {
             </span>
           )}
         </Link>
+
+        <button
+          onClick={toggleTheme}
+          title="Toggle dark mode"
+          aria-label="Toggle dark mode"
+          className="w-10 h-10 rounded-xl bg-white border border-gray-200 flex items-center justify-center text-[#6B7280] hover:bg-[#FFF4F0] hover:text-[#FF561E] hover:border-orange-200 transition-colors"
+        >
+          <Moon className="w-[18px] h-[18px] theme-only-light" strokeWidth={2} />
+          <Sun className="w-[18px] h-[18px] theme-only-dark" strokeWidth={2} />
+        </button>
 
         <CurrencyDropdown />
 

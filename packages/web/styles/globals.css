@@ -163,3 +163,147 @@ body {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* =====================================================================
+   Dark mode — scoped to the customer dashboard and admin panel only.
+   The `.theme-dark` class is applied to the shell root (never <html>),
+   so public pages (login/signup/landing) are never affected.
+   Overrides remap the app's common Tailwind / arbitrary colour utilities
+   to a dark palette so existing pages render correctly without editing
+   every element. Brand colours (#FF561E, gradients) are intentionally
+   left untouched.
+   ===================================================================== */
+
+.theme-dark {
+  --dk-bg: #0F1115;       /* page background */
+  --dk-surface: #181B21;  /* cards, nav, topbar */
+  --dk-elev: #23262E;     /* rows, inputs, neutral chips, hover */
+  --dk-border: #2A2F39;   /* borders + dividers */
+  --dk-text: #E6E8EB;     /* headings / primary text */
+  --dk-muted: #9BA3AF;    /* secondary text */
+  --dk-faint: #6B7280;    /* faint text / placeholders / icons */
+  --dk-warm: #2A1D16;     /* warm orange-tinted surfaces */
+
+  background-color: var(--dk-bg) !important;
+  color: var(--dk-text);
+}
+
+/* ---- Surfaces (cards, sidebar, topbar) ---- */
+.theme-dark .bg-white,
+.theme-dark .bg-white\/95,
+.theme-dark .bg-white\/90,
+.theme-dark .bg-white\/80,
+.theme-dark .bg-white\/70,
+.theme-dark .bg-white\/60,
+.theme-dark .bg-white\/50 {
+  background-color: var(--dk-surface) !important;
+}
+
+/* ---- Page background (shell + any descendant using it) ---- */
+.theme-dark .bg-\[\#F8F9FB\],
+.theme-dark .bg-\[\#FAFAFA\],
+.theme-dark .bg-\[\#F7F8FA\] {
+  background-color: var(--dk-bg) !important;
+}
+
+/* ---- Elevated neutrals: rows, inputs, neutral chips, hovers ---- */
+.theme-dark .bg-gray-50,
+.theme-dark .bg-gray-100,
+.theme-dark .bg-gray-200,
+.theme-dark .bg-gray-50\/50,
+.theme-dark .bg-gray-50\/60,
+.theme-dark .bg-gray-50\/40,
+.theme-dark .bg-\[\#F9FAFB\],
+.theme-dark .bg-\[\#F3F4F6\],
+.theme-dark .bg-\[\#EEF0F3\] {
+  background-color: var(--dk-elev) !important;
+}
+
+/* ---- Warm orange-tinted surfaces ---- */
+.theme-dark .bg-\[\#FFF4F0\],
+.theme-dark .bg-\[\#FFF8F5\],
+.theme-dark .bg-\[\#FFEDE6\],
+.theme-dark .bg-orange-50,
+.theme-dark .bg-orange-50\/60,
+.theme-dark .bg-orange-50\/40 {
+  background-color: var(--dk-warm) !important;
+}
+
+/* ---- Hover backgrounds ---- */
+.theme-dark .hover\:bg-\[\#FFF4F0\]:hover { background-color: var(--dk-warm) !important; }
+.theme-dark .hover\:bg-gray-50:hover,
+.theme-dark .hover\:bg-gray-50\/40:hover,
+.theme-dark .hover\:bg-gray-100:hover,
+.theme-dark .hover\:bg-gray-200:hover { background-color: var(--dk-elev) !important; }
+.theme-dark .hover\:bg-white:hover { background-color: var(--dk-surface) !important; }
+
+/* ---- Text ---- */
+.theme-dark .text-\[\#1A1D20\],
+.theme-dark .text-black,
+.theme-dark .text-gray-900,
+.theme-dark .text-gray-800 { color: var(--dk-text) !important; }
+
+.theme-dark .text-\[\#6B7280\],
+.theme-dark .text-\[\#5E6673\],
+.theme-dark .text-gray-700,
+.theme-dark .text-gray-600,
+.theme-dark .text-gray-500 { color: var(--dk-muted) !important; }
+
+.theme-dark .text-\[\#9CA3AF\],
+.theme-dark .text-gray-400,
+.theme-dark .text-gray-300 { color: var(--dk-faint) !important; }
+
+/* Placeholders */
+.theme-dark .placeholder\:text-\[\#9CA3AF\]::placeholder,
+.theme-dark .placeholder\:text-gray-400::placeholder { color: var(--dk-faint) !important; }
+
+/* ---- Borders + dividers ---- */
+.theme-dark .border-gray-50,
+.theme-dark .border-gray-100,
+.theme-dark .border-gray-200,
+.theme-dark .border-gray-300,
+.theme-dark .border-orange-100,
+.theme-dark .border-orange-100\/70,
+.theme-dark .border-orange-200 { border-color: var(--dk-border) !important; }
+
+.theme-dark .divide-gray-50 > :not([hidden]) ~ :not([hidden]),
+.theme-dark .divide-gray-100 > :not([hidden]) ~ :not([hidden]),
+.theme-dark .divide-gray-200 > :not([hidden]) ~ :not([hidden]) { border-color: var(--dk-border) !important; }
+
+/* Hover borders */
+.theme-dark .hover\:border-gray-200:hover,
+.theme-dark .hover\:border-gray-300:hover { border-color: var(--dk-border) !important; }
+
+/* ---- Status chips: dim the light tints so they read on dark ---- */
+.theme-dark .bg-emerald-50 { background-color: rgba(16, 185, 129, 0.15) !important; }
+.theme-dark .bg-red-50 { background-color: rgba(239, 68, 68, 0.15) !important; }
+.theme-dark .bg-amber-50 { background-color: rgba(245, 158, 11, 0.15) !important; }
+.theme-dark .bg-blue-50 { background-color: rgba(59, 130, 246, 0.15) !important; }
+
+/* ---- Skeleton loading shimmer on dark ---- */
+.theme-dark .skeleton { background: var(--dk-elev); }
+.theme-dark .skeleton::after {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0,
+    rgba(255, 255, 255, 0.06) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+}
+
+/* Native form controls adopt the dark scheme (date pickers, selects). */
+.theme-dark input,
+.theme-dark select,
+.theme-dark textarea { color-scheme: dark; }
+
+/* Elements that must stay light in dark mode (e.g. QR codes need a light
+   background to remain scannable). */
+.theme-dark .keep-light { background-color: #fff !important; }
+
+/* Theme-conditional visibility, driven purely by the `.theme-dark` class so
+   both icons are always in the DOM (identical server/client markup -> no
+   hydration mismatch). Used by the dark-mode toggle icons. */
+.theme-only-dark { display: none; }
+.theme-only-light { display: inline-block; }
+.theme-dark .theme-only-dark { display: inline-block; }
+.theme-dark .theme-only-light { display: none; }

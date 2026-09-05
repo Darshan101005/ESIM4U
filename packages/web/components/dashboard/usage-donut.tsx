@@ -1,18 +1,12 @@
+import { formatData, type DataUnit } from "@/lib/data-units";
+
 interface UsageDonutProps {
   usedMb: number;
   allocatedMb: number;
   unlimited?: boolean;
+  unit?: DataUnit;
   size?: number;
   stroke?: number;
-}
-
-function mbToGb(mb: number): number {
-  return Math.round((mb / 1024) * 100) / 100;
-}
-
-function fmtGb(mb: number): string {
-  const gb = mbToGb(mb);
-  return `${parseFloat(gb.toFixed(2))} GB`;
 }
 
 // Traffic-light colour based on how much data has been consumed.
@@ -23,7 +17,7 @@ function usageColor(consumedFraction: number): string {
   return "#10B981"; // green
 }
 
-export default function UsageDonut({ usedMb, allocatedMb, unlimited, size = 168, stroke = 16 }: UsageDonutProps) {
+export default function UsageDonut({ usedMb, allocatedMb, unlimited, unit = "MB", size = 168, stroke = 16 }: UsageDonutProps) {
   const radius = (size - stroke) / 2;
   const circumference = 2 * Math.PI * radius;
 
@@ -52,7 +46,7 @@ export default function UsageDonut({ usedMb, allocatedMb, unlimited, size = 168,
           style={{ transition: "stroke-dashoffset 0.6s ease, stroke 0.4s ease" }}
         />
       </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+      <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-2">
         {unlimited ? (
           <>
             <span className="text-[30px] font-bold text-[#1A1D20] leading-none">&infin;</span>
@@ -60,7 +54,7 @@ export default function UsageDonut({ usedMb, allocatedMb, unlimited, size = 168,
           </>
         ) : (
           <>
-            <span className="text-[26px] font-bold text-[#1A1D20] leading-none">{fmtGb(remainingMb)}</span>
+            <span className="text-[22px] font-bold text-[#1A1D20] leading-none">{formatData(remainingMb, unit)}</span>
             <span className="text-[12px] text-[#6B7280] mt-1">remaining</span>
           </>
         )}
@@ -68,5 +62,3 @@ export default function UsageDonut({ usedMb, allocatedMb, unlimited, size = 168,
     </div>
   );
 }
-
-export { mbToGb, fmtGb };

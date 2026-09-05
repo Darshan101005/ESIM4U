@@ -20,6 +20,8 @@ import {
   Hash,
 } from "lucide-react";
 import toast from "react-hot-toast";
+import DataUnitToggle from "@/components/dashboard/data-unit-toggle";
+import { formatData, toMb, type DataUnit } from "@/lib/data-units";
 
 interface OrderRow {
   id: number;
@@ -54,12 +56,6 @@ function statusPill(status: string) {
 }
 
 const usd = (n: number) => `$${(n || 0).toFixed(2)}`;
-
-function fmtData(mb?: number | null): string {
-  if (mb == null) return "—";
-  if (mb >= 1024) return `${(mb / 1024).toFixed(2)} GB`;
-  return `${Math.round(mb)} MB`;
-}
 
 function fmtDate(iso?: string | null): string {
   if (!iso) return "—";
@@ -187,6 +183,7 @@ interface FullOrder {
 interface Consumption {
   data_allocated?: number;
   data_used?: number;
+  data_unit?: string;
   unlimited?: boolean;
   plan_status?: string;
   bundle_expiry_date?: string;
@@ -195,6 +192,7 @@ interface Consumption {
 function OrderDetail({ orderId }: { orderId: number }) {
   const [data, setData] = useState<{ order: FullOrder; consumption: Consumption | null } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [dataUnit, setDataUnit] = useState<DataUnit>("MB");
 
   useEffect(() => {
     let active = true;
@@ -222,8 +220,8 @@ function OrderDetail({ orderId }: { orderId: number }) {
 
   const o = data.order;
   const c = data.consumption;
-  const used = c?.data_used ?? 0;
-  const allocated = c?.data_allocated ?? 0;
+  const used = toMb(c?.data_used, c?.data_unit);
+  const allocated = toMb(c?.data_allocated, c?.data_unit);
   const remaining = Math.max(0, allocated - used);
 
   return (
@@ -243,7 +241,10 @@ function OrderDetail({ orderId }: { orderId: number }) {
       {/* Data usage */}
       {c && (
         <div>
-          <p className="text-[11px] font-bold text-[#6B7280] uppercase tracking-wide mb-1.5">Data usage</p>
+          <div className="flex items-center justify-between mb-1.5">
+            <p className="text-[11px] font-bold text-[#6B7280] uppercase tracking-wide">Data usage</p>
+            {!c.unlimited && <DataUnitToggle unit={dataUnit} onChange={setDataUnit} />}
+          </div>
           <div className="rounded-xl bg-white border border-gray-100 p-3">
             {c.plan_status && (
               <span className="inline-block mb-2 px-2 py-0.5 rounded-full bg-[#FFF4F0] text-[#FF561E] text-[10px] font-bold capitalize">{c.plan_status}</span>
@@ -254,14 +255,14 @@ function OrderDetail({ orderId }: { orderId: number }) {
               <>
                 <div className="flex items-center justify-between text-[12.5px] mb-1">
                   <span className="text-[#6B7280]">Used</span>
-                  <span className="font-semibold text-[#1A1D20]">{fmtData(used)} / {fmtData(allocated)}</span>
+                  <span className="font-semibold text-[#1A1D20]">{formatData(used, dataUnit)} / {formatData(allocated, dataUnit)}</span>
                 </div>
                 <div className="h-1.5 rounded-full bg-gray-100 overflow-hidden">
                   <div className="h-full bg-[#FF561E]" style={{ width: `${allocated > 0 ? Math.min(100, (used / allocated) * 100) : 0}%` }} />
                 </div>
                 <div className="flex items-center justify-between text-[12.5px] mt-1.5">
                   <span className="text-[#6B7280]">Remaining</span>
-                  <span className="font-semibold text-[#1A1D20]">{fmtData(remaining)}</span>
+                  <span className="font-semibold text-[#1A1D20]">{formatData(remaining, dataUnit)}</span>
                 </div>
               </>
             )}

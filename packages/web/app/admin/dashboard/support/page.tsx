@@ -20,8 +20,8 @@ import {
   type PendingAttachment,
   type ReplyTarget,
   type DeleteScope,
+  ticketStatusPill,
 } from "@/components/support/shared";
-import { ticketStatusPill } from "@/app/dashboard/support/tickets/page";
 import AdminNotificationBell from "@/components/admin/admin-notification-bell";
 import ConfirmModal from "@/components/confirm-modal";
 import CustomerDetailsDrawer from "@/components/admin/customer-details-drawer";

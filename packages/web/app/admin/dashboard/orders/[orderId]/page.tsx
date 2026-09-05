@@ -6,7 +6,9 @@ import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, Loader2, XCircle, Mail, Hash, Calendar, Database, Clock, CheckCircle2, Ban, RotateCcw, CreditCard, Info, ExternalLink, Receipt } from "lucide-react";
 import toast from "react-hot-toast";
 import QrDisplay from "@/components/dashboard/qr-display";
-import UsageDonut, { fmtGb } from "@/components/dashboard/usage-donut";
+import UsageDonut from "@/components/dashboard/usage-donut";
+import DataUnitToggle from "@/components/dashboard/data-unit-toggle";
+import { formatData, toMb, type DataUnit } from "@/lib/data-units";
 import { CURRENCY_SYMBOLS } from "@/lib/fx";
 import { isPaidStatus, statusLabel, statusPillClass } from "@/lib/order-status";
 import { buildPaymentRows, type PaymentRow } from "@/lib/payment-details";
@@ -67,6 +69,7 @@ export default function AdminOrderDetailPage() {
   const [consumption, setConsumption] = useState<Consumption | null>(null);
   const [loading, setLoading] = useState(true);
   const [note, setNote] = useState("");
+  const [dataUnit, setDataUnit] = useState<DataUnit>("MB");
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
@@ -301,6 +304,7 @@ export default function AdminOrderDetailPage() {
             <div className="flex items-center justify-between mb-5 flex-wrap gap-2">
               <h3 className="text-[16px] font-bold text-[#1A1D20]">Data Usage</h3>
               <div className="flex items-center gap-2 flex-wrap">
+                <DataUnitToggle unit={dataUnit} onChange={setDataUnit} />
                 {consumption.plan_status && (
                   <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold bg-gray-100 text-[#6B7280]">{consumption.plan_status}</span>
                 )}
@@ -315,15 +319,15 @@ export default function AdminOrderDetailPage() {
               </div>
             </div>
             <div className="flex flex-col sm:flex-row items-center gap-6 sm:gap-8">
-              <UsageDonut usedMb={consumption.data_used ?? 0} allocatedMb={consumption.data_allocated ?? 0} unlimited={consumption.unlimited} />
+              <UsageDonut usedMb={toMb(consumption.data_used, consumption.data_unit)} allocatedMb={toMb(consumption.data_allocated, consumption.data_unit)} unlimited={consumption.unlimited} unit={dataUnit} />
               <div className="flex-1 w-full min-w-0 space-y-3">
                 <div className="flex items-center justify-between py-2.5 border-b border-gray-50">
                   <span className="flex items-center gap-2 text-[13px] text-[#6B7280]"><Database className="w-4 h-4 text-[#FF561E]" strokeWidth={2} /> Used</span>
-                  <span className="text-[13.5px] font-bold text-[#1A1D20]">{consumption.unlimited ? "—" : `${fmtGb(consumption.data_used ?? 0)} / ${fmtGb(consumption.data_allocated ?? 0)}`}</span>
+                  <span className="text-[13.5px] font-bold text-[#1A1D20]">{consumption.unlimited ? "—" : `${formatData(toMb(consumption.data_used, consumption.data_unit), dataUnit)} / ${formatData(toMb(consumption.data_allocated, consumption.data_unit), dataUnit)}`}</span>
                 </div>
                 <div className="flex items-center justify-between py-2.5 border-b border-gray-50">
                   <span className="flex items-center gap-2 text-[13px] text-[#6B7280]"><Database className="w-4 h-4 text-emerald-500" strokeWidth={2} /> Remaining</span>
-                  <span className="text-[13.5px] font-bold text-[#1A1D20]">{consumption.unlimited ? "Unlimited" : fmtGb(Math.max(0, (consumption.data_allocated ?? 0) - (consumption.data_used ?? 0)))}</span>
+                  <span className="text-[13.5px] font-bold text-[#1A1D20]">{consumption.unlimited ? "Unlimited" : formatData(Math.max(0, toMb(consumption.data_allocated, consumption.data_unit) - toMb(consumption.data_used, consumption.data_unit)), dataUnit)}</span>
                 </div>
                 <div className="flex items-center justify-between py-2.5">
                   <span className="flex items-center gap-2 text-[13px] text-[#6B7280]"><CalendarClock className="w-4 h-4 text-[#FF561E]" strokeWidth={2} /> Valid Until</span>

@@ -6,8 +6,7 @@ import Link from "next/link";
 import DashboardTopbar from "@/components/dashboard/topbar";
 import { ArrowLeft, Loader2, Headset, User } from "lucide-react";
 import toast from "react-hot-toast";
-import { FormattedText, AttachmentView, Composer, formatTime, dayLabel, type Attachment, type PendingAttachment } from "@/components/support/shared";
-import { ticketStatusPill } from "../page";
+import { FormattedText, AttachmentView, Composer, formatTime, dayLabel, ticketStatusPill, type Attachment, type PendingAttachment } from "@/components/support/shared";
 
 interface TicketMsg {
   id: number;

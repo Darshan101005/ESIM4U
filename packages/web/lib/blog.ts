@@ -294,6 +294,49 @@ blogPosts.push(
         ],
       },
     ],
+  },
+  {
+    slug: "understanding-your-esim-data-usage",
+    title: "Understanding your eSIM data usage: MB, GB and what counts",
+    excerpt:
+      "Wondering why your plan shows a tiny amount used, or how MB and GB relate? Here's a clear guide to reading your eSIM data usage.",
+    date: "September 2026",
+    readingTime: "4 min read",
+    category: "Guides",
+    sections: [
+      {
+        paragraphs: [
+          "Your eSIM4U dashboard shows exactly how much data you've used and how much is left. Understanding those numbers helps you avoid running out mid-trip — and makes it easy to check whether a plan is working the moment you install it.",
+        ],
+      },
+      {
+        heading: "MB and GB, quickly",
+        paragraphs: [
+          "Data is measured in megabytes (MB) and gigabytes (GB). There are 1024 MB in 1 GB. So a 1 GB plan is the same as 1024 MB. Small activities like sending a message or loading a map use only a few MB, which is why a brand-new plan might show something like 1 MB used out of 1 GB.",
+          "Because 1 MB is such a small slice of a 1 GB plan, a usage view rounded to whole gigabytes can look like \"0 GB used\" even when the eSIM is working perfectly. That's why your dashboard lets you switch the display between MB and GB — MB shows the exact amount so you can confirm the eSIM has connected.",
+        ],
+      },
+      {
+        heading: "What uses data",
+        bullets: [
+          "Light: messaging, email and maps use a few MB at a time.",
+          "Moderate: browsing and social media use tens to hundreds of MB per hour.",
+          "Heavy: video streaming and calls can use 1 GB or more per hour.",
+        ],
+      },
+      {
+        heading: "Checking your usage",
+        paragraphs: [
+          "Open the eSIM from My eSIMs to see live usage and remaining balance. Usage updates shortly after your device reports it to the network, so give it a few minutes after browsing. If you see even 1 MB used, your eSIM is connected and working.",
+        ],
+      },
+      {
+        heading: "Running low?",
+        paragraphs: [
+          "If you're close to your limit, many eSIM4U plans can be topped up, or you can buy a fresh plan in a couple of minutes. Switching your usage view to MB makes it easy to see precisely how much headroom you have left.",
+        ],
+      },
+    ],
   }
 );
 
