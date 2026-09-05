@@ -31,8 +31,8 @@ const carouselItems = [
 const reviews = [
   {
     name: 'Daniel K.',
-    country: 'United Kingdom',
-    flag: 'GBR',
+    country: 'Germany',
+    flag: 'DEU',
     rating: 5,
     text: 'eSIM4U made my trip so much easier! I had internet the moment I landed. Super fast and reliable.',
   },

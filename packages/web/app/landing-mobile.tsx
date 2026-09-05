@@ -53,7 +53,7 @@ const regionsList = [
 ];
 
 const reviews = [
-  { name: 'Daniel K.', country: 'United Kingdom', flag: 'GBR', rating: 5, text: 'eSIM4U made my trip so much easier! I had internet the moment I landed. Super fast and reliable.' },
+  { name: 'Daniel K.', country: 'Germany', flag: 'DEU', rating: 5, text: 'eSIM4U made my trip so much easier! I had internet the moment I landed. Super fast and reliable.' },
   { name: 'Sophia L.', country: 'France', flag: 'FRA', rating: 4, text: 'Installation was quick and easy. Great coverage across Europe, highly recommended!' },
   { name: 'Yuto M.', country: 'Japan', flag: 'JPN', rating: 5, text: 'I used eSIM4U in Japan and it worked perfectly. No SIM swap, no hassle, just seamless connection.' },
   { name: 'Aarav S.', country: 'India', flag: 'IND', rating: 4, text: 'Activated my eSIM before the flight and was online instantly in Delhi. Brilliant service.' },
