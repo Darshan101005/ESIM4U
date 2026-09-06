@@ -72,7 +72,7 @@ export default function DashboardSidebar({ collapsed = false, onToggle }: Dashbo
           </button>
         )}
         {!isCollapsed && (
-          <Link href="/" className="flex items-center">
+          <Link href="/dashboard" className="flex items-center">
             <Image src="/assets/esim4u-logo.png" alt="eSIM4U" width={120} height={36} className="object-contain h-auto w-[120px]" priority />
           </Link>
         )}
@@ -117,7 +117,7 @@ export default function DashboardSidebar({ collapsed = false, onToggle }: Dashbo
           })}
         </nav>
 
-        {!isCollapsed && (
+        {!isCollapsed && settings.features.referrals && (
           <div className="px-3 pt-3 mt-auto">
             <div className="rounded-2xl bg-[#FFF4F0] border border-orange-100/70 p-3.5">
               <div className="flex items-center gap-2 mb-1">

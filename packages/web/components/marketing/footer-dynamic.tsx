@@ -66,7 +66,7 @@ export function FooterSocials() {
   if (active.length === 0) return null;
 
   return (
-    <div className="w-full flex items-center justify-center md:justify-start gap-5 sm:gap-6 mt-2 flex-wrap">
+    <div className="w-full flex items-center justify-center gap-5 sm:gap-6 mt-2 flex-wrap">
       {active.map((i) => (
         <a
           key={i.key}

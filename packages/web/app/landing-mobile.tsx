@@ -622,7 +622,7 @@ export default function LandingMobile() {
             </div>
           ))}
         </div>
-        <Link href="/plans" className="mt-6 w-full inline-flex items-center justify-center px-6 py-3.5 rounded-full bg-[#FF561E] text-white font-semibold text-[15px] gap-2 shadow-md shadow-orange-500/20">
+        <Link href="/dashboard/browse" className="mt-6 w-full inline-flex items-center justify-center px-6 py-3.5 rounded-full bg-[#FF561E] text-white font-semibold text-[15px] gap-2 shadow-md shadow-orange-500/20">
           View Plans <ArrowRight className="w-4 h-4" />
         </Link>
       </section>

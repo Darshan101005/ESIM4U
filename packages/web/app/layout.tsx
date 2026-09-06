@@ -5,6 +5,7 @@ import PwaRegister from "@/components/pwa-register";
 import PwaInstallPrompt from "@/components/pwa-install-prompt";
 import MaintenanceGate from "@/components/maintenance-gate";
 import AiChatWidget from "@/components/chat/ai-chat-widget";
+import { getSiteSettingsCached } from "@/lib/site-settings";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://esim4u.uk"),
@@ -84,11 +85,12 @@ export const viewport: Viewport = {
   themeColor: "#FF561E",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const settings = await getSiteSettingsCached();
   const jsonLd = [
     {
       "@context": "https://schema.org",
@@ -120,7 +122,7 @@ export default function RootLayout({
         />
         {children}
         <AiChatWidget />
-        <MaintenanceGate />
+        <MaintenanceGate maintenance={settings.maintenance} />
         <ToasterProvider />
         <PwaRegister />
         <PwaInstallPrompt />

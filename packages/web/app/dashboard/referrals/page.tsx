@@ -5,6 +5,8 @@ import { useEffect, useState } from "react";
 import { useCurrency } from "@/lib/currency-context";
 import { Gift, Copy, Check, Users, Wallet, Share2, ArrowDownLeft, ArrowUpRight, Info } from "lucide-react";
 import toast from "react-hot-toast";
+import { notFound } from "next/navigation";
+import { useSiteSettings } from "@/lib/use-site-settings";
 
 interface LedgerEntry {
   direction: "credit" | "debit";
@@ -38,6 +40,7 @@ function formatDate(iso: string): string {
 
 export default function ReferralsPage() {
   const { format } = useCurrency();
+  const settings = useSiteSettings();
   const [copied, setCopied] = useState(false);
   const [summary, setSummary] = useState<ReferralSummary | null>(null);
   const [loading, setLoading] = useState(true);
@@ -73,6 +76,9 @@ export default function ReferralsPage() {
       toast.error("Could not copy");
     }
   };
+
+  // Feature disabled in Manage Website → treat the page as non-existent.
+  if (!settings.features.referrals) notFound();
 
   return (
     <>

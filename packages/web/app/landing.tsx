@@ -1176,7 +1176,7 @@ export default function Landing() {
             <div className="relative flex justify-center border-t-0">
               <div className="absolute inset-x-0 top-0 bottom-4 bg-[#FFF4F0] rounded-b-[24px] z-0"></div>
               <div className="pt-5 pb-8 px-4 relative z-10 w-full flex justify-center">
-                <Link href="/plans" className="inline-flex items-center justify-center px-8 py-3.5 rounded-full bg-[#FF561E] text-white font-semibold text-[15px]  transition-all shadow-md shadow-orange-500/20 gap-2 shrink-0">
+                <Link href="/dashboard/browse" className="inline-flex items-center justify-center px-8 py-3.5 rounded-full bg-[#FF561E] text-white font-semibold text-[15px]  transition-all shadow-md shadow-orange-500/20 gap-2 shrink-0">
                   View Plans <ArrowRight className="w-4 h-4 ml-1 transform transition-transform hover:translate-x-1" />
                 </Link>
               </div>

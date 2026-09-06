@@ -1,3 +1,4 @@
+import { unstable_cache } from "next/cache";
 import pool from "@/lib/db";
 import { DEFAULT_SETTINGS, type SiteSettings } from "@/lib/site-settings-types";
 
@@ -50,6 +51,15 @@ export async function getSiteSettings(): Promise<SiteSettings> {
     return { ...DEFAULT_SETTINGS };
   }
 }
+
+/**
+ * Cached settings for layout-level reads (e.g. the maintenance gate). Revalidates
+ * every 10s so it's fast, keeps pages static-friendly, and still reflects an
+ * admin toggle within a few seconds — without any client fetch (so no flash).
+ */
+export const getSiteSettingsCached = unstable_cache(async () => getSiteSettings(), ["site-settings-v1"], {
+  revalidate: 10,
+});
 
 /** Deep-merge a partial update over the current settings and persist. */
 export async function updateSiteSettings(partial: Partial<SiteSettings>): Promise<SiteSettings> {

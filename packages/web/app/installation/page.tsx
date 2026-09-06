@@ -43,7 +43,7 @@ export default function InstallationPage() {
         </div>
 
         <div className="max-w-[820px] mx-auto px-5 sm:px-8 py-10 sm:py-14 space-y-8">
-          <section className="rounded-2xl border border-gray-100 bg-white shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-6 sm:p-8">
+          <section id="ios" className="scroll-mt-24 rounded-2xl border border-gray-100 bg-white shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-6 sm:p-8">
             <h2 className={h2}>On iPhone (iOS)</h2>
             <div className="space-y-5">
               <Step n={1} title="Open Settings">Go to Settings &gt; Cellular / Mobile Data &gt; Add eSIM.</Step>
@@ -53,7 +53,7 @@ export default function InstallationPage() {
             </div>
           </section>
 
-          <section className="rounded-2xl border border-gray-100 bg-white shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-6 sm:p-8">
+          <section id="android" className="scroll-mt-24 rounded-2xl border border-gray-100 bg-white shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-6 sm:p-8">
             <h2 className={h2}>On Android</h2>
             <div className="space-y-5">
               <Step n={1} title="Open Settings">Go to Settings &gt; Network &amp; Internet (or SIM manager).</Step>
@@ -66,11 +66,10 @@ export default function InstallationPage() {
           <div className="flex items-start gap-3 rounded-2xl bg-[#FFF4F0] border border-orange-100 px-5 py-4">
             <Info className="w-5 h-5 text-[#FF561E] shrink-0 mt-0.5" strokeWidth={2} />
             <p className="text-[13px] text-[#6B7280] leading-relaxed">
-              After purchase, signed-in customers get detailed step-by-step guides with screenshots for{" "}
-              <Link href="/dashboard/support/ios" className="text-[#FF561E] font-semibold underline underline-offset-2">iOS</Link>{" "}
-              and{" "}
-              <Link href="/dashboard/support/android" className="text-[#FF561E] font-semibold underline underline-offset-2">Android</Link>{" "}
-              in the support area.
+              Jump straight to the steps for your device:{" "}
+              <Link href="#ios" className="text-[#FF561E] font-semibold underline underline-offset-2">iOS</Link>{" "}
+              or{" "}
+              <Link href="#android" className="text-[#FF561E] font-semibold underline underline-offset-2">Android</Link>.
             </p>
           </div>
         </div>

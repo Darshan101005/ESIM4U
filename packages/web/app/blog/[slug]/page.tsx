@@ -5,6 +5,9 @@ import SiteHeader from "@/components/marketing/site-header";
 import SiteFooter from "@/components/marketing/site-footer";
 import { blogPosts, getPost } from "@/lib/blog";
 import { ArrowLeft, ArrowRight } from "lucide-react";
+import { getSiteSettings } from "@/lib/site-settings";
+
+export const dynamic = "force-dynamic";
 
 export function generateStaticParams() {
   return blogPosts.map((p) => ({ slug: p.slug }));
@@ -16,7 +19,10 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   return { title: `${post.title} | eSIM4U`, description: post.excerpt };
 }
 
-export default function BlogArticlePage({ params }: { params: { slug: string } }) {
+export default async function BlogArticlePage({ params }: { params: { slug: string } }) {
+  const settings = await getSiteSettings();
+  if (!settings.features.blog) notFound();
+
   const post = getPost(params.slug);
   if (!post) notFound();
 

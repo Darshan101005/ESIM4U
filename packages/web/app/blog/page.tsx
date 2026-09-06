@@ -1,15 +1,22 @@
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 import SiteHeader from "@/components/marketing/site-header";
 import SiteFooter from "@/components/marketing/site-footer";
 import { blogPosts } from "@/lib/blog";
 import BlogSearch from "@/components/marketing/blog-search";
+import { getSiteSettings } from "@/lib/site-settings";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Blog | eSIM4U",
   description: "Tips, guides, and insights on eSIMs, travel connectivity, and staying online abroad.",
 };
 
-export default function BlogPage() {
+export default async function BlogPage() {
+  const settings = await getSiteSettings();
+  if (!settings.features.blog) notFound();
+
   return (
     <div className="min-h-screen flex flex-col bg-white font-sans">
       <main className="flex-1 w-full">

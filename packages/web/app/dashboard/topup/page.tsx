@@ -17,7 +17,9 @@ import {
   RefreshCw,
 } from "lucide-react";
 import toast from "react-hot-toast";
+import { notFound } from "next/navigation";
 import { useCurrency } from "@/lib/currency-context";
+import { useSiteSettings } from "@/lib/use-site-settings";
 import { CURRENCY_SYMBOLS } from "@/lib/fx";
 
 type WalletDirection = "credit" | "debit";
@@ -90,6 +92,7 @@ function formatSyncTime(d: Date): string {
 
 export default function TopUpPage() {
   const { currency, format } = useCurrency();
+  const settings = useSiteSettings();
 
   const [balanceUsd, setBalanceUsd] = useState<number | null>(null);
   const [history, setHistory] = useState<WalletTx[]>([]);
@@ -161,6 +164,9 @@ export default function TopUpPage() {
       setStarting(false);
     }
   };
+
+  // Feature disabled in Manage Website → treat the page as non-existent.
+  if (!settings.features.topup) notFound();
 
   return (
     <>

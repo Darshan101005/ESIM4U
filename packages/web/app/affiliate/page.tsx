@@ -1,8 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import SiteHeader from "@/components/marketing/site-header";
 import SiteFooter from "@/components/marketing/site-footer";
 import { Megaphone, DollarSign, LineChart, Tag, ArrowRight } from "lucide-react";
+import { getSiteSettings } from "@/lib/site-settings";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Affiliate Program | eSIM4U",
@@ -23,7 +27,10 @@ const steps = [
   { n: "4", title: "Earn & get paid", desc: "Earn commission on every sale; we pay you out and you track it all on your dashboard." },
 ];
 
-export default function AffiliatePage() {
+export default async function AffiliatePage() {
+  const settings = await getSiteSettings();
+  if (!settings.features.affiliate) notFound();
+
   return (
     <div className="min-h-screen flex flex-col bg-white font-sans">
       <main className="flex-1 w-full">

@@ -51,14 +51,14 @@ export default async function HelpCenterPage() {
         </div>
 
         <div className="max-w-[1000px] mx-auto px-5 sm:px-8 pb-14">
-          <div className="rounded-2xl bg-[#1A1D20] px-6 py-8 sm:px-10 flex flex-col sm:flex-row items-center justify-between gap-5 text-center sm:text-left">
+          <div className="rounded-2xl bg-gradient-to-br from-[#FF561E] to-[#FF7A45] px-6 py-8 sm:px-10 flex flex-col sm:flex-row items-center justify-between gap-5 text-center sm:text-left">
             <div>
               <p className="text-[18px] font-bold text-white flex items-center gap-2 justify-center sm:justify-start">
-                <MessageCircle className="w-5 h-5 text-emerald-400" /> Still need help?
+                <MessageCircle className="w-5 h-5 text-white" /> Still need help?
               </p>
-              <p className="text-[14px] text-white/70 mt-1">Chat with us on WhatsApp for a quick reply.</p>
+              <p className="text-[14px] text-white/85 mt-1">Chat with us on WhatsApp for a quick reply.</p>
             </div>
-            <a href={settings.whatsapp ? toWaLink(settings.whatsapp) : `mailto:${settings.contactEmail}`} target="_blank" rel="noopener noreferrer" className="px-7 py-3 rounded-full bg-emerald-500 text-white font-semibold text-[14px] hover:bg-emerald-600 transition-colors shrink-0">
+            <a href={settings.whatsapp ? toWaLink(settings.whatsapp) : `mailto:${settings.contactEmail}`} target="_blank" rel="noopener noreferrer" className="px-7 py-3 rounded-full bg-white text-[#FF561E] font-bold text-[14px] hover:bg-white/90 transition-colors shrink-0 shadow-sm">
               {settings.whatsapp ? "Message on WhatsApp" : "Email us"}
             </a>
           </div>
