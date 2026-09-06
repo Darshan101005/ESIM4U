@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import SiteHeader from "@/components/marketing/site-header";
 import SiteFooter from "@/components/marketing/site-footer";
-import { Download, ShieldCheck, Smartphone, Share, Plus, MoreVertical, QrCode } from "lucide-react";
+import { Download, ShieldCheck, Smartphone, Share, Plus, MoreVertical, QrCode, Send } from "lucide-react";
+
+const TELEGRAM_BOT_URL = "https://t.me/esim4u_uk_bot";
 
 export const metadata: Metadata = {
   title: "Download the ESIM4U App",
@@ -141,6 +143,52 @@ export default function DownloadPage() {
               <Step n={3}>Scroll down and tap <b>Add to Home Screen</b> <Plus className="inline w-4 h-4 -mt-0.5" />.</Step>
               <Step n={4}>Tap <b>Add</b> in the top-right — the eSIM4U icon appears on your home screen.</Step>
             </ol>
+          </section>
+
+          <div className="border-t border-gray-100" />
+
+          {/* 4. Telegram bot & Mini App */}
+          <section>
+            <div className="flex items-center justify-between gap-4 flex-wrap mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-xl bg-[#EAF6FC] flex items-center justify-center shrink-0">
+                  <Send className="w-5 h-5 text-[#229ED9]" strokeWidth={2} />
+                </div>
+                <div>
+                  <h2 className="text-[19px] font-bold text-[#1A1D20] leading-tight">Prefer Telegram? Use our bot</h2>
+                  <p className="text-[12.5px] text-[#6B7280]">Manage eSIMs and buy plans right inside Telegram — no install needed</p>
+                </div>
+              </div>
+              <a
+                href={TELEGRAM_BOT_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-[#229ED9] text-white text-[15px] font-bold hover:bg-[#1c8ec2] transition-colors shadow-sm shrink-0"
+              >
+                <Send className="w-5 h-5" /> Open Telegram bot
+              </a>
+            </div>
+
+            <p className="text-[14.5px] text-[#6B7280] leading-relaxed mb-5">
+              If you&apos;re on Telegram, you can do everything there too — browse and buy plans, view your eSIMs and QR
+              codes, check your wallet and data usage, and chat with support. The built-in <b>Mini App</b> opens the full
+              eSIM4U website right inside Telegram, so buying and logging in work exactly the same.
+            </p>
+
+            <ol className="space-y-3.5">
+              <Step n={1}>Open our bot <b>@esim4u_uk_bot</b> — tap <b>Open Telegram bot</b> above, or search the name in Telegram.</Step>
+              <Step n={2}>Tap <b>Start</b> to see the menu.</Step>
+              <Step n={3}>Tap <b>🌐 Open App</b> to launch the eSIM4U <b>Mini App</b> inside Telegram and browse or buy plans.</Step>
+              <Step n={4}>Tap <b>🔗 Link my account</b> to connect your eSIM4U account (one-time code, or email &amp; password) — then view your eSIMs, wallet, data usage and QR codes in chat.</Step>
+              <Step n={5}>Tap <b>💬 Support</b> any time to chat with our team, and get your eSIM QR delivered to Telegram automatically after each purchase.</Step>
+            </ol>
+
+            <div className="mt-6 rounded-xl bg-[#EAF6FC] border border-[#229ED9]/15 p-4">
+              <p className="text-[13px] text-[#0f6c96] leading-relaxed inline-flex gap-2.5">
+                <Send className="w-4 h-4 shrink-0 mt-0.5" />
+                <span>Tip: the Mini App runs the same secure website — your login, payments and eSIMs are all in one account, whether you use the app, the website or Telegram.</span>
+              </p>
+            </div>
           </section>
 
         </div>

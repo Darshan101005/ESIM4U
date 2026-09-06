@@ -14,6 +14,7 @@ export interface SiteSettings {
     x: SocialLink;
     tiktok: SocialLink;
     youtube: SocialLink;
+    telegram: SocialLink;
   };
   features: {
     topup: boolean;
@@ -90,6 +91,7 @@ export const DEFAULT_SETTINGS: SiteSettings = {
     x: { url: "", enabled: true },
     tiktok: { url: "", enabled: true },
     youtube: { url: "", enabled: true },
+    telegram: { url: "https://t.me/esim4u_uk_bot", enabled: true },
   },
   features: { topup: true, referrals: true, affiliate: true, blog: true, cookieConsent: true },
   maintenance: {

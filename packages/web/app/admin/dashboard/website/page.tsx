@@ -181,7 +181,7 @@ export default function ManageWebsitePage() {
               </div>
               <p className="text-[12.5px] text-[#6B7280] mb-4">Add the profile URL and use the toggle to show or hide each icon in the footer.</p>
               <div className="space-y-4">
-                {(["instagram", "facebook", "x", "tiktok", "youtube"] as const).map((k) => (
+                {(["instagram", "facebook", "x", "tiktok", "youtube", "telegram"] as const).map((k) => (
                   <div key={k}>
                     <div className="flex items-center justify-between mb-1.5">
                       <label className={`${labelCls} capitalize mb-0`}>{k === "x" ? "X (Twitter)" : k}</label>
@@ -199,7 +199,7 @@ export default function ManageWebsitePage() {
                       className={inputCls}
                       value={settings.socials[k].url}
                       onChange={(e) => setSettings((s) => ({ ...s, socials: { ...s.socials, [k]: { ...s.socials[k], url: e.target.value } } }))}
-                      placeholder={`https://${k === "x" ? "x" : k}.com/esim4u`}
+                      placeholder={k === "telegram" ? "https://t.me/esim4u_uk_bot" : `https://${k === "x" ? "x" : k}.com/esim4u`}
                     />
                   </div>
                 ))}
