@@ -87,6 +87,7 @@ export default function FaqPage() {
               FAQs
               <span className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-5 h-[2.5px] bg-[#FF561E] rounded-full"></span>
             </Link>
+            <Link href="/download" className="hover:text-[#FF561E] transition-colors">Download App</Link>
           </nav>
         </div>
 

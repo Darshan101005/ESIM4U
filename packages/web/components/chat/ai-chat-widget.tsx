@@ -2,11 +2,14 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { usePathname } from "next/navigation";
-import { X, Send, Loader2, RotateCcw } from "lucide-react";
+import { X, Send, Loader2, RotateCcw, Brain, ChevronDown } from "lucide-react";
 
 interface Msg {
   role: "user" | "assistant";
   content: string;
+  reasoning?: string;
+  thinkingOpen?: boolean;
+  status?: string;
 }
 
 const GREETING: Msg = {
@@ -15,9 +18,6 @@ const GREETING: Msg = {
 };
 
 /* --------------------------- tiny markdown render -------------------------- */
-// Renders the small Markdown subset the model uses: **bold**, `code`,
-// "- " bullet lists, "1." numbered lists, and paragraphs. No tables.
-
 function renderInline(text: string): React.ReactNode[] {
   const nodes: React.ReactNode[] = [];
   const re = /\*\*(.+?)\*\*|`(.+?)`/g;
@@ -26,15 +26,13 @@ function renderInline(text: string): React.ReactNode[] {
   let i = 0;
   while ((m = re.exec(text)) !== null) {
     if (m.index > last) nodes.push(text.slice(last, m.index));
-    if (m[1] !== undefined) {
-      nodes.push(<strong key={i++}>{m[1]}</strong>);
-    } else if (m[2] !== undefined) {
+    if (m[1] !== undefined) nodes.push(<strong key={i++}>{m[1]}</strong>);
+    else if (m[2] !== undefined)
       nodes.push(
         <code key={i++} className="px-1 py-0.5 rounded bg-black/[0.06] font-mono text-[12px] break-all">
           {m[2]}
         </code>
       );
-    }
     last = m.index + m[0].length;
   }
   if (last < text.length) nodes.push(text.slice(last));
@@ -126,6 +124,7 @@ export default function AiChatWidget() {
   const [messages, setMessages] = useState<Msg[]>([GREETING]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
+  const [thinking, setThinking] = useState(false); // user-controlled reasoning mode
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -141,62 +140,116 @@ export default function AiChatWidget() {
 
   if (pathname.startsWith("/admin") || pathname.startsWith("/dashboard")) return null;
 
-  const send = async () => {
-    const text = input.trim();
-    if (!text || busy) return;
+  const patchLast = (patch: Partial<Msg>) =>
+    setMessages((m) => {
+      const copy = [...m];
+      copy[copy.length - 1] = { ...copy[copy.length - 1], ...patch };
+      return copy;
+    });
 
-    const next: Msg[] = [...messages, { role: "user", content: text }];
-    setMessages([...next, { role: "assistant", content: "" }]);
-    setInput("");
+  const toggleThinking = (i: number) =>
+    setMessages((m) => {
+      const copy = [...m];
+      copy[i] = { ...copy[i], thinkingOpen: !copy[i].thinkingOpen };
+      return copy;
+    });
+
+  // Runs a completion for a conversation that ends with a user message. Used by
+  // both send() and retry(). Appends a fresh assistant bubble and streams into it.
+  const runCompletion = async (convo: Msg[]) => {
+    if (busy) return;
+    setMessages([...convo, { role: "assistant", content: "", reasoning: undefined, thinkingOpen: thinking }]);
     setBusy(true);
 
-    try {
+    // Parses framed NDJSON: {"t":"r"|"c","v":"..."}. Unknown types are ignored;
+    // unparseable text (plain canned messages) is treated as answer content.
+    const streamReply = async (): Promise<string> => {
+      patchLast({ content: "", reasoning: undefined, thinkingOpen: thinking });
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: next }),
+        body: JSON.stringify({ messages: convo, reasoning: thinking }),
       });
-
       if (!res.body) {
-        const fallback = await res.text().catch(() => "Sorry, something went wrong.");
-        setMessages((m) => {
-          const copy = [...m];
-          copy[copy.length - 1] = { role: "assistant", content: fallback || "Sorry, something went wrong." };
-          return copy;
-        });
-        return;
+        const t = await res.text().catch(() => "");
+        if (t) patchLast({ content: t });
+        return t || "";
       }
-
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
-      let acc = "";
+      let buffer = "";
+      let accR = "";
+      let accC = "";
+
+      const handle = (line: string) => {
+        const s = line.trim();
+        if (!s) return;
+        try {
+          const o = JSON.parse(s);
+          if (o && typeof o.t === "string" && typeof o.v === "string") {
+            if (o.t === "r") {
+              accR += o.v;
+              patchLast({ reasoning: accR, thinkingOpen: accC ? false : true });
+            } else if (o.t === "c") {
+              accC += o.v;
+              patchLast({ content: accC, thinkingOpen: false });
+            }
+            // any other type (e.g. status) is ignored
+            return;
+          }
+          accC += s;
+          patchLast({ content: accC });
+        } catch {
+          accC += line;
+          patchLast({ content: accC });
+        }
+      };
+
       for (;;) {
         const { done, value } = await reader.read();
         if (done) break;
-        acc += decoder.decode(value, { stream: true });
-        setMessages((m) => {
-          const copy = [...m];
-          copy[copy.length - 1] = { role: "assistant", content: acc };
-          return copy;
-        });
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+        for (const line of lines) handle(line);
+      }
+      if (buffer.trim()) handle(buffer);
+      return accC;
+    };
+
+    try {
+      let acc = "";
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          acc = await streamReply();
+        } catch {
+          acc = "";
+        }
+        if (acc.trim()) break;
+        if (attempt === 0) await new Promise((r) => setTimeout(r, 700));
       }
       if (!acc.trim()) {
-        setMessages((m) => {
-          const copy = [...m];
-          copy[copy.length - 1] = { role: "assistant", content: "Sorry, I couldn't generate a reply. Please try again." };
-          return copy;
-        });
+        patchLast({ content: "The assistant is busy right now — please tap Retry. 🙏", reasoning: undefined });
       }
-    } catch {
-      setMessages((m) => {
-        const copy = [...m];
-        copy[copy.length - 1] = { role: "assistant", content: "I'm having trouble connecting. Please try again shortly." };
-        return copy;
-      });
     } finally {
       setBusy(false);
       inputRef.current?.focus();
     }
+  };
+
+  const send = () => {
+    const text = input.trim();
+    if (!text || busy) return;
+    setInput("");
+    runCompletion([...messages, { role: "user", content: text }]);
+  };
+
+  // Re-generate an assistant reply from the user message just before it.
+  const retry = (assistantIndex: number) => {
+    if (busy) return;
+    const convo = messages.slice(0, assistantIndex);
+    if (convo.length === 0 || convo[convo.length - 1].role !== "user") return;
+    runCompletion(convo);
   };
 
   const clearChat = () => {
@@ -212,11 +265,6 @@ export default function AiChatWidget() {
       send();
     }
   };
-
-  const lastIsEmptyAssistant =
-    messages.length > 0 &&
-    messages[messages.length - 1].role === "assistant" &&
-    messages[messages.length - 1].content === "";
 
   return (
     <>
@@ -249,11 +297,7 @@ export default function AiChatWidget() {
           <div className="flex items-center justify-between gap-3 px-4 py-3 bg-gradient-to-r from-[#FF561E] to-[#FF7A45] text-white shrink-0">
             <div className="flex items-center gap-2.5 min-w-0">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/assets/bot.png"
-                alt="eSIM4U assistant"
-                className="w-9 h-9 rounded-full object-cover bg-white/20 shrink-0"
-              />
+              <img src="/assets/bot.png" alt="eSIM4U assistant" className="w-9 h-9 rounded-full object-cover bg-white/20 shrink-0" />
               <div className="min-w-0">
                 <p className="text-[14px] font-bold leading-tight">eSIM4U Assistant</p>
                 <p className="text-[11.5px] text-white/90 leading-tight flex items-center gap-1.5">
@@ -284,26 +328,58 @@ export default function AiChatWidget() {
           {/* Messages */}
           <div ref={scrollRef} className="flex-1 overflow-y-auto px-3.5 py-4 space-y-3 bg-[#FAFAFA]">
             {messages.map((m, i) => {
-              const isTyping = lastIsEmptyAssistant && i === messages.length - 1;
+              const isLast = i === messages.length - 1;
+              const isTyping = isLast && busy && !m.content && !m.reasoning;
+
+              if (m.role === "user") {
+                return (
+                  <div key={i} className="flex justify-end">
+                    <div className="max-w-[86%] px-3.5 py-2.5 rounded-2xl rounded-br-md bg-[#FF561E] text-white text-[13.5px] leading-relaxed break-words whitespace-pre-wrap">
+                      {m.content}
+                    </div>
+                  </div>
+                );
+              }
+
+              const canRetry = i > 0 && !busy;
               return (
-                <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
-                  <div
-                    className={`max-w-[86%] px-3.5 py-2.5 rounded-2xl text-[13.5px] leading-relaxed break-words ${
-                      m.role === "user"
-                        ? "bg-[#FF561E] text-white rounded-br-md whitespace-pre-wrap"
-                        : "bg-white text-[#1A1D20] border border-gray-100 rounded-bl-md"
-                    }`}
-                  >
-                    {m.role === "user" ? (
-                      m.content
-                    ) : isTyping ? (
-                      <span className="inline-flex items-center gap-1 text-[#9CA3AF] py-0.5">
-                        <span className="w-1.5 h-1.5 rounded-full bg-current animate-bounce [animation-delay:-0.2s]" />
-                        <span className="w-1.5 h-1.5 rounded-full bg-current animate-bounce [animation-delay:-0.1s]" />
-                        <span className="w-1.5 h-1.5 rounded-full bg-current animate-bounce" />
-                      </span>
-                    ) : (
-                      <Markdown text={m.content} />
+                <div key={i} className="flex justify-start">
+                  <div className="max-w-[86%] flex flex-col items-start gap-1">
+                    <div className="px-3.5 py-2.5 rounded-2xl rounded-bl-md bg-white text-[#1A1D20] border border-gray-100 text-[13.5px] leading-relaxed break-words">
+                      {m.reasoning && (
+                        <div className="mb-1.5">
+                          <button
+                            onClick={() => toggleThinking(i)}
+                            className="inline-flex items-center gap-1 text-[11.5px] font-medium text-[#6B7280] hover:text-[#FF561E] transition-colors"
+                          >
+                            <Brain className="w-3.5 h-3.5" />
+                            {m.content ? "Thoughts" : "Thinking…"}
+                            <ChevronDown className={`w-3.5 h-3.5 transition-transform ${m.thinkingOpen ? "rotate-180" : ""}`} />
+                          </button>
+                          {m.thinkingOpen && (
+                            <div className="mt-1 pl-2.5 border-l-2 border-gray-200 text-[12px] leading-relaxed text-[#6B7280] whitespace-pre-wrap">
+                              {m.reasoning}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      {m.content ? (
+                        <Markdown text={m.content} />
+                      ) : isTyping ? (
+                        <span className="inline-flex items-center gap-1 text-[#9CA3AF] py-0.5">
+                          <span className="w-1.5 h-1.5 rounded-full bg-current animate-bounce [animation-delay:-0.2s]" />
+                          <span className="w-1.5 h-1.5 rounded-full bg-current animate-bounce [animation-delay:-0.1s]" />
+                          <span className="w-1.5 h-1.5 rounded-full bg-current animate-bounce" />
+                        </span>
+                      ) : null}
+                    </div>
+                    {canRetry && (
+                      <button
+                        onClick={() => retry(i)}
+                        className="inline-flex items-center gap-1 pl-1 text-[11px] text-[#9CA3AF] hover:text-[#FF561E] transition-colors"
+                      >
+                        <RotateCcw className="w-3 h-3" /> Retry
+                      </button>
                     )}
                   </div>
                 </div>
@@ -314,6 +390,18 @@ export default function AiChatWidget() {
           {/* Input */}
           <div className="border-t border-gray-100 p-2.5 bg-white shrink-0">
             <div className="flex items-end gap-2">
+              <button
+                onClick={() => setThinking((v) => !v)}
+                aria-pressed={thinking}
+                title={thinking ? "Thinking mode ON (slower, shows reasoning)" : "Thinking mode OFF (faster)"}
+                className={`w-10 h-10 shrink-0 rounded-xl flex items-center justify-center border transition-colors ${
+                  thinking
+                    ? "bg-[#FFF4F0] border-[#FF561E] text-[#FF561E]"
+                    : "bg-white border-gray-200 text-[#9CA3AF] hover:text-[#6B7280]"
+                }`}
+              >
+                <Brain className="w-4.5 h-4.5" />
+              </button>
               <textarea
                 ref={inputRef}
                 value={input}
@@ -332,7 +420,9 @@ export default function AiChatWidget() {
                 {busy ? <Loader2 className="w-4.5 h-4.5 animate-spin" /> : <Send className="w-4.5 h-4.5" />}
               </button>
             </div>
-            <p className="text-[10.5px] text-[#9CA3AF] text-center mt-1.5">AI assistant — may be inaccurate.</p>
+            <p className="text-[10.5px] text-[#9CA3AF] text-center mt-1.5">
+              {thinking ? "Thinking mode on — shows reasoning, a bit slower." : "AI assistant — may be inaccurate."}
+            </p>
           </div>
         </div>
       )}
