@@ -26,7 +26,11 @@ export default function SiteFooter() {
           <div className="relative h-20 w-64 md:h-[90px] md:w-[280px] md:-ml-4 lg:-ml-8">
             <Image src="/assets/esim4u-logo.png" alt="eSIM4U" fill className="object-contain object-center md:object-left brightness-0 invert" />
           </div>
-          <FooterSocials />
+          {/* Same width + offset as the logo box so the icon row stays centered
+              under the logo (centered on mobile, left-aligned on desktop). */}
+          <div className="w-64 md:w-[280px] md:-ml-4 lg:-ml-8">
+            <FooterSocials />
+          </div>
         </div>
 
         <div className="flex-1 grid grid-cols-2 lg:grid-cols-5 gap-y-10 gap-x-8 lg:gap-y-12 lg:gap-x-6 xl:gap-2 lg:pl-10">
