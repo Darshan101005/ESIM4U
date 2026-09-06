@@ -4,6 +4,7 @@ import ToasterProvider from "@/components/toaster-provider";
 import PwaRegister from "@/components/pwa-register";
 import PwaInstallPrompt from "@/components/pwa-install-prompt";
 import MaintenanceGate from "@/components/maintenance-gate";
+import AiChatWidget from "@/components/chat/ai-chat-widget";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://esim4u.uk"),
@@ -118,6 +119,7 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
         {children}
+        <AiChatWidget />
         <MaintenanceGate />
         <ToasterProvider />
         <PwaRegister />
