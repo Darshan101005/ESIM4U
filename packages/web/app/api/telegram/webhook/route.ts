@@ -143,15 +143,24 @@ async function mainMenuText(chatId: string): Promise<{ text: string; keyboard: I
     const name = info?.name ? info.name.split(" ")[0] : "there";
     return {
       text:
-        `👋 Hi <b>${esc(name)}</b>! Welcome to <b>eSIM4U</b>.\n\n` +
-        `Manage your eSIMs, wallet and support right here — or open the full app to browse and buy new plans.`,
+        `👋 <b>Hi ${esc(name)}!</b>\n\n` +
+        `Welcome back to <b>eSIM4U</b> — everything in one place:\n\n` +
+        `📱  <b>My eSIMs</b> — plans & QR codes\n` +
+        `💰  <b>Wallet</b> — balance & referral credit\n` +
+        `📊  <b>Data Usage</b> — live data remaining\n` +
+        `💬  <b>Support</b> — chat with our team\n\n` +
+        `Pick an option below, or open the app to buy a new plan 👇`,
       keyboard: mainMenuKeyboard(true),
     };
   }
   return {
     text:
-      `👋 Welcome to <b>eSIM4U</b> — instant travel eSIMs for 190+ countries.\n\n` +
-      `Open the app to browse and buy plans, or link your account to manage your eSIMs and wallet right here in Telegram.`,
+      `👋 <b>Welcome to eSIM4U</b>\n` +
+      `🌍 Instant travel eSIMs for 190+ countries.\n\n` +
+      `🌐  <b>Open App</b> — browse & buy plans\n` +
+      `🔗  <b>Link account</b> — manage eSIMs, wallet & usage here\n` +
+      `💬  <b>Support</b> — we're here to help\n\n` +
+      `Choose an option below to get started 👇`,
     keyboard: mainMenuKeyboard(false),
   };
 }
