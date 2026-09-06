@@ -5,6 +5,8 @@ import Link from "next/link";
 import DashboardTopbar from "@/components/dashboard/topbar";
 import { useEffect, useState } from "react";
 import { Mail, BookOpen, ChevronDown, ChevronRight, Smartphone, Ticket, Headset } from "lucide-react";
+import { useSiteSettings } from "@/lib/use-site-settings";
+import { toWaLink } from "@/lib/site-settings-types";
 
 const FAQS = [
   { q: "When does my plan start?", a: "Install the eSIM any time. The plan stays Pending and only activates — and the validity countdown begins — when your phone first connects to a supported network in your destination country." },
@@ -13,10 +15,8 @@ const FAQS = [
   { q: "Can I top up or extend a plan?", a: "Many plans support recharges. Where available, you'll see the Recharge option on your eSIM in My eSIMs. Otherwise simply buy a new plan." },
 ];
 
-const WHATSAPP_DISPLAY = "+92 323 9539487";
-const WHATSAPP_LINK = "https://wa.me/923239539487";
-
 export default function SupportPage() {
+  const settings = useSiteSettings();
   const [open, setOpen] = useState<number | null>(0);
   const [online, setOnline] = useState<boolean | null>(null);
 
@@ -114,23 +114,25 @@ export default function SupportPage() {
 
         {/* Contact channels — below the FAQs */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <a href="mailto:support@esim4u.uk" className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-5 hover:border-orange-100 transition-colors">
+          <a href={`mailto:${settings.contactEmail}`} className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-5 hover:border-orange-100 transition-colors">
             <div className="w-10 h-10 rounded-xl bg-[#FFF4F0] flex items-center justify-center mb-3">
               <Mail className="w-5 h-5 text-[#FF561E]" strokeWidth={2} />
             </div>
             <p className="text-[14px] font-bold text-[#1A1D20]">Email us</p>
-            <p className="text-[12px] text-[#6B7280] mt-0.5">support@esim4u.uk</p>
+            <p className="text-[12px] text-[#6B7280] mt-0.5">{settings.contactEmail}</p>
           </a>
-          <a
-            href={WHATSAPP_LINK}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-5 hover:border-emerald-200 transition-colors"
-          >
-            <Image src="/assets/whatsapp.svg" alt="WhatsApp" width={40} height={40} className="w-10 h-10 rounded-xl mb-3" />
-            <p className="text-[14px] font-bold text-[#1A1D20]">WhatsApp</p>
-            <p className="text-[12px] text-[#6B7280] mt-0.5">{WHATSAPP_DISPLAY}</p>
-          </a>
+          {settings.whatsapp && (
+            <a
+              href={toWaLink(settings.whatsapp)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-5 hover:border-emerald-200 transition-colors"
+            >
+              <Image src="/assets/whatsapp.svg" alt="WhatsApp" width={40} height={40} className="w-10 h-10 rounded-xl mb-3" />
+              <p className="text-[14px] font-bold text-[#1A1D20]">WhatsApp</p>
+              <p className="text-[12px] text-[#6B7280] mt-0.5">{settings.whatsapp}</p>
+            </a>
+          )}
         </div>
       </main>
     </>

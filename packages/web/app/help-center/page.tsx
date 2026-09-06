@@ -3,6 +3,8 @@ import Link from "next/link";
 import SiteHeader from "@/components/marketing/site-header";
 import SiteFooter from "@/components/marketing/site-footer";
 import { BookOpen, HelpCircle, MessageCircle, Mail, Smartphone, ArrowRight } from "lucide-react";
+import { getSiteSettings } from "@/lib/site-settings";
+import { toWaLink } from "@/lib/site-settings-types";
 
 export const metadata: Metadata = {
   title: "Help Center | eSIM4U",
@@ -16,7 +18,8 @@ const cards = [
   { icon: Mail, title: "Contact us", desc: "Send us a message and we'll reply to your inbox.", href: "/contact" },
 ];
 
-export default function HelpCenterPage() {
+export default async function HelpCenterPage() {
+  const settings = await getSiteSettings();
   return (
     <div className="min-h-screen flex flex-col bg-white font-sans">
       <main className="flex-1 w-full">
@@ -55,8 +58,8 @@ export default function HelpCenterPage() {
               </p>
               <p className="text-[14px] text-white/70 mt-1">Chat with us on WhatsApp for a quick reply.</p>
             </div>
-            <a href="https://wa.me/923239539487" target="_blank" rel="noopener noreferrer" className="px-7 py-3 rounded-full bg-emerald-500 text-white font-semibold text-[14px] hover:bg-emerald-600 transition-colors shrink-0">
-              Message on WhatsApp
+            <a href={settings.whatsapp ? toWaLink(settings.whatsapp) : `mailto:${settings.contactEmail}`} target="_blank" rel="noopener noreferrer" className="px-7 py-3 rounded-full bg-emerald-500 text-white font-semibold text-[14px] hover:bg-emerald-600 transition-colors shrink-0">
+              {settings.whatsapp ? "Message on WhatsApp" : "Email us"}
             </a>
           </div>
         </div>

@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { useCachedSession, signOutAndClear } from "@/lib/auth-client";
+import { useSiteSettings } from "@/lib/use-site-settings";
 import { Skeleton } from "@/components/dashboard/skeleton";
 
 const navItems = [
@@ -26,9 +27,9 @@ const navItems = [
   { label: "Browse eSIMs", href: "/dashboard/browse", icon: Globe },
   { label: "My eSIMs", href: "/dashboard/esims", icon: Smartphone },
   { label: "Orders", href: "/dashboard/orders", icon: ShoppingBag },
-  { label: "Top Up", href: "/dashboard/topup", icon: Wallet },
+  { label: "Top Up", href: "/dashboard/topup", icon: Wallet, feature: "topup" as const },
   { label: "Transactions", href: "/dashboard/transactions", icon: ArrowLeftRight },
-  { label: "Referrals", href: "/dashboard/referrals", icon: Gift, badge: "New" },
+  { label: "Referrals", href: "/dashboard/referrals", icon: Gift, badge: "New", feature: "referrals" as const },
   { label: "Support", href: "/dashboard/support", icon: Headset },
 ];
 
@@ -42,6 +43,8 @@ export default function DashboardSidebar({ collapsed = false, onToggle }: Dashbo
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
   const { data: session, isPending } = useCachedSession();
+  const settings = useSiteSettings();
+  const items = navItems.filter((i) => !i.feature || settings.features[i.feature]);
   const user = session?.user as { name?: string; email?: string } | undefined;
   const initial = (user?.name || user?.email || "U").charAt(0).toUpperCase();
 
@@ -77,7 +80,7 @@ export default function DashboardSidebar({ collapsed = false, onToggle }: Dashbo
 
       <div className="flex-1 overflow-y-auto flex flex-col min-h-0">
         <nav className="px-3 py-1 space-y-0.5">
-          {navItems.map((item) => {
+          {items.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.href);
             return (

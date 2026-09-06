@@ -4,11 +4,11 @@ import { useState } from "react";
 import SiteHeader from "@/components/marketing/site-header";
 import SiteFooter from "@/components/marketing/site-footer";
 import { Mail, MessageCircle, Send, CheckCircle2, Clock, Ticket } from "lucide-react";
-
-const WHATSAPP_DISPLAY = "+92 323 9539487";
-const WHATSAPP_LINK = "https://wa.me/923239539487";
+import { useSiteSettings } from "@/lib/use-site-settings";
+import { toWaLink } from "@/lib/site-settings-types";
 
 export default function ContactPage() {
+  const settings = useSiteSettings();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [subject, setSubject] = useState("");
@@ -67,23 +67,25 @@ export default function ContactPage() {
         <div className="max-w-[1000px] mx-auto px-5 sm:px-8 py-10 sm:py-14 grid grid-cols-1 lg:grid-cols-[1fr_1.2fr] gap-8">
           {/* Channels */}
           <div className="flex flex-col gap-4">
-            <a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer" className="flex items-center gap-4 rounded-2xl border border-gray-100 bg-white shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-5 hover:border-emerald-200 transition-colors">
-              <div className="w-12 h-12 rounded-2xl bg-emerald-50 flex items-center justify-center shrink-0">
-                <MessageCircle className="w-6 h-6 text-emerald-600" />
-              </div>
-              <div>
-                <p className="text-[15px] font-bold text-[#1A1D20]">WhatsApp</p>
-                <p className="text-[13px] text-[#6B7280]">{WHATSAPP_DISPLAY}</p>
-              </div>
-            </a>
+            {settings.whatsapp && (
+              <a href={toWaLink(settings.whatsapp)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-4 rounded-2xl border border-gray-100 bg-white shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-5 hover:border-emerald-200 transition-colors">
+                <div className="w-12 h-12 rounded-2xl bg-emerald-50 flex items-center justify-center shrink-0">
+                  <MessageCircle className="w-6 h-6 text-emerald-600" />
+                </div>
+                <div>
+                  <p className="text-[15px] font-bold text-[#1A1D20]">WhatsApp</p>
+                  <p className="text-[13px] text-[#6B7280]">{settings.whatsapp}</p>
+                </div>
+              </a>
+            )}
 
-            <a href="mailto:support@esim4u.uk" className="flex items-center gap-4 rounded-2xl border border-gray-100 bg-white shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-5 hover:border-orange-200 transition-colors">
+            <a href={`mailto:${settings.contactEmail}`} className="flex items-center gap-4 rounded-2xl border border-gray-100 bg-white shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-5 hover:border-orange-200 transition-colors">
               <div className="w-12 h-12 rounded-2xl bg-[#FFF4F0] flex items-center justify-center shrink-0">
                 <Mail className="w-6 h-6 text-[#FF561E]" />
               </div>
               <div>
                 <p className="text-[15px] font-bold text-[#1A1D20]">Email</p>
-                <p className="text-[13px] text-[#6B7280]">support@esim4u.uk</p>
+                <p className="text-[13px] text-[#6B7280]">{settings.contactEmail}</p>
               </div>
             </a>
 

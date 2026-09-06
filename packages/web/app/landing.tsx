@@ -547,6 +547,7 @@ export default function Landing() {
               <button onClick={() => scrollToId('how-it-works')} className="hover:text-[#FF561E] transition-colors">How It Works</button>
               <Link href="/about-us" className="hover:text-[#FF561E] transition-colors">About Us</Link>
               <Link href="/faq" className="hover:text-[#FF561E] transition-colors">FAQs</Link>
+              <Link href="/download" className="hover:text-[#FF561E] transition-colors">Download App</Link>
             </nav>
           </div>
 

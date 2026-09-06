@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Cookie, X } from "lucide-react";
+import { useSiteSettings } from "@/lib/use-site-settings";
 
 const STORAGE_KEY = "esim4u_cookie_consent";
 
@@ -14,6 +15,7 @@ interface ConsentValue {
 }
 
 export default function CookieConsent() {
+  const settings = useSiteSettings();
   const [visible, setVisible] = useState(false);
   const [managing, setManaging] = useState(false);
   const [analytics, setAnalytics] = useState(true);
@@ -43,6 +45,7 @@ export default function CookieConsent() {
   const rejectNonEssential = () => save({ essential: true, analytics: false, marketing: false, ts: Date.now() });
   const saveChoices = () => save({ essential: true, analytics, marketing, ts: Date.now() });
 
+  if (!settings.features.cookieConsent) return null;
   if (!visible) return null;
 
   return (

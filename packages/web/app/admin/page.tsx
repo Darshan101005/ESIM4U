@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { Loader2, ShieldCheck, Mail, Lock, Eye, EyeOff } from "lucide-react";
+import { Loader2, ShieldCheck, Mail, Lock, Eye, EyeOff, Info } from "lucide-react";
 import toast from "react-hot-toast";
 
 export default function AdminLoginPage() {
@@ -99,7 +99,8 @@ export default function AdminLoginPage() {
           </form>
         </div>
 
-        <p className="text-center text-[12px] text-[#6B7280] mt-6">
+        <p className="flex items-center justify-center gap-1.5 text-center text-[12px] text-[#6B7280] mt-6">
+          <Info className="w-3.5 h-3.5 shrink-0" strokeWidth={2} />
           Authorized personnel only. All access is monitored.
         </p>
       </div>

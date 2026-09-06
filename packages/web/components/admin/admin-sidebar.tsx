@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import Image from "next/image";
-import { LayoutDashboard, Users, ShoppingBag, Tag, Package, LogOut, Menu, X, ShieldCheck, Ticket, Megaphone, Settings, UserCog, Landmark, Headset } from "lucide-react";
+import { LayoutDashboard, Users, ShoppingBag, Tag, Package, LogOut, Menu, X, ShieldCheck, Ticket, Megaphone, Settings, UserCog, Landmark, Headset, Globe } from "lucide-react";
 import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
 
@@ -17,6 +17,7 @@ const navItems = [
   { label: "Affiliates", href: "/admin/dashboard/affiliate", icon: Megaphone },
   { label: "Support", href: "/admin/dashboard/support", icon: Headset },
   { label: "Customers", href: "/admin/dashboard/users", icon: Users },
+  { label: "Manage Website", href: "/admin/dashboard/website", icon: Globe },
 ];
 
 interface AdminSidebarProps {
@@ -90,7 +91,7 @@ export default function AdminSidebar({ collapsed = false, onToggle }: AdminSideb
         )}
       </div>
 
-      <nav className="flex-1 min-h-0 overflow-y-auto px-3 py-2 space-y-1 hide-scrollbar">
+      <nav className="flex-1 min-h-0 overflow-y-auto px-3 py-2 pb-4 space-y-1 hide-scrollbar [mask-image:linear-gradient(to_bottom,#000_calc(100%-18px),transparent)]">
         {navItems.map((item) => {
           const Icon = item.icon;
           const active = isActive(item.href);

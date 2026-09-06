@@ -44,6 +44,7 @@ export default function SiteHeader({ active }: { active?: string }) {
           <Link href="/#how-it-works" className={navCls}>How It Works</Link>
           <Link href="/about-us" className={active === "about" ? "text-[#FF561E]" : navCls}>About Us</Link>
           <Link href="/faq" className={active === "faq" ? "text-[#FF561E]" : navCls}>FAQs</Link>
+          <Link href="/download" className={active === "download" ? "text-[#FF561E]" : navCls}>Download App</Link>
         </nav>
       </div>
 

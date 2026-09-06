@@ -316,6 +316,7 @@ export default function LandingMobile() {
             <button onClick={() => scrollToId('m-compare')} className="py-3 px-3 text-[15px] font-medium text-[#1A1D20] text-left rounded-xl active:bg-gray-50">Why eSIM4U</button>
             <Link href="/about-us" onClick={() => setMenuOpen(false)} className="py-3 px-3 text-[15px] font-medium text-[#1A1D20] rounded-xl active:bg-gray-50">About Us</Link>
             <Link href="/faq" onClick={() => setMenuOpen(false)} className="py-3 px-3 text-[15px] font-medium text-[#1A1D20] rounded-xl active:bg-gray-50">FAQs</Link>
+            <Link href="/download" onClick={() => setMenuOpen(false)} className="py-3 px-3 text-[15px] font-semibold text-[#FF561E] rounded-xl active:bg-gray-50">Download App</Link>
           </nav>
           <div className="mt-auto px-4 pb-6 flex flex-col gap-3">
             {authUser ? (
