@@ -9,6 +9,7 @@ import { ensureOrderPaymentColumns } from "@/lib/orders-schema";
 import { creditWallet } from "@/lib/wallet";
 import { sendOrderReadyEmail } from "@/lib/email";
 import { qualifyReferralIfEligible, refundReferralForOrders } from "@/lib/referral";
+import { sendEsimToTelegram } from "@/lib/telegram";
 
 function round(value: number): number {
   return Math.round(value * 100) / 100;
@@ -147,6 +148,21 @@ async function emailOrderReady(row: OrderRow, a: AssignmentData): Promise<void> 
     });
   } catch (e) {
     console.error("Failed to send order-ready email:", e instanceof Error ? e.message : e);
+  }
+
+  // Also deliver the eSIM to the customer's linked Telegram (best-effort). This
+  // is a no-op if Telegram isn't configured or the customer hasn't linked.
+  try {
+    await sendEsimToTelegram(row.user_id, row, {
+      iccid: a.iccid,
+      qrCodeUrl: a.qrCodeUrl,
+      activationCode: a.activationCode,
+      smdpAddress: a.smdpAddress,
+      matchingId: a.matchingId,
+      activationOtp: a.activationOtp,
+    });
+  } catch (e) {
+    console.error("Failed to send order-ready Telegram message:", e instanceof Error ? e.message : e);
   }
 }
 

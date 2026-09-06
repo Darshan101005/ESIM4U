@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyAdminToken, getAdminCookieName } from "@/lib/admin-auth";
 import { resolveIncomingAttachments } from "@/lib/support-attachments";
+import { sendSupportReplyToTelegram } from "@/lib/telegram";
 import {
   listChatMessages,
   sendChatMessage,
@@ -51,6 +52,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       attachments,
       replyToId,
     });
+    // Mirror the reply to the customer's linked Telegram, if any (best-effort).
+    void sendSupportReplyToTelegram(userId, (body.body || "").toString());
     return NextResponse.json({ message });
   } catch (error: unknown) {
     if (error instanceof Error && error.message === "EMPTY_MESSAGE") {

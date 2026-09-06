@@ -3,6 +3,7 @@ import "@/styles/globals.css";
 import ToasterProvider from "@/components/toaster-provider";
 import PwaRegister from "@/components/pwa-register";
 import PwaInstallPrompt from "@/components/pwa-install-prompt";
+import MaintenanceGate from "@/components/maintenance-gate";
 
 export const metadata: Metadata = {
   title: "eSIM4U - Global eSIM Solutions",
@@ -37,6 +38,7 @@ export default function RootLayout({
     <html lang="en">
       <body>
         {children}
+        <MaintenanceGate />
         <ToasterProvider />
         <PwaRegister />
         <PwaInstallPrompt />

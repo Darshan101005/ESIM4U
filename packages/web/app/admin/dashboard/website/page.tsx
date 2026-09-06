@@ -2,7 +2,7 @@
 
 import AdminTopbar from "@/components/admin/admin-topbar";
 import { useCallback, useEffect, useState } from "react";
-import { Loader2, Mail, Phone, Share2, ToggleRight, Save } from "lucide-react";
+import { Loader2, Mail, Phone, Share2, ToggleRight, Save, Wrench } from "lucide-react";
 import toast from "react-hot-toast";
 import { DEFAULT_SETTINGS, type SiteSettings } from "@/lib/site-settings-types";
 
@@ -90,6 +90,36 @@ export default function ManageWebsitePage() {
       toast.error(e instanceof Error ? e.message : "Save failed");
     } finally {
       setSavingSocials(false);
+    }
+  };
+
+  const [savingMaint, setSavingMaint] = useState(false);
+  const [savingMaintToggle, setSavingMaintToggle] = useState<string | null>(null);
+
+  const toggleMaintenance = async (key: "website" | "bot", value: boolean) => {
+    const prev = settings.maintenance[key];
+    setSettings((s) => ({ ...s, maintenance: { ...s.maintenance, [key]: value } }));
+    setSavingMaintToggle(key);
+    try {
+      await put({ maintenance: { ...settings.maintenance, [key]: value } });
+      toast.success(`${key === "bot" ? "Bot" : "Website"} maintenance ${value ? "on" : "off"}`);
+    } catch (e: unknown) {
+      setSettings((s) => ({ ...s, maintenance: { ...s.maintenance, [key]: prev } }));
+      toast.error(e instanceof Error ? e.message : "Save failed");
+    } finally {
+      setSavingMaintToggle(null);
+    }
+  };
+
+  const saveMaintenanceMessage = async () => {
+    setSavingMaint(true);
+    try {
+      await put({ maintenance: { ...settings.maintenance, message: settings.maintenance.message.trim() } });
+      toast.success("Maintenance message saved");
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Save failed");
+    } finally {
+      setSavingMaint(false);
     }
   };
 
@@ -196,6 +226,69 @@ export default function ManageWebsitePage() {
                     <Toggle on={settings.features[f.key]} onChange={(v) => toggleFeature(f.key, v)} disabled={savingFeature === f.key} />
                   </div>
                 ))}
+              </div>
+            </section>
+
+            {/* Maintenance mode */}
+            <section className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-6">
+              <div className="flex items-center gap-2.5 mb-5">
+                <div className="w-9 h-9 rounded-xl bg-[#FFF4F0] flex items-center justify-center"><Wrench className="w-4.5 h-4.5 text-[#FF561E]" /></div>
+                <h2 className="text-[16px] font-bold text-[#1A1D20]">Maintenance mode</h2>
+              </div>
+              <p className="text-[12.5px] text-[#6B7280] mb-4">
+                Temporarily pause the website or the Telegram bot for customers. Admins always keep access.
+              </p>
+              <div className="divide-y divide-gray-50">
+                <div className="flex items-center justify-between gap-4 py-3.5">
+                  <div className="min-w-0">
+                    <p className="text-[14px] font-semibold text-[#1A1D20]">Website maintenance</p>
+                    <p className="text-[12px] text-[#6B7280]">Show a maintenance screen to customers on the site.</p>
+                  </div>
+                  <Toggle on={settings.maintenance.website} onChange={(v) => toggleMaintenance("website", v)} disabled={savingMaintToggle === "website"} />
+                </div>
+                <div className="flex items-center justify-between gap-4 py-3.5">
+                  <div className="min-w-0">
+                    <p className="text-[14px] font-semibold text-[#1A1D20]">Telegram bot maintenance</p>
+                    <p className="text-[12px] text-[#6B7280]">Bot replies with the maintenance notice to non-admins.</p>
+                  </div>
+                  <Toggle on={settings.maintenance.bot} onChange={(v) => toggleMaintenance("bot", v)} disabled={savingMaintToggle === "bot"} />
+                </div>
+              </div>
+              <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className={labelCls}>Schedule from (optional)</label>
+                  <input
+                    type="datetime-local"
+                    className={inputCls}
+                    value={settings.maintenance.from}
+                    onChange={(e) => setSettings((s) => ({ ...s, maintenance: { ...s.maintenance, from: e.target.value } }))}
+                  />
+                </div>
+                <div>
+                  <label className={labelCls}>Schedule to (optional)</label>
+                  <input
+                    type="datetime-local"
+                    className={inputCls}
+                    value={settings.maintenance.to}
+                    onChange={(e) => setSettings((s) => ({ ...s, maintenance: { ...s.maintenance, to: e.target.value } }))}
+                  />
+                </div>
+              </div>
+              <p className="text-[12px] text-[#6B7280] mt-2">
+                Leave both blank to start immediately when a toggle is on. With a window set, maintenance only applies
+                between those times, and the popup / bot message shows the schedule.
+              </p>
+              <div className="mt-4">
+                <label className={labelCls}>Maintenance message</label>
+                <textarea
+                  className={`${inputCls} min-h-[80px] resize-y`}
+                  value={settings.maintenance.message}
+                  onChange={(e) => setSettings((s) => ({ ...s, maintenance: { ...s.maintenance, message: e.target.value } }))}
+                  placeholder="We'll be back shortly…"
+                />
+                <button onClick={saveMaintenanceMessage} disabled={savingMaint} className="mt-3 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#FF561E] text-white text-[13px] font-bold hover:bg-[#E04B18] transition-colors disabled:opacity-70">
+                  {savingMaint ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} Save schedule &amp; message
+                </button>
               </div>
             </section>
           </div>

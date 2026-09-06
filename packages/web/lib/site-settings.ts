@@ -37,6 +37,7 @@ function merge(stored: Partial<SiteSettings> | null | undefined): SiteSettings {
     whatsapp: s.whatsapp ?? DEFAULT_SETTINGS.whatsapp,
     socials,
     features: { ...DEFAULT_SETTINGS.features, ...(s.features || {}) },
+    maintenance: { ...DEFAULT_SETTINGS.maintenance, ...(s.maintenance || {}) },
   };
 }
 
@@ -59,6 +60,7 @@ export async function updateSiteSettings(partial: Partial<SiteSettings>): Promis
     ...partial,
     socials: { ...current.socials, ...(partial.socials || {}) },
     features: { ...current.features, ...(partial.features || {}) },
+    maintenance: { ...current.maintenance, ...(partial.maintenance || {}) },
   };
   await pool.query(`UPDATE site_settings SET data = $1, updated_at = NOW() WHERE id = 1`, [JSON.stringify(next)]);
   return next;

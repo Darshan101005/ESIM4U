@@ -4,13 +4,26 @@ import DashboardTopbar from "@/components/dashboard/topbar";
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Loader2, DollarSign, LogOut, ShieldCheck, LifeBuoy, Mail, UserRound } from "lucide-react";
+import { Loader2, DollarSign, LogOut, ShieldCheck, LifeBuoy, Mail, UserRound, Copy, Check } from "lucide-react";
 import toast from "react-hot-toast";
 import { signOutAndClear, authClient } from "@/lib/auth-client";
 import { useCurrency } from "@/lib/currency-context";
 import { SUPPORTED_CURRENCIES } from "@/lib/fx";
 import SelectMenu from "@/components/admin/select-menu";
 import { Link2 } from "lucide-react";
+
+/** Official Telegram mark. */
+function TelegramLogo({ size = 22 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" className="shrink-0" aria-hidden="true">
+      <circle cx="12" cy="12" r="12" fill="#229ED9" />
+      <path
+        fill="#fff"
+        d="M5.49 11.78 16.2 7.3c.5-.18.94.12.78.88l-1.82 8.58c-.13.6-.5.75-1 .47l-2.76-2.04-1.33 1.28c-.15.15-.27.27-.55.27l.2-2.83 5.14-4.65c.22-.2-.05-.31-.35-.11l-6.35 4-2.74-.86c-.6-.19-.6-.6.13-.9z"
+      />
+    </svg>
+  );
+}
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -21,6 +34,13 @@ export default function SettingsPage() {
   const [googleConnected, setGoogleConnected] = useState(false);
   const [googleAccountId, setGoogleAccountId] = useState<string | null>(null);
   const [linkBusy, setLinkBusy] = useState(false);
+
+  // Telegram connect
+  const [tg, setTg] = useState<{ enabled: boolean; linked: boolean; username: string | null; botUsername: string | null } | null>(null);
+  const [tgCode, setTgCode] = useState("");
+  const [tgDeepLink, setTgDeepLink] = useState<string | null>(null);
+  const [tgBusy, setTgBusy] = useState(false);
+  const [tgCopied, setTgCopied] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -45,10 +65,58 @@ export default function SettingsPage() {
     } catch {}
   }, []);
 
+  const loadTelegram = useCallback(async () => {
+    try {
+      const res = await fetch("/api/telegram/link-code");
+      if (!res.ok) return;
+      setTg(await res.json());
+    } catch {}
+  }, []);
+
   useEffect(() => {
     load();
     loadAccounts();
-  }, [load, loadAccounts]);
+    loadTelegram();
+  }, [load, loadAccounts, loadTelegram]);
+
+  const generateTgCode = async () => {
+    setTgBusy(true);
+    try {
+      const res = await fetch("/api/telegram/link-code", { method: "POST" });
+      const d = await res.json();
+      if (!res.ok) throw new Error();
+      setTgCode(d.code);
+      setTgDeepLink(d.deepLink || null);
+    } catch {
+      toast.error("Couldn't generate a code");
+    } finally {
+      setTgBusy(false);
+    }
+  };
+
+  const copyTgCode = async () => {
+    if (!tgCode) return;
+    try {
+      await navigator.clipboard.writeText(tgCode);
+      setTgCopied(true);
+      setTimeout(() => setTgCopied(false), 1800);
+    } catch {
+      toast.error("Copy failed");
+    }
+  };
+
+  const disconnectTg = async () => {
+    try {
+      const res = await fetch("/api/telegram/link-code", { method: "DELETE" });
+      if (!res.ok) throw new Error();
+      toast.success("Telegram disconnected");
+      setTgCode("");
+      setTgDeepLink(null);
+      loadTelegram();
+    } catch {
+      toast.error("Couldn't disconnect");
+    }
+  };
 
   const connectGoogle = async () => {
     setLinkBusy(true);
@@ -175,6 +243,75 @@ export default function SettingsPage() {
                 <p className="text-[11.5px] text-[#6B7280] mt-2 flex items-center gap-1.5">
                   <span className="w-2 h-2 rounded-full bg-emerald-500" /> Your Google account is linked to {email}.
                 </p>
+              )}
+
+              {/* Telegram */}
+              {tg?.enabled && (
+                <div className="mt-3">
+                  <div className="flex items-center justify-between rounded-xl border border-gray-100 px-4 py-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <TelegramLogo />
+                      <div className="min-w-0">
+                        <p className="text-[14px] font-semibold text-[#1A1D20]">Telegram</p>
+                        <p className="text-[12px] text-[#6B7280] truncate">
+                          {tg.linked ? (tg.username ? `Connected — @${tg.username}` : "Connected") : "Not connected"}
+                        </p>
+                      </div>
+                    </div>
+                    {tg.linked ? (
+                      <button
+                        onClick={disconnectTg}
+                        className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-gray-200 text-[13px] font-bold text-[#6B7280] hover:text-red-500 hover:border-red-200 transition-colors shrink-0"
+                      >
+                        Disconnect
+                      </button>
+                    ) : (
+                      <button
+                        onClick={generateTgCode}
+                        disabled={tgBusy}
+                        className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#229ED9] text-white text-[13px] font-bold hover:bg-[#1c8ec2] transition-colors disabled:opacity-60 shrink-0"
+                      >
+                        {tgBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : "Connect"}
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Generated one-time code */}
+                  {!tg.linked && tgCode && (
+                    <div className="mt-3 rounded-xl border border-[#229ED9]/20 bg-[#229ED9]/5 p-4">
+                      <p className="text-[12px] text-[#6B7280] mb-2">Your one-time link code (valid 15 minutes):</p>
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 px-4 py-3 rounded-xl bg-white border border-gray-200 font-mono text-[22px] font-bold tracking-[0.3em] text-[#1A1D20] text-center">
+                          {tgCode}
+                        </div>
+                        <button
+                          onClick={copyTgCode}
+                          className="inline-flex items-center gap-2 px-4 py-3 rounded-xl bg-[#FF561E] text-white text-[13px] font-bold hover:bg-[#E04B18] transition-colors shrink-0"
+                        >
+                          {tgCopied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                          {tgCopied ? "Copied" : "Copy"}
+                        </button>
+                      </div>
+                      <p className="text-[12.5px] text-[#6B7280] mt-3 leading-relaxed">
+                        In the bot, send <code className="px-1.5 py-0.5 rounded bg-white border border-gray-200 font-mono text-[#1A1D20]">/link {tgCode}</code>
+                        {tgDeepLink ? (
+                          <>
+                            {" "}or{" "}
+                            <a href={tgDeepLink} target="_blank" rel="noopener noreferrer" className="text-[#229ED9] font-semibold underline">
+                              tap here to open Telegram
+                            </a>
+                            .
+                          </>
+                        ) : (
+                          "."
+                        )}
+                      </p>
+                      <button onClick={generateTgCode} disabled={tgBusy} className="text-[12.5px] font-semibold text-[#FF561E] hover:underline mt-2 disabled:opacity-60">
+                        {tgBusy ? "Generating…" : "Generate a new code"}
+                      </button>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
 

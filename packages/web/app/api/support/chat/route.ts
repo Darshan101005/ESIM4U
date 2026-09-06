@@ -12,6 +12,7 @@ import {
   pruneOldChatsIfDue,
   deleteChatMessage,
 } from "@/lib/support";
+import { notifyAdminsOfCustomerMessage } from "@/lib/telegram";
 
 async function requireUser() {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -60,6 +61,8 @@ export async function POST(request: NextRequest) {
       userEmail: user.email,
       customerName: user.name,
     });
+    // Notify admins in Telegram (live if watching, otherwise a ping with count).
+    void notifyAdminsOfCustomerMessage(user.id, user.name || "Customer", text);
     return NextResponse.json({ message });
   } catch (error: unknown) {
     if (error instanceof Error && error.message === "EMPTY_MESSAGE") {

@@ -7,6 +7,170 @@ import { Loader2, Plus, Pencil, Trash2, Pause, Play, ShieldCheck, UserCog, X, Se
 import ConfirmModal from "@/components/confirm-modal";
 import toast from "react-hot-toast";
 
+interface TgAdmin {
+  username: string;
+  name: string | null;
+  created_at: string;
+}
+
+/** Official Telegram mark. */
+function TelegramLogo({ size = 20 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" className="shrink-0" aria-hidden="true">
+      <circle cx="12" cy="12" r="12" fill="#229ED9" />
+      <path
+        fill="#fff"
+        d="M5.49 11.78 16.2 7.3c.5-.18.94.12.78.88l-1.82 8.58c-.13.6-.5.75-1 .47l-2.76-2.04-1.33 1.28c-.15.15-.27.27-.55.27l.2-2.83 5.14-4.65c.22-.2-.05-.31-.35-.11l-6.35 4-2.74-.86c-.6-.19-.6-.6.13-.9z"
+      />
+    </svg>
+  );
+}
+
+function TelegramAdminsSection() {
+  const [list, setList] = useState<TgAdmin[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [username, setUsername] = useState("");
+  const [name, setName] = useState("");
+  const [adding, setAdding] = useState(false);
+  const [busy, setBusy] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    try {
+      const res = await fetch("/api/admin/telegram-admins", { cache: "no-store" });
+      if (!res.ok) throw new Error();
+      const d = await res.json();
+      setList(d.admins || []);
+    } catch {
+      // stays empty
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const add = async () => {
+    const u = username.trim().replace(/^@+/, "");
+    if (!u) {
+      toast.error("Enter a Telegram username");
+      return;
+    }
+    setAdding(true);
+    try {
+      const res = await fetch("/api/admin/telegram-admins", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: u, name: name.trim() || null }),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || "Failed");
+      toast.success("Telegram admin added");
+      setUsername("");
+      setName("");
+      await load();
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Failed to add");
+    } finally {
+      setAdding(false);
+    }
+  };
+
+  const remove = async (u: string) => {
+    setBusy(u);
+    try {
+      const res = await fetch("/api/admin/telegram-admins", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: u }),
+      });
+      if (!res.ok) throw new Error();
+      toast.success("Removed");
+      await load();
+    } catch {
+      toast.error("Failed to remove");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const inputCls =
+    "w-full px-4 py-2.5 rounded-xl bg-white border border-gray-200 outline-none focus:border-[#FF561E] focus:ring-2 focus:ring-[#FF561E]/10 text-[14px] transition-all";
+
+  return (
+    <section className="mt-8 bg-white rounded-2xl border border-gray-100 shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-6">
+      <div className="flex items-center gap-2 mb-1">
+        <TelegramLogo />
+        <h2 className="text-[16px] font-bold text-[#1A1D20]">Telegram Admin Management</h2>
+      </div>
+      <p className="text-[13px] text-[#6B7280] mb-5">
+        Add a Telegram <span className="font-semibold">@username</span> here to let that person sign in to the admin bridge
+        from the bot.
+      </p>
+
+      <div className="flex flex-col sm:flex-row gap-2 mb-5">
+        <div className="relative flex-1">
+          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#6B7280] text-[14px] font-medium">@</span>
+          <input
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            placeholder="telegram_username"
+            className={`${inputCls} pl-8`}
+            onKeyDown={(e) => e.key === "Enter" && add()}
+          />
+        </div>
+        <input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Name (optional)"
+          className={`${inputCls} sm:max-w-[200px]`}
+          onKeyDown={(e) => e.key === "Enter" && add()}
+        />
+        <button
+          onClick={add}
+          disabled={adding}
+          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#FF561E] text-white text-[13px] font-bold hover:bg-[#E04B18] transition-colors shadow-sm shadow-orange-500/25 disabled:opacity-70 shrink-0"
+        >
+          {adding ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />} Add
+        </button>
+      </div>
+
+      {loading ? (
+        <div className="flex items-center gap-2 text-[#6B7280] text-[14px]">
+          <Loader2 className="w-4 h-4 animate-spin" /> Loading…
+        </div>
+      ) : list.length === 0 ? (
+        <p className="text-[13px] text-[#6B7280]">No Telegram admins yet.</p>
+      ) : (
+        <div className="space-y-2">
+          {list.map((t) => (
+            <div key={t.username} className="flex items-center justify-between rounded-xl border border-gray-100 px-4 py-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-9 h-9 rounded-lg bg-[#EAF6FC] flex items-center justify-center shrink-0">
+                  <TelegramLogo size={18} />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[14px] font-semibold text-[#1A1D20] truncate">@{t.username}</p>
+                  {t.name && <p className="text-[12px] text-[#6B7280] truncate">{t.name}</p>}
+                </div>
+              </div>
+              <button
+                onClick={() => remove(t.username)}
+                disabled={busy === t.username}
+                title="Remove"
+                className="w-9 h-9 rounded-lg border border-gray-200 flex items-center justify-center text-[#6B7280] hover:text-red-500 hover:border-red-200 transition-colors disabled:opacity-50 shrink-0"
+              >
+                {busy === t.username ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
 interface Admin {
   id: number;
   email: string;
@@ -305,6 +469,9 @@ export default function ManageAdminsPage() {
             })}
           </div>
         )}
+
+        {/* Telegram admins allowlist */}
+        <TelegramAdminsSection />
       </main>
 
       {/* Add / Edit modal */}
