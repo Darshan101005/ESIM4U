@@ -1,0 +1,3 @@
+Contact: mailto:support@esim4u.uk
+Preferred-Languages: en
+Canonical: https://esim4u.uk/.well-known/security.txt
