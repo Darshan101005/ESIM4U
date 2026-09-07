@@ -2,9 +2,10 @@
 
 import AdminTopbar from "@/components/admin/admin-topbar";
 import { useCallback, useEffect, useState } from "react";
-import { Loader2, Mail, Phone, Share2, ToggleRight, Save, Wrench } from "lucide-react";
+import { Loader2, Mail, Phone, Share2, ToggleRight, Save, Wrench, FileText, Eye, Pencil } from "lucide-react";
 import toast from "react-hot-toast";
 import { DEFAULT_SETTINGS, type SiteSettings } from "@/lib/site-settings-types";
+import MarkdownContent from "@/components/markdown-content";
 
 const inputCls =
   "w-full px-3.5 py-2.5 rounded-xl bg-[#F9FAFB] border border-gray-200 text-[13.5px] text-[#1A1D20] outline-none focus:border-[#FF561E] focus:ring-2 focus:ring-[#FF561E]/10 transition-all";
@@ -38,6 +39,9 @@ export default function ManageWebsitePage() {
   const [savingContact, setSavingContact] = useState(false);
   const [savingSocials, setSavingSocials] = useState(false);
   const [savingFeature, setSavingFeature] = useState<string | null>(null);
+  const [legalTab, setLegalTab] = useState<"terms" | "privacy">("terms");
+  const [legalView, setLegalView] = useState<"edit" | "preview">("edit");
+  const [savingLegal, setSavingLegal] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -120,6 +124,24 @@ export default function ManageWebsitePage() {
       toast.error(e instanceof Error ? e.message : "Save failed");
     } finally {
       setSavingMaint(false);
+    }
+  };
+
+  const saveLegal = async () => {
+    setSavingLegal(true);
+    try {
+      await put({
+        legal: {
+          terms: settings.legal.terms,
+          privacy: settings.legal.privacy,
+          updated: settings.legal.updated.trim(),
+        },
+      });
+      toast.success("Legal pages saved — live on the site");
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Save failed");
+    } finally {
+      setSavingLegal(false);
     }
   };
 
@@ -290,6 +312,90 @@ export default function ManageWebsitePage() {
                   {savingMaint ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} Save schedule &amp; message
                 </button>
               </div>
+            </section>
+
+            {/* Legal pages (Terms & Privacy) */}
+            <section className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-6">
+              <div className="flex items-center gap-2.5 mb-5">
+                <div className="w-9 h-9 rounded-xl bg-[#FFF4F0] flex items-center justify-center"><FileText className="w-4.5 h-4.5 text-[#FF561E]" /></div>
+                <h2 className="text-[16px] font-bold text-[#1A1D20]">Legal pages</h2>
+              </div>
+              <p className="text-[12.5px] text-[#6B7280] mb-4">
+                Edit the Terms &amp; Conditions and Privacy Policy in markdown, preview the result, then save to publish
+                on the public pages. Use <span className="font-mono">## Heading</span>, <span className="font-mono">- list</span>,{" "}
+                <span className="font-mono">**bold**</span>, and <span className="font-mono">[text](/link)</span>.
+              </p>
+
+              {/* Which page */}
+              <div className="flex items-center gap-2 mb-3">
+                {(["terms", "privacy"] as const).map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setLegalTab(t)}
+                    className={`px-4 py-2 rounded-xl text-[13px] font-bold transition-colors ${
+                      legalTab === t ? "bg-[#FF561E] text-white" : "bg-[#F9FAFB] text-[#6B7280] hover:text-[#1A1D20]"
+                    }`}
+                  >
+                    {t === "terms" ? "Terms & Conditions" : "Privacy Policy"}
+                  </button>
+                ))}
+                <div className="ml-auto flex items-center gap-1 rounded-xl bg-[#F9FAFB] p-1">
+                  <button
+                    type="button"
+                    onClick={() => setLegalView("edit")}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold transition-colors ${
+                      legalView === "edit" ? "bg-white shadow-sm text-[#1A1D20]" : "text-[#6B7280]"
+                    }`}
+                  >
+                    <Pencil className="w-3.5 h-3.5" /> Edit
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setLegalView("preview")}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold transition-colors ${
+                      legalView === "preview" ? "bg-white shadow-sm text-[#1A1D20]" : "text-[#6B7280]"
+                    }`}
+                  >
+                    <Eye className="w-3.5 h-3.5" /> Preview
+                  </button>
+                </div>
+              </div>
+
+              <div className="mb-4">
+                <label className={labelCls}>&ldquo;Last updated&rdquo; label (shown on both pages)</label>
+                <input
+                  className={inputCls}
+                  value={settings.legal.updated}
+                  onChange={(e) => setSettings((s) => ({ ...s, legal: { ...s.legal, updated: e.target.value } }))}
+                  placeholder="September 2026"
+                />
+              </div>
+
+              {legalView === "edit" ? (
+                <textarea
+                  className={`${inputCls} min-h-[420px] resize-y font-mono text-[12.5px] leading-[1.7]`}
+                  value={settings.legal[legalTab]}
+                  onChange={(e) => setSettings((s) => ({ ...s, legal: { ...s.legal, [legalTab]: e.target.value } }))}
+                  placeholder="Write the page content in markdown…"
+                  spellCheck
+                />
+              ) : (
+                <div className="rounded-xl border border-gray-200 bg-white px-5 py-5 max-h-[520px] overflow-auto">
+                  <MarkdownContent
+                    content={settings.legal[legalTab]}
+                    className="text-[14px] leading-[1.8] text-[#374151]"
+                  />
+                </div>
+              )}
+
+              <button
+                onClick={saveLegal}
+                disabled={savingLegal}
+                className="mt-4 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#FF561E] text-white text-[13px] font-bold hover:bg-[#E04B18] transition-colors disabled:opacity-70"
+              >
+                {savingLegal ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} Save legal pages
+              </button>
             </section>
           </div>
         )}

@@ -4,7 +4,7 @@ import DashboardTopbar from "@/components/dashboard/topbar";
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Loader2, Database, Clock, Calendar, Hash, XCircle, RotateCcw, Ban, RefreshCw } from "lucide-react";
+import { ArrowLeft, Loader2, Database, Clock, Calendar, Hash, XCircle, RotateCcw, Ban, RefreshCw, AlertTriangle } from "lucide-react";
 import toast from "react-hot-toast";
 import QrDisplay from "@/components/dashboard/qr-display";
 import UsageDonut from "@/components/dashboard/usage-donut";
@@ -242,6 +242,15 @@ export default function OrderDetailPage() {
               smdpAddress={order.smdp_address}
               matchingId={order.matching_id}
             />
+            <div className="mt-5 flex items-start gap-3 rounded-xl border border-amber-100 bg-amber-50 px-4 py-3.5">
+              <AlertTriangle className="w-4.5 h-4.5 text-amber-600 shrink-0 mt-0.5" strokeWidth={2} />
+              <p className="text-[12.5px] leading-relaxed text-amber-800">
+                <span className="font-semibold">Please keep this eSIM installed.</span> Once an installed eSIM is
+                deleted from your device, it is permanently removed and cannot be reinstalled or used again. Should this
+                occur, you will need to purchase a new eSIM to reconnect. We recommend removing an eSIM only once you no
+                longer require it.
+              </p>
+            </div>
           </div>
         ) : (
           notice && (

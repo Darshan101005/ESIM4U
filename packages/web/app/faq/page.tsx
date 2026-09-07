@@ -43,6 +43,21 @@ const faqs: FaqItem[] = [
       "Yes. If your plan supports top-ups, you can add more data from your dashboard without installing a new eSIM. You can also purchase a new plan at any time for a different destination or a longer stay.",
   },
   {
+    question: "If I delete my eSIM, can I use or install it again?",
+    answer:
+      "No. If you delete your eSIM, you cannot use or install it again — it is permanently removed once deleted. If this happens, you will need to purchase a new eSIM for future use, so only remove an eSIM when you are sure you no longer need it.",
+  },
+  {
+    question: "What does the eSIM status \u201creleased\u201d mean?",
+    answer:
+      "When an eSIM status shows as released, the eSIM profile has been removed from the device and is no longer actively installed. A released profile generally cannot be reused or reinstalled — once deleted it is considered gone and can't be added again. You would need to buy a new eSIM to reconnect.",
+  },
+  {
+    question: "My eSIM shows as enabled but only about 1MB of data is used — is that normal?",
+    answer:
+      "Yes, this can be completely normal. It usually means the eSIM was installed and activated but little to no mobile data was actually used — for example the device stayed on Wi-Fi, the eSIM wasn't selected as the line for mobile data, or data roaming was turned off. A tiny amount of usage (around 1MB) often just comes from initial network signalling and background activity, not real browsing. To confirm real usage, check data consumption in your device settings.",
+  },
+  {
     question: "Which countries and networks do you cover?",
     answer:
       "We offer eSIM data plans across 200+ countries and territories, connecting to 500+ trusted local and regional networks. You can browse coverage and pricing for any destination directly from your dashboard.",

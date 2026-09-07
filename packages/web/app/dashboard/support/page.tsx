@@ -13,6 +13,9 @@ const FAQS = [
   { q: "How do I check my remaining data?", a: "Open the eSIM from My eSIMs. Live data usage and remaining balance are shown there once the plan is active." },
   { q: "Will the eSIM work on my phone?", a: "Most phones from 2018 onward support eSIM (iPhone XS and newer, recent Samsung/Pixel). Your phone must be carrier-unlocked." },
   { q: "Can I top up or extend a plan?", a: "Many plans support recharges. Where available, you'll see the Recharge option on your eSIM in My eSIMs. Otherwise simply buy a new plan." },
+  { q: "If I delete my eSIM, can I use it again?", a: "No. If you delete your eSIM, you cannot use or install it again — it is permanently removed once deleted. If this happens, you'll need to purchase a new eSIM for future use, so only remove an eSIM when you're sure you no longer need it." },
+  { q: "What does the eSIM status \u201creleased\u201d mean?", a: "It means the eSIM profile has been removed from the device and is no longer installed. A released profile generally can't be reused or reinstalled — once deleted it's considered gone. You'd need to buy a new eSIM to reconnect." },
+  { q: "My eSIM is enabled but only ~1MB is used — is that normal?", a: "Often yes. It usually means little to no mobile data was actually used: the device stayed on Wi-Fi, the eSIM wasn't selected for mobile data, or data roaming was off. A tiny amount (around 1MB) can come from initial network signalling and background activity. Check data consumption in your device settings to confirm real usage." },
 ];
 
 export default function SupportPage() {

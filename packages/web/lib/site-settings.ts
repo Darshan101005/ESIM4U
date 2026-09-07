@@ -39,6 +39,7 @@ function merge(stored: Partial<SiteSettings> | null | undefined): SiteSettings {
     socials,
     features: { ...DEFAULT_SETTINGS.features, ...(s.features || {}) },
     maintenance: { ...DEFAULT_SETTINGS.maintenance, ...(s.maintenance || {}) },
+    legal: { ...DEFAULT_SETTINGS.legal, ...(s.legal || {}) },
   };
 }
 
@@ -71,6 +72,7 @@ export async function updateSiteSettings(partial: Partial<SiteSettings>): Promis
     socials: { ...current.socials, ...(partial.socials || {}) },
     features: { ...current.features, ...(partial.features || {}) },
     maintenance: { ...current.maintenance, ...(partial.maintenance || {}) },
+    legal: { ...current.legal, ...(partial.legal || {}) },
   };
   await pool.query(`UPDATE site_settings SET data = $1, updated_at = NOW() WHERE id = 1`, [JSON.stringify(next)]);
   return next;
