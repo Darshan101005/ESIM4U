@@ -38,7 +38,13 @@ export interface SiteSettings {
     /** Human-readable "last updated" label shown on both pages. */
     updated: string;
   };
+  /** AI chatbot provider selection (no auto-routing — the admin picks one). */
+  chatbot: {
+    provider: ChatbotProvider;
+  };
 }
+
+export type ChatbotProvider = "nim" | "openrouter";
 
 export type SocialKey = keyof SiteSettings["socials"];
 
@@ -238,5 +244,9 @@ export const DEFAULT_SETTINGS: SiteSettings = {
     updated: "September 2026",
     terms: DEFAULT_TERMS_MD,
     privacy: DEFAULT_PRIVACY_MD,
+  },
+  // NVIDIA NIM is the default — it's the faster, more reliable provider.
+  chatbot: {
+    provider: "nim",
   },
 };

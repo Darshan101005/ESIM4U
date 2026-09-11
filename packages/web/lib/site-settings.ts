@@ -40,6 +40,7 @@ function merge(stored: Partial<SiteSettings> | null | undefined): SiteSettings {
     features: { ...DEFAULT_SETTINGS.features, ...(s.features || {}) },
     maintenance: { ...DEFAULT_SETTINGS.maintenance, ...(s.maintenance || {}) },
     legal: { ...DEFAULT_SETTINGS.legal, ...(s.legal || {}) },
+    chatbot: { ...DEFAULT_SETTINGS.chatbot, ...(s.chatbot || {}) },
   };
 }
 
@@ -73,6 +74,7 @@ export async function updateSiteSettings(partial: Partial<SiteSettings>): Promis
     features: { ...current.features, ...(partial.features || {}) },
     maintenance: { ...current.maintenance, ...(partial.maintenance || {}) },
     legal: { ...current.legal, ...(partial.legal || {}) },
+    chatbot: { ...current.chatbot, ...(partial.chatbot || {}) },
   };
   await pool.query(`UPDATE site_settings SET data = $1, updated_at = NOW() WHERE id = 1`, [JSON.stringify(next)]);
   return next;

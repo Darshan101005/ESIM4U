@@ -60,7 +60,7 @@ export default function SelectMenu({ value, onChange, options, placeholder = "Se
                     setOpen(false);
                   }}
                   className={`w-full flex items-center justify-between gap-2 px-4 py-2 text-left text-[13.5px] transition-colors ${
-                    active ? "bg-[#FFF4F0] text-[#FF561E] font-semibold" : "text-[#1A1D20] hover:bg-[#FFF4F0] hover:text-[#FF561E]"
+                    active ? "bg-[#FFF4F0] text-[#FF561E] font-semibold" : "text-[#1A1D20] hover:bg-gray-50"
                   }`}
                 >
                   <span className="truncate">{o.label}</span>

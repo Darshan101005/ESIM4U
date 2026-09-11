@@ -2,10 +2,11 @@
 
 import AdminTopbar from "@/components/admin/admin-topbar";
 import { useCallback, useEffect, useState } from "react";
-import { Loader2, Mail, Phone, Share2, ToggleRight, Save, Wrench, FileText, Eye, Pencil } from "lucide-react";
+import { Loader2, Mail, Phone, Share2, ToggleRight, Save, Wrench, FileText, Eye, Pencil, Bot } from "lucide-react";
 import toast from "react-hot-toast";
-import { DEFAULT_SETTINGS, type SiteSettings } from "@/lib/site-settings-types";
+import { DEFAULT_SETTINGS, type SiteSettings, type ChatbotProvider } from "@/lib/site-settings-types";
 import MarkdownContent from "@/components/markdown-content";
+import SelectMenu from "@/components/admin/select-menu";
 
 const inputCls =
   "w-full px-3.5 py-2.5 rounded-xl bg-[#F9FAFB] border border-gray-200 text-[13.5px] text-[#1A1D20] outline-none focus:border-[#FF561E] focus:ring-2 focus:ring-[#FF561E]/10 transition-all";
@@ -41,7 +42,9 @@ export default function ManageWebsitePage() {
   const [savingFeature, setSavingFeature] = useState<string | null>(null);
   const [legalTab, setLegalTab] = useState<"terms" | "privacy">("terms");
   const [legalView, setLegalView] = useState<"edit" | "preview">("edit");
+  const [legalOpen, setLegalOpen] = useState(false);
   const [savingLegal, setSavingLegal] = useState(false);
+  const [savingChatbot, setSavingChatbot] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -145,13 +148,30 @@ export default function ManageWebsitePage() {
     }
   };
 
+  const saveChatbot = async (provider: ChatbotProvider) => {
+    const prev = settings.chatbot.provider;
+    if (prev === provider) return;
+    setSettings((s) => ({ ...s, chatbot: { ...s.chatbot, provider } }));
+    setSavingChatbot(true);
+    try {
+      await put({ chatbot: { provider } });
+      toast.success(`Chatbot now uses ${provider === "nim" ? "NVIDIA NIM" : "OpenRouter"}`);
+    } catch (e: unknown) {
+      setSettings((s) => ({ ...s, chatbot: { ...s.chatbot, provider: prev } }));
+      toast.error(e instanceof Error ? e.message : "Save failed");
+    } finally {
+      setSavingChatbot(false);
+    }
+  };
+
   const toggleFeature = async (key: keyof SiteSettings["features"], value: boolean) => {
     const prev = settings.features[key];
     setSettings((s) => ({ ...s, features: { ...s.features, [key]: value } }));
     setSavingFeature(key);
+    const label = FEATURES.find((f) => f.key === key)?.label ?? "Feature";
     try {
       await put({ features: { ...settings.features, [key]: value } });
-      toast.success(`${value ? "Enabled" : "Disabled"} — updated across the site`);
+      toast.success(`${label} is now ${value ? "visible to" : "hidden from"} users`);
     } catch (e: unknown) {
       setSettings((s) => ({ ...s, features: { ...s.features, [key]: prev } }));
       toast.error(e instanceof Error ? e.message : "Save failed");
@@ -251,6 +271,32 @@ export default function ManageWebsitePage() {
               </div>
             </section>
 
+            {/* AI Assistant provider */}
+            <section className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-6">
+              <div className="flex items-center gap-2.5 mb-5">
+                <div className="w-9 h-9 rounded-xl bg-[#FFF4F0] flex items-center justify-center"><Bot className="w-4.5 h-4.5 text-[#FF561E]" /></div>
+                <h2 className="text-[16px] font-bold text-[#1A1D20]">AI Assistant</h2>
+              </div>
+              <p className="text-[12.5px] text-[#6B7280] mb-4">
+                Choose which provider powers the website chatbot. There&apos;s no automatic switching — the selected
+                provider handles every message. Normal replies use the fast Lightning model; when thinking mode is on,
+                the larger reasoning model is used. Both work on either provider.
+              </p>
+              <label className={labelCls}>Chatbot provider</label>
+              <SelectMenu
+                value={settings.chatbot.provider}
+                onChange={(v) => saveChatbot(v as ChatbotProvider)}
+                disabled={savingChatbot}
+                options={[
+                  { value: "nim", label: "NVIDIA NIM" },
+                  { value: "openrouter", label: "OpenRouter" },
+                ]}
+              />
+              <p className="text-[12px] text-[#6B7280] mt-2">
+                Currently using: <span className="font-semibold text-[#1A1D20]">{settings.chatbot.provider === "nim" ? "NVIDIA NIM" : "OpenRouter"}</span>.
+              </p>
+            </section>
+
             {/* Maintenance mode */}
             <section className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-6">
               <div className="flex items-center gap-2.5 mb-5">
@@ -321,11 +367,24 @@ export default function ManageWebsitePage() {
                 <h2 className="text-[16px] font-bold text-[#1A1D20]">Legal pages</h2>
               </div>
               <p className="text-[12.5px] text-[#6B7280] mb-4">
-                Edit the Terms &amp; Conditions and Privacy Policy in markdown, preview the result, then save to publish
-                on the public pages. Use <span className="font-mono">## Heading</span>, <span className="font-mono">- list</span>,{" "}
-                <span className="font-mono">**bold**</span>, and <span className="font-mono">[text](/link)</span>.
+                Edit the Terms &amp; Conditions and Privacy Policy, preview the result, then save to publish on the
+                public pages.
               </p>
 
+              {!legalOpen ? (
+                <button
+                  type="button"
+                  onClick={() => setLegalOpen(true)}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#FFF4F0] text-[#FF561E] text-[13px] font-bold hover:bg-[#ffe9e0] transition-colors"
+                >
+                  <Pencil className="w-4 h-4" /> Edit legal pages
+                </button>
+              ) : (
+              <>
+              <p className="text-[12.5px] text-[#6B7280] mb-3">
+                Formatting: use <span className="font-mono">## Heading</span>, <span className="font-mono">- list</span>,{" "}
+                <span className="font-mono">**bold**</span>, and <span className="font-mono">[text](/link)</span>.
+              </p>
               {/* Which page */}
               <div className="flex items-center gap-2 mb-3">
                 {(["terms", "privacy"] as const).map((t) => (
@@ -389,13 +448,24 @@ export default function ManageWebsitePage() {
                 </div>
               )}
 
-              <button
-                onClick={saveLegal}
-                disabled={savingLegal}
-                className="mt-4 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#FF561E] text-white text-[13px] font-bold hover:bg-[#E04B18] transition-colors disabled:opacity-70"
-              >
-                {savingLegal ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} Save legal pages
-              </button>
+              <div className="mt-4 flex items-center gap-3">
+                <button
+                  onClick={saveLegal}
+                  disabled={savingLegal}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#FF561E] text-white text-[13px] font-bold hover:bg-[#E04B18] transition-colors disabled:opacity-70"
+                >
+                  {savingLegal ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} Save legal pages
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLegalOpen(false)}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white border border-gray-200 text-[#6B7280] text-[13px] font-bold hover:text-[#1A1D20] hover:border-gray-300 transition-colors"
+                >
+                  Close editor
+                </button>
+              </div>
+              </>
+              )}
             </section>
           </div>
         )}

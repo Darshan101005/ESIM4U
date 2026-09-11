@@ -13,9 +13,10 @@ export const dynamic = "force-dynamic";
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 const NIM_URL = "https://integrate.api.nvidia.com/v1/chat/completions";
 
-// Model options per provider. The orchestrator tries OpenRouter's free tier
-// first, then falls back to NVIDIA NIM when OpenRouter is rate-limited/down, so
-// the chat effectively never goes down. (NIM slugs have no ":free" suffix.)
+// Model options per provider. The active provider is chosen by the admin in
+// Manage Website (NVIDIA NIM or OpenRouter) — we use only that provider, with
+// a fast (non-thinking) model and a thinking model. (NIM slugs have no ":free"
+// suffix; OpenRouter free-tier slugs do.)
 const OR_FAST = ["nvidia/nemotron-3.5-lightning:free", "nvidia/nemotron-3-ultra-550b-a55b:free"];
 const OR_THINK = ["nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free", "nvidia/nemotron-3-ultra-550b-a55b:free"];
 const NIM_FAST = ["nvidia/nemotron-3.5-lightning-30b-a3b", "nvidia/nemotron-3-ultra-550b-a55b"];
@@ -178,11 +179,23 @@ export async function POST(req: NextRequest) {
   // NIM. Whichever connects first wins, so the chat keeps working even when
   // OpenRouter's free daily limit is hit.
   const maxTokens = reasoningEnabled ? 1400 : 600;
-  const endpoints: Endpoint[] = [];
-  // NVIDIA NIM first (faster + reliable); OpenRouter free tier as the fallback.
-  if (nimKey) {
+
+  // Which provider to use is chosen by the admin in Manage Website — there is
+  // NO cross-provider auto-routing (that caused inconsistent latency). We use
+  // only the selected provider; the other is a fallback ONLY if the selected
+  // one has no API key configured, so the chat can't go fully dark.
+  let selectedProvider: "nim" | "openrouter" = "nim";
+  try {
+    const s = await getSiteSettings();
+    if (s.chatbot?.provider === "openrouter") selectedProvider = "openrouter";
+  } catch {
+    // keep default
+  }
+
+  const pushNim = (list: Endpoint[]) => {
+    if (!nimKey) return;
     for (const model of reasoningEnabled ? NIM_THINK : NIM_FAST) {
-      endpoints.push({
+      list.push({
         url: NIM_URL,
         key: nimKey,
         accept: "text/event-stream",
@@ -199,10 +212,11 @@ export async function POST(req: NextRequest) {
           }),
       });
     }
-  }
-  if (orKey) {
+  };
+  const pushOpenRouter = (list: Endpoint[]) => {
+    if (!orKey) return;
     for (const model of reasoningEnabled ? OR_THINK : OR_FAST) {
-      endpoints.push({
+      list.push({
         url: OPENROUTER_URL,
         key: orKey,
         makeBody: (messages) =>
@@ -216,6 +230,15 @@ export async function POST(req: NextRequest) {
           }),
       });
     }
+  };
+
+  const endpoints: Endpoint[] = [];
+  if (selectedProvider === "nim") {
+    pushNim(endpoints);
+    if (endpoints.length === 0) pushOpenRouter(endpoints); // key-missing safety net
+  } else {
+    pushOpenRouter(endpoints);
+    if (endpoints.length === 0) pushNim(endpoints); // key-missing safety net
   }
 
   // Connect to one endpoint (no timeout — a slow model is fine). One quick retry
