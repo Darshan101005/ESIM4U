@@ -82,7 +82,7 @@ export default function TwoFactorForm() {
             Open your authenticator app and enter the current 6-digit code for eSIM4U Admin.
           </p>
 
-          <div className="flex items-center justify-between gap-2 mb-6" onPaste={(e) => setAt(0, e.clipboardData.getData("text"))}>
+          <div className="flex items-center gap-1.5 sm:gap-2 mb-6" onPaste={(e) => setAt(0, e.clipboardData.getData("text"))}>
             {digits.map((d, i) => (
               <input
                 key={i}
@@ -95,7 +95,7 @@ export default function TwoFactorForm() {
                 onChange={(e) => setAt(i, e.target.value)}
                 onKeyDown={(e) => onKeyDown(i, e)}
                 disabled={loading}
-                className="w-12 h-14 text-center text-[22px] font-bold rounded-xl bg-white border border-gray-200 outline-none focus:border-[#FF561E] focus:ring-2 focus:ring-[#FF561E]/10 transition-all disabled:opacity-60"
+                className="flex-1 min-w-0 h-14 text-center text-[20px] sm:text-[22px] font-bold rounded-xl bg-white border border-gray-200 outline-none focus:border-[#FF561E] focus:ring-2 focus:ring-[#FF561E]/10 transition-all disabled:opacity-60"
               />
             ))}
           </div>
