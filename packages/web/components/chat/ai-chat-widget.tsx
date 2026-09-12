@@ -127,6 +127,9 @@ export default function AiChatWidget() {
   const [thinking, setThinking] = useState(false); // user-controlled reasoning mode
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  // Hidden while the PWA install banner is on screen so they don't overlap at
+  // the bottom on mobile (the banner broadcasts its visibility).
+  const [installBannerOpen, setInstallBannerOpen] = useState(false);
 
   const scrollToBottom = useCallback(() => {
     requestAnimationFrame(() => {
@@ -138,7 +141,16 @@ export default function AiChatWidget() {
     if (open) scrollToBottom();
   }, [messages, open, scrollToBottom]);
 
+  useEffect(() => {
+    const flag = (window as unknown as { __ESIM4U_INSTALL_OPEN__?: boolean }).__ESIM4U_INSTALL_OPEN__;
+    if (flag) setInstallBannerOpen(true);
+    const onBanner = (e: Event) => setInstallBannerOpen(Boolean((e as CustomEvent).detail));
+    window.addEventListener("esim4u:install-banner", onBanner as EventListener);
+    return () => window.removeEventListener("esim4u:install-banner", onBanner as EventListener);
+  }, []);
+
   if (pathname.startsWith("/admin") || pathname.startsWith("/dashboard")) return null;
+  if (installBannerOpen) return null;
 
   const patchLast = (patch: Partial<Msg>) =>
     setMessages((m) => {

@@ -7,6 +7,7 @@ export const metadata: Metadata = {
   title: "Terms of Service | eSIM4U",
   description:
     "The terms and conditions that govern your use of eSIM4U's website, eSIM data plans, and related services.",
+  alternates: { canonical: "/terms" },
 };
 
 // Reflect admin edits from Manage Website without a rebuild.

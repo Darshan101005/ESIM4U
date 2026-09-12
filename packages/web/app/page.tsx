@@ -1,5 +1,12 @@
+import type { Metadata } from 'next';
 import { headers } from 'next/headers';
 import LandingSwitch from './landing-switch';
+
+// Home is the canonical root. (Other pages now self-canonicalize to their own
+// URL instead of inheriting the homepage canonical.)
+export const metadata: Metadata = {
+  alternates: { canonical: '/' },
+};
 
 // Phone user-agents. Tablets/desktops fall through to the desktop layout,
 // matching the 767px client breakpoint below.

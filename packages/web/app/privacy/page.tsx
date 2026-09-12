@@ -7,6 +7,7 @@ export const metadata: Metadata = {
   title: "Privacy Policy | eSIM4U",
   description:
     "How eSIM4U collects, uses, shares, and protects your personal data, and the rights you have over it.",
+  alternates: { canonical: "/privacy" },
 };
 
 // Reflect admin edits from Manage Website without a rebuild.

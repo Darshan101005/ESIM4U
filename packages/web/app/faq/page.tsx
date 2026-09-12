@@ -9,6 +9,7 @@ export const metadata: Metadata = {
   title: "FAQ | eSIM4U",
   description:
     "Answers to the most common questions about eSIM4U: how eSIMs work, device compatibility, activation, data plans, refunds, and support.",
+  alternates: { canonical: "/faq" },
 };
 
 const faqs: FaqItem[] = [
@@ -75,8 +76,18 @@ const faqs: FaqItem[] = [
 ];
 
 export default function FaqPage() {
+  const faqJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: faqs.map((f) => ({
+      "@type": "Question",
+      name: f.question,
+      acceptedAnswer: { "@type": "Answer", text: f.answer },
+    })),
+  };
   return (
     <div className="min-h-screen flex flex-col bg-white font-sans">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
       <header className="w-full px-8 md:px-12 xl:px-16 pt-8 flex items-center justify-between relative z-50">
         <div className="flex-1 flex justify-start">
           <Link href="/" className="flex items-center">

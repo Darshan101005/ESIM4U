@@ -37,7 +37,6 @@ export const metadata: Metadata = {
     "eSIM 190 countries",
   ],
   manifest: "/manifest.webmanifest",
-  alternates: { canonical: "/" },
   robots: {
     index: true,
     follow: true,
@@ -53,15 +52,18 @@ export const metadata: Metadata = {
     type: "website",
     siteName: "eSIM4U",
     url: "https://esim4u.uk",
+    locale: "en_GB",
     title: "eSIM4U — Global Travel eSIMs for 190+ Countries",
     description:
       "Buy travel eSIMs for 190+ countries. Instant delivery, no roaming fees — stay connected the moment you land.",
+    images: [{ url: "/assets/esim4u-logo.png", width: 512, height: 512, alt: "eSIM4U" }],
   },
   twitter: {
     card: "summary_large_image",
     title: "eSIM4U — Global Travel eSIMs for 190+ Countries",
     description:
       "Buy travel eSIMs for 190+ countries. Instant delivery, no roaming fees — stay connected the moment you land.",
+    images: ["/assets/esim4u-logo.png"],
   },
   // For Search Console "URL prefix" verification via meta tag (optional):
   // set NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION in the environment.
@@ -91,6 +93,11 @@ export default async function RootLayout({
   children: React.ReactNode;
 }) {
   const settings = await getSiteSettingsCached();
+  // Verified public social profiles strengthen the Organization entity (helps
+  // Google connect the brand across the web).
+  const sameAs = Object.values(settings.socials || {})
+    .filter((s) => s?.enabled && s.url?.trim())
+    .map((s) => s.url.trim());
   const jsonLd = [
     {
       "@context": "https://schema.org",
@@ -99,9 +106,11 @@ export default async function RootLayout({
       url: "https://esim4u.uk",
       logo: "https://esim4u.uk/assets/logo.png",
       description: "Instant travel eSIMs for 190+ countries.",
+      areaServed: "Worldwide",
+      ...(sameAs.length ? { sameAs } : {}),
       contactPoint: {
         "@type": "ContactPoint",
-        email: "support@esim4u.uk",
+        email: settings.contactEmail || "support@esim4u.uk",
         contactType: "customer support",
       },
     },
@@ -110,6 +119,7 @@ export default async function RootLayout({
       "@type": "WebSite",
       name: "eSIM4U",
       url: "https://esim4u.uk",
+      inLanguage: "en-GB",
     },
   ];
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import Image from "next/image";
 import { X, Download, Share } from "lucide-react";
 
@@ -9,31 +10,57 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
 }
 
-const DISMISS_KEY = "esim4u:pwa-dismissed";
-const DISMISS_DAYS = 7;
+// One shared key: we stamp it the moment the banner is shown AND when it's
+// dismissed, then suppress the banner for 24h. That way it appears at most once
+// a day and never re-pops on every page navigation within that day.
+const SEEN_KEY = "esim4u:pwa-seen";
+const SUPPRESS_MS = 24 * 60 * 60 * 1000; // 1 day
 
-function recentlyDismissed(): boolean {
+function seenRecently(): boolean {
   try {
-    const ts = Number(localStorage.getItem(DISMISS_KEY) || 0);
-    return ts > 0 && Date.now() - ts < DISMISS_DAYS * 86400000;
+    const ts = Number(localStorage.getItem(SEEN_KEY) || 0);
+    return ts > 0 && Date.now() - ts < SUPPRESS_MS;
   } catch {
     return false;
   }
 }
 
+function markSeen(): void {
+  try {
+    localStorage.setItem(SEEN_KEY, String(Date.now()));
+  } catch {}
+}
+
+// Lets the AI chat widget know to hide while the install banner is on screen
+// (they'd otherwise overlap at the bottom on mobile).
+function broadcast(visible: boolean): void {
+  try {
+    (window as unknown as { __ESIM4U_INSTALL_OPEN__?: boolean }).__ESIM4U_INSTALL_OPEN__ = visible;
+    window.dispatchEvent(new CustomEvent("esim4u:install-banner", { detail: visible }));
+  } catch {}
+}
+
 /**
- * Custom "Install app" banner shown only in the mobile browser — never inside
- * the native app WebView and never when the PWA is already installed.
- * Android/Chrome uses the captured beforeinstallprompt; iOS Safari shows the
- * Share → Add to Home Screen hint (iOS has no install API).
+ * Custom "Install app" banner shown only on the landing page ("/") in the
+ * mobile browser — never inside the native app WebView, never when the PWA is
+ * already installed, and at most once per day. Android/Chrome uses the captured
+ * beforeinstallprompt; iOS Safari shows the Share -> Add to Home Screen hint.
  */
 export default function PwaInstallPrompt() {
+  const pathname = usePathname() || "/";
   const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(null);
   const [show, setShow] = useState(false);
   const [iosHint, setIosHint] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+
+    // Landing page only — don't surface it inside the dashboard, admin, or any
+    // other route.
+    if (pathname !== "/") {
+      setShow(false);
+      return;
+    }
 
     const w = window as unknown as { __ESIM4U_APP__?: boolean };
     const nav = navigator as unknown as { standalone?: boolean };
@@ -43,13 +70,14 @@ export default function PwaInstallPrompt() {
       window.matchMedia("(display-mode: standalone)").matches || nav.standalone === true;
     const isMobile = window.matchMedia("(max-width: 768px)").matches;
 
-    if (inApp || isStandalone || !isMobile || recentlyDismissed()) return;
+    if (inApp || isStandalone || !isMobile || seenRecently()) return;
 
     // Android / Chrome: capture the install prompt.
     const onBeforeInstall = (e: Event) => {
       e.preventDefault();
       setDeferred(e as BeforeInstallPromptEvent);
       setShow(true);
+      markSeen(); // shown once for today
     };
     window.addEventListener("beforeinstallprompt", onBeforeInstall as EventListener);
 
@@ -59,15 +87,20 @@ export default function PwaInstallPrompt() {
     if (isIOS && isSafari) {
       setIosHint(true);
       setShow(true);
+      markSeen();
     }
 
     return () => window.removeEventListener("beforeinstallprompt", onBeforeInstall as EventListener);
-  }, []);
+  }, [pathname]);
+
+  // Keep the chat widget in sync with whether the banner is on screen.
+  useEffect(() => {
+    broadcast(show);
+    return () => broadcast(false);
+  }, [show]);
 
   const dismiss = () => {
-    try {
-      localStorage.setItem(DISMISS_KEY, String(Date.now()));
-    } catch {}
+    markSeen();
     setShow(false);
   };
 
@@ -77,6 +110,7 @@ export default function PwaInstallPrompt() {
       await deferred.prompt();
       await deferred.userChoice;
     } catch {}
+    markSeen();
     setDeferred(null);
     setShow(false);
   };
