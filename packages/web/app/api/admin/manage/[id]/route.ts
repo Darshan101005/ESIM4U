@@ -42,6 +42,11 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     }
 
     if (body.role === "admin" || body.role === "super_admin") {
+      // Prevent changing your own role (e.g. a super admin demoting themselves
+      // to admin and losing management access — lockout safety).
+      if (targetId === requester.id && body.role !== requester.role) {
+        return NextResponse.json({ error: "You cannot change your own role" }, { status: 400 });
+      }
       updates.push(`role = $${i++}`);
       values.push(body.role);
     }

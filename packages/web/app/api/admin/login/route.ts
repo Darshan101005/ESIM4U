@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyAdminCredentials, generateAdminToken, getAdminCookieName } from "@/lib/admin-auth";
+import {
+  verifyAdminCredentials,
+  generateAdminToken,
+  getAdminCookieName,
+  generatePending2faToken,
+  getAdmin2faCookieName,
+} from "@/lib/admin-auth";
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,6 +24,23 @@ export async function POST(request: NextRequest) {
 
     if (admin.is_active === false) {
       return NextResponse.json({ error: "This admin account has been paused. Contact a super admin." }, { status: 403 });
+    }
+
+    // 2FA is on: don't issue the real session yet. Hand out a short-lived
+    // pending token and ask the client for the authenticator code.
+    if (admin.totp_enabled) {
+      const pending = generatePending2faToken(admin.id);
+      const response = NextResponse.json({ success: true, twoFactorRequired: true });
+      response.cookies.set(getAdmin2faCookieName(), pending, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        maxAge: 5 * 60,
+        path: "/",
+      });
+      // Make sure no stale full session lingers.
+      response.cookies.set(getAdminCookieName(), "", { path: "/", maxAge: 0 });
+      return response;
     }
 
     const token = generateAdminToken(admin);

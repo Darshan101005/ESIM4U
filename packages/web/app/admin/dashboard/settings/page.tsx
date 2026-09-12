@@ -4,6 +4,7 @@ import AdminTopbar from "@/components/admin/admin-topbar";
 import { useEffect, useState, useCallback } from "react";
 import { Loader2, User, Mail, Lock, Eye, EyeOff, Pencil, X } from "lucide-react";
 import toast from "react-hot-toast";
+import TwoFactorSetup from "@/components/admin/two-factor-setup";
 
 export default function AdminSettingsPage() {
   const [loading, setLoading] = useState(true);
@@ -277,6 +278,9 @@ export default function AdminSettingsPage() {
                 </button>
               </div>
             </section>
+
+            {/* Two-factor authentication */}
+            <TwoFactorSetup />
           </div>
         )}
       </main>

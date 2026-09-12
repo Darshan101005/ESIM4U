@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
 
     await ensureAdminColumns();
     const result = await pool.query(
-      `SELECT id, email, name, role, is_active, created_at FROM admin_users ORDER BY created_at ASC, id ASC`
+      `SELECT id, email, name, role, is_active, totp_enabled, created_at FROM admin_users ORDER BY created_at ASC, id ASC`
     );
 
     return NextResponse.json({ admins: result.rows, currentAdminId: requester.id });

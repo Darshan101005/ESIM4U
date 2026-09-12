@@ -5,6 +5,10 @@ import pool from "@/lib/db";
 const ADMIN_JWT_SECRET = process.env.ADMIN_JWT_SECRET || "fallback-admin-secret";
 const ADMIN_TOKEN_EXPIRY = "7d";
 const ADMIN_COOKIE_NAME = "esim4u_admin_token";
+// Short-lived cookie issued after a correct password when 2FA is on. It only
+// authorises the second step (entering the authenticator code) — never the app.
+const ADMIN_2FA_COOKIE_NAME = "esim4u_admin_2fa_pending";
+const ADMIN_2FA_TOKEN_EXPIRY = "5m";
 
 export type AdminRole = "super_admin" | "admin";
 
@@ -14,6 +18,7 @@ export interface AdminUser {
   name: string;
   role: AdminRole;
   is_active?: boolean;
+  totp_enabled?: boolean;
   created_at: string;
 }
 
@@ -24,6 +29,9 @@ export async function ensureAdminColumns(): Promise<void> {
   await pool.query(`
     ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS role VARCHAR(20) DEFAULT 'admin';
     ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
+    ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS totp_enabled BOOLEAN DEFAULT false;
+    ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS totp_secret VARCHAR(64);
+    ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS totp_pending_secret VARCHAR(64);
   `);
   adminColumnsReady = true;
 }
@@ -35,7 +43,7 @@ function normalizeRole(role: unknown): AdminRole {
 export async function verifyAdminCredentials(email: string, password: string): Promise<AdminUser | null> {
   await ensureAdminColumns();
   const result = await pool.query(
-    `SELECT id, email, name, password_hash, role, is_active, created_at FROM admin_users WHERE email = $1`,
+    `SELECT id, email, name, password_hash, role, is_active, totp_enabled, created_at FROM admin_users WHERE email = $1`,
     [email]
   );
 
@@ -52,6 +60,7 @@ export async function verifyAdminCredentials(email: string, password: string): P
     name: admin.name,
     role: normalizeRole(admin.role),
     is_active: admin.is_active !== false,
+    totp_enabled: admin.totp_enabled === true,
     created_at: admin.created_at,
   };
 }
@@ -81,6 +90,28 @@ export function verifyAdminToken(token: string): AdminUser | null {
 
 export function getAdminCookieName(): string {
   return ADMIN_COOKIE_NAME;
+}
+
+export function getAdmin2faCookieName(): string {
+  return ADMIN_2FA_COOKIE_NAME;
+}
+
+/** Signs the short-lived token that authorises only the 2FA entry step. */
+export function generatePending2faToken(adminId: number): string {
+  return jwt.sign({ id: adminId, twoFactorPending: true }, ADMIN_JWT_SECRET, {
+    expiresIn: ADMIN_2FA_TOKEN_EXPIRY,
+  });
+}
+
+/** Returns the admin id if the pending-2FA token is valid, else null. */
+export function verifyPending2faToken(token: string): { id: number } | null {
+  try {
+    const decoded = jwt.verify(token, ADMIN_JWT_SECRET) as jwt.JwtPayload;
+    if (!decoded?.twoFactorPending || typeof decoded.id !== "number") return null;
+    return { id: decoded.id };
+  } catch {
+    return null;
+  }
 }
 
 export async function createAdminUser(

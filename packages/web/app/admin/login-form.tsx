@@ -28,6 +28,10 @@ export default function AdminLoginForm() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Login failed");
+      if (data.twoFactorRequired) {
+        router.push("/admin/2fa");
+        return;
+      }
       toast.success("Welcome back");
       router.push("/admin/dashboard");
     } catch (err: unknown) {

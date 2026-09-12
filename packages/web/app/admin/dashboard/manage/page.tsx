@@ -475,7 +475,9 @@ export default function ManageAdminsPage() {
       </main>
 
       {/* Add / Edit modal */}
-      {modalOpen && (
+      {modalOpen && (() => {
+        const editingSelf = modalMode === "edit" && form.id === currentAdminId;
+        return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={() => !saving && setModalOpen(false)} />
           <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
@@ -516,8 +518,9 @@ export default function ManageAdminsPage() {
             <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
-                onClick={() => setForm({ ...form, role: "admin" })}
-                className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border text-[13px] font-semibold transition-colors ${
+                onClick={() => !editingSelf && setForm({ ...form, role: "admin" })}
+                disabled={editingSelf}
+                className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border text-[13px] font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
                   form.role === "admin" ? "border-[#FF561E] bg-[#FFF4F0] text-[#FF561E]" : "border-gray-200 text-[#6B7280] hover:border-gray-300"
                 }`}
               >
@@ -525,14 +528,18 @@ export default function ManageAdminsPage() {
               </button>
               <button
                 type="button"
-                onClick={() => setForm({ ...form, role: "super_admin" })}
-                className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border text-[13px] font-semibold transition-colors ${
+                onClick={() => !editingSelf && setForm({ ...form, role: "super_admin" })}
+                disabled={editingSelf}
+                className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border text-[13px] font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
                   form.role === "super_admin" ? "border-[#FF561E] bg-[#FFF4F0] text-[#FF561E]" : "border-gray-200 text-[#6B7280] hover:border-gray-300"
                 }`}
               >
                 <ShieldCheck className="w-4 h-4" /> Super Admin
               </button>
             </div>
+            {editingSelf && (
+              <p className="text-[12px] text-[#6B7280] mt-2">You can&apos;t change your own role.</p>
+            )}
 
             <div className="mt-6 flex items-center gap-2">
               <button
@@ -551,7 +558,8 @@ export default function ManageAdminsPage() {
             </div>
           </div>
         </div>
-      )}
+        );
+      })()}
 
       <ConfirmModal
         open={!!toRemove}
