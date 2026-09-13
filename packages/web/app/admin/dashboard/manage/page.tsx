@@ -3,7 +3,7 @@
 import AdminTopbar from "@/components/admin/admin-topbar";
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Plus, Pencil, Trash2, Pause, Play, ShieldCheck, UserCog, X, Search, Eye, EyeOff } from "lucide-react";
+import { Loader2, Plus, Pencil, Trash2, Pause, Play, ShieldCheck, UserCog, X, Search, Eye, EyeOff, KeyRound } from "lucide-react";
 import ConfirmModal from "@/components/confirm-modal";
 import toast from "react-hot-toast";
 
@@ -177,7 +177,27 @@ interface Admin {
   name: string;
   role: "super_admin" | "admin";
   is_active: boolean;
+  totp_enabled: boolean;
   created_at: string;
+}
+
+/** Compact slide toggle used for the per-row 2FA control. */
+function MiniToggle({ on, onClick, disabled }: { on: boolean; onClick: () => void; disabled?: boolean }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={`relative rounded-full transition-colors shrink-0 disabled:opacity-50 ${on ? "bg-[#FF561E]" : "bg-gray-300"}`}
+      style={{ height: "18px", width: "32px" }}
+      aria-pressed={on}
+    >
+      <span
+        className="absolute top-0.5 left-0.5 rounded-full bg-white shadow-sm transition-transform"
+        style={{ height: "14px", width: "14px", transform: on ? "translateX(14px)" : "none" }}
+      />
+    </button>
+  );
 }
 
 type Filter = "all" | "active" | "inactive";
@@ -199,6 +219,7 @@ export default function ManageAdminsPage() {
   const [saving, setSaving] = useState(false);
   const [busyId, setBusyId] = useState<number | null>(null);
   const [toRemove, setToRemove] = useState<Admin | null>(null);
+  const [to2faDisable, setTo2faDisable] = useState<Admin | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -320,6 +341,35 @@ export default function ManageAdminsPage() {
     }
   };
 
+  // Per-row 2FA. Enabling can only be done by the account owner (they must scan
+  // the QR from their profile), so the row toggle only turns 2FA OFF — the
+  // emergency reset for a locked-out admin.
+  const handle2faToggle = (a: Admin) => {
+    if (a.totp_enabled) {
+      setTo2faDisable(a);
+    } else if (a.id === currentAdminId) {
+      toast("Turn on your own 2FA from Settings → Two-Factor Authentication.");
+    } else {
+      toast.error(`Only ${a.name || "that admin"} can turn on their own 2FA, from their profile settings.`);
+    }
+  };
+
+  const disable2fa = async (a: Admin) => {
+    setBusyId(a.id);
+    try {
+      const res = await fetch(`/api/admin/manage/${a.id}/2fa`, { method: "DELETE" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to turn off 2FA");
+      toast.success(a.id === currentAdminId ? "Your 2FA is turned off" : `2FA turned off for ${a.name || "admin"}`);
+      setTo2faDisable(null);
+      await load();
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Failed to turn off 2FA");
+    } finally {
+      setBusyId(null);
+    }
+  };
+
   const counts = useMemo(() => {
     return {
       all: admins.length,
@@ -431,6 +481,13 @@ export default function ManageAdminsPage() {
                   </div>
 
                   <div className="flex items-center gap-2 shrink-0">
+                    <div
+                      className="flex items-center gap-1.5 pr-2.5 mr-0.5 border-r border-gray-100"
+                      title={a.totp_enabled ? "2FA on — toggle to turn off (emergency)" : "2FA off"}
+                    >
+                      <KeyRound className={`w-3.5 h-3.5 ${a.totp_enabled ? "text-[#FF561E]" : "text-gray-300"}`} />
+                      <MiniToggle on={a.totp_enabled} onClick={() => handle2faToggle(a)} disabled={busyId === a.id} />
+                    </div>
                     <span
                       className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold ${
                         a.is_active ? "bg-emerald-50 text-emerald-600" : "bg-gray-100 text-[#6B7280]"
@@ -575,6 +632,22 @@ export default function ManageAdminsPage() {
         loading={busyId !== null && toRemove !== null && busyId === toRemove.id}
         onConfirm={() => toRemove && remove(toRemove)}
         onCancel={() => setToRemove(null)}
+      />
+
+      <ConfirmModal
+        open={!!to2faDisable}
+        title="Turn off two-factor authentication?"
+        message={
+          to2faDisable
+            ? to2faDisable.id === currentAdminId
+              ? "This turns off 2FA on your own account. You'll sign in with just your password until you set it up again from Settings."
+              : `This turns off 2FA for "${(to2faDisable.name || "this admin").toUpperCase()}" — use only for emergencies (e.g. they lost their device). They'll sign in with just their password until they re-enable it from their profile.`
+            : undefined
+        }
+        confirmLabel="Turn off 2FA"
+        loading={busyId !== null && to2faDisable !== null && busyId === to2faDisable.id}
+        onConfirm={() => to2faDisable && disable2fa(to2faDisable)}
+        onCancel={() => setTo2faDisable(null)}
       />
     </>
   );
