@@ -38,13 +38,67 @@ export interface SiteSettings {
     /** Human-readable "last updated" label shown on both pages. */
     updated: string;
   };
-  /** AI chatbot provider selection (no auto-routing — the admin picks one). */
+  /** AI chatbot provider + developer settings (admin-controlled). */
   chatbot: {
     provider: ChatbotProvider;
+    /** How the chat "thinking" (reasoning) mode behaves for visitors:
+     *  - "default": the user can toggle it on/off themselves
+     *  - "on": forced on, the user can't turn it off (toggle hidden)
+     *  - "off": forced off, the toggle is hidden */
+    thinkingMode: ThinkingMode;
+    /** Enabled models for normal (non-thinking) replies, in PRIORITY order
+     *  (first = highest priority). Drag-ordered in the admin panel. */
+    fastModels: ChatModelKey[];
+    /** Enabled models for thinking replies, in priority order. */
+    thinkingModels: ChatModelKey[];
+    /** How multiple selected models are used:
+     *  - false (default): try them one at a time in priority order (only one
+     *    request in flight; move to the next only if the current one fails)
+     *  - true: fire all selected models at once and use the fastest to respond */
+    raceModels: boolean;
+    /** When true, the chat streams debug info to the browser console. */
+    verbose: boolean;
   };
 }
 
 export type ChatbotProvider = "nim" | "openrouter";
+export type ThinkingMode = "default" | "on" | "off";
+export type ChatModelKey = "lightning" | "omni" | "ultra";
+
+/**
+ * Logical model catalog. Each entry maps a stable key (used in settings) to the
+ * real provider-specific model slugs. Kept here (client-safe) so the admin UI
+ * can render labels and the chat route can resolve slugs. Order = try order.
+ */
+export const CHAT_MODEL_CATALOG: {
+  key: ChatModelKey;
+  label: string;
+  hint: string;
+  nim: string;
+  openrouter: string;
+}[] = [
+  {
+    key: "lightning",
+    label: "Lightning",
+    hint: "Fastest, lightweight",
+    nim: "nvidia/nemotron-3.5-lightning-30b-a3b",
+    openrouter: "nvidia/nemotron-3.5-lightning:free",
+  },
+  {
+    key: "omni",
+    label: "Omni",
+    hint: "Balanced reasoning",
+    nim: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning",
+    openrouter: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
+  },
+  {
+    key: "ultra",
+    label: "Ultra",
+    hint: "Most capable, slower",
+    nim: "nvidia/nemotron-3-ultra-550b-a55b",
+    openrouter: "nvidia/nemotron-3-ultra-550b-a55b:free",
+  },
+];
 
 export type SocialKey = keyof SiteSettings["socials"];
 
@@ -248,5 +302,10 @@ export const DEFAULT_SETTINGS: SiteSettings = {
   // NVIDIA NIM is the default — it's the faster, more reliable provider.
   chatbot: {
     provider: "nim",
+    thinkingMode: "default",
+    fastModels: ["lightning", "omni"],
+    thinkingModels: ["omni", "ultra"],
+    raceModels: false,
+    verbose: false,
   },
 };

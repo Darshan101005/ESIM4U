@@ -5,7 +5,7 @@ import { CHATBOT_KNOWLEDGE } from "@/lib/chatbot-knowledge";
 import { buildUserContext } from "@/lib/chatbot-context";
 import { detectPlanTarget, fetchPlansText } from "@/lib/chatbot-plans";
 import { getSiteSettings } from "@/lib/site-settings";
-import { toWaLink } from "@/lib/site-settings-types";
+import { toWaLink, CHAT_MODEL_CATALOG, type ChatModelKey } from "@/lib/site-settings-types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -13,16 +13,20 @@ export const dynamic = "force-dynamic";
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 const NIM_URL = "https://integrate.api.nvidia.com/v1/chat/completions";
 
-// Model options per provider. The active provider is chosen by the admin in
-// Manage Website (NVIDIA NIM or OpenRouter) — we use only that provider, with
-// a fast (non-thinking) model and a thinking model. (NIM slugs have no ":free"
-// suffix; OpenRouter free-tier slugs do.)
-const OR_FAST = ["nvidia/nemotron-3.5-lightning:free", "nvidia/nemotron-3-ultra-550b-a55b:free"];
-const OR_THINK = ["nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free", "nvidia/nemotron-3-ultra-550b-a55b:free"];
-const NIM_FAST = ["nvidia/nemotron-3.5-lightning-30b-a3b", "nvidia/nemotron-3-ultra-550b-a55b"];
-const NIM_THINK = ["nvidia/nemotron-3-nano-omni-30b-a3b-reasoning", "nvidia/nemotron-3-ultra-550b-a55b"];
+// Candidate models are admin-selected per mode (Developer settings in Manage
+// Website) and resolved to real slugs via CHAT_MODEL_CATALOG. Defaults used if
+// an admin somehow saves an empty list.
+const DEFAULT_FAST: ChatModelKey[] = ["lightning", "omni"];
+const DEFAULT_THINK: ChatModelKey[] = ["omni", "ultra"];
 
-type Endpoint = { url: string; key: string; accept?: string; makeBody: (messages: unknown) => string };
+type Endpoint = {
+  url: string;
+  key: string;
+  provider: "nim" | "openrouter";
+  model: string;
+  accept?: string;
+  makeBody: (messages: unknown) => string;
+};
 
 // Hard backstop: never let the underlying model/provider names leak, no matter
 // what the model says or how it's prompt-injected. Applied to all streamed text.
@@ -159,7 +163,6 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json().catch(() => ({}));
   const incoming: ChatMsg[] = Array.isArray(body?.messages) ? body.messages : [];
-  const reasoningEnabled = body?.reasoning === true;
   const history = incoming
     .filter((m) => m && (m.role === "user" || m.role === "assistant") && typeof m.content === "string")
     .slice(-10)
@@ -175,29 +178,52 @@ export async function POST(req: NextRequest) {
   const lastUser = history[history.length - 1].content;
   const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-  // Build the provider fallback chain: OpenRouter free tier first, then NVIDIA
-  // NIM. Whichever connects first wins, so the chat keeps working even when
-  // OpenRouter's free daily limit is hit.
-  const maxTokens = reasoningEnabled ? 1400 : 600;
-
-  // Which provider to use is chosen by the admin in Manage Website — there is
-  // NO cross-provider auto-routing (that caused inconsistent latency). We use
-  // only the selected provider; the other is a fallback ONLY if the selected
-  // one has no API key configured, so the chat can't go fully dark.
+  // Provider + developer settings are chosen by the admin in Manage Website.
+  // There's NO cross-provider auto-routing; the other provider is only a
+  // fallback when the selected one has no API key, so the chat can't go dark.
   let selectedProvider: "nim" | "openrouter" = "nim";
+  let thinkingMode: "default" | "on" | "off" = "default";
+  let verbose = false;
+  let raceModels = false;
+  let fastKeys: ChatModelKey[] = DEFAULT_FAST;
+  let thinkKeys: ChatModelKey[] = DEFAULT_THINK;
   try {
     const s = await getSiteSettings();
-    if (s.chatbot?.provider === "openrouter") selectedProvider = "openrouter";
+    const c = s.chatbot;
+    if (c?.provider === "openrouter") selectedProvider = "openrouter";
+    if (c?.thinkingMode === "on" || c?.thinkingMode === "off") thinkingMode = c.thinkingMode;
+    verbose = c?.verbose === true;
+    raceModels = c?.raceModels === true;
+    if (Array.isArray(c?.fastModels) && c.fastModels.length) fastKeys = c.fastModels;
+    if (Array.isArray(c?.thinkingModels) && c.thinkingModels.length) thinkKeys = c.thinkingModels;
   } catch {
-    // keep default
+    // keep defaults
   }
+
+  // Resolve the effective thinking mode: admin can force it on/off, otherwise
+  // it follows what the visitor toggled in the widget.
+  const reasoningEnabled = thinkingMode === "on" ? true : thinkingMode === "off" ? false : body?.reasoning === true;
+  const maxTokens = reasoningEnabled ? 1400 : 600;
+
+  // The models to try, in the admin's chosen PRIORITY order (first = highest).
+  const wantedKeys = reasoningEnabled ? thinkKeys : fastKeys;
+  const catalogByKey = new Map(CHAT_MODEL_CATALOG.map((m) => [m.key, m]));
+  const orderedModels = wantedKeys
+    .map((k) => catalogByKey.get(k))
+    .filter((m): m is (typeof CHAT_MODEL_CATALOG)[number] => Boolean(m));
+  const activeModels = orderedModels.length
+    ? orderedModels
+    : (reasoningEnabled ? DEFAULT_THINK : DEFAULT_FAST).map((k) => catalogByKey.get(k)!);
 
   const pushNim = (list: Endpoint[]) => {
     if (!nimKey) return;
-    for (const model of reasoningEnabled ? NIM_THINK : NIM_FAST) {
+    for (const m of activeModels) {
+      const model = m.nim;
       list.push({
         url: NIM_URL,
         key: nimKey,
+        provider: "nim",
+        model,
         accept: "text/event-stream",
         makeBody: (messages) =>
           JSON.stringify({
@@ -215,10 +241,13 @@ export async function POST(req: NextRequest) {
   };
   const pushOpenRouter = (list: Endpoint[]) => {
     if (!orKey) return;
-    for (const model of reasoningEnabled ? OR_THINK : OR_FAST) {
+    for (const m of activeModels) {
+      const model = m.openrouter;
       list.push({
         url: OPENROUTER_URL,
         key: orKey,
+        provider: "openrouter",
+        model,
         makeBody: (messages) =>
           JSON.stringify({
             model,
@@ -240,6 +269,12 @@ export async function POST(req: NextRequest) {
     pushOpenRouter(endpoints);
     if (endpoints.length === 0) pushNim(endpoints); // key-missing safety net
   }
+
+  // Debug (only when verbose is on): provider chosen + candidate model order.
+  const debugLine = `selected=${selectedProvider} thinkingMode=${thinkingMode} thinking=${reasoningEnabled} candidates=[${endpoints
+    .map((e) => `${e.provider}:${e.model}`)
+    .join(", ")}]`;
+  if (verbose) console.log(`[chat] ${debugLine}`);
 
   // Connect to one endpoint (no timeout — a slow model is fine). One quick retry
   // on a transient 429/5xx, otherwise move on to the next endpoint/provider.
@@ -304,23 +339,71 @@ export async function POST(req: NextRequest) {
         const liveInfo = await buildLiveInfo();
         const messages = [{ role: "system", content: buildSystemPrompt(userContext, liveInfo, plansInfo) }, ...history];
 
+        // Surface debug info to the browser console when verbose mode is on.
+        if (verbose) emit(controller, { t: "d", v: debugLine });
+
         // ---- Orchestrator: first model that connects and yields a first token
         // wins. No timeouts — a slow model is fine; we only move on if a model
         // can't connect or returns nothing.
-        let activeReader: ReadableStreamDefaultReader<Uint8Array> | null = null;
-        let firstChunk: Uint8Array | undefined;
+        type Win = { ep: Endpoint; reader: ReadableStreamDefaultReader<Uint8Array>; firstChunk: Uint8Array };
 
-        for (const ep of endpoints) {
+        // Attempt one endpoint: connect + read the first chunk. Returns null if
+        // it can't connect or yields nothing (its reader is cancelled then).
+        const attempt = async (ep: Endpoint): Promise<Win | null> => {
           const r = await connect(ep, messages);
-          if (!r) continue;
+          if (!r) return null;
           const first = await r.read().catch(() => ({ done: true as const, value: undefined }));
           if (first.done || !first.value) {
             r.cancel().catch(() => {});
-            continue;
+            return null;
           }
-          activeReader = r;
-          firstChunk = first.value;
-          break;
+          return { ep, reader: r, firstChunk: first.value };
+        };
+
+        let win: Win | null = null;
+
+        if (raceModels && endpoints.length > 1) {
+          // Race: fire every candidate at once, the first to yield a token wins,
+          // and the losers are cancelled.
+          win = await new Promise<Win | null>((resolve) => {
+            let remaining = endpoints.length;
+            let settled = false;
+            for (const ep of endpoints) {
+              attempt(ep)
+                .then((res) => {
+                  if (settled) {
+                    if (res) res.reader.cancel().catch(() => {});
+                    return;
+                  }
+                  if (res) {
+                    settled = true;
+                    resolve(res);
+                  } else if (--remaining === 0) {
+                    resolve(null);
+                  }
+                })
+                .catch(() => {
+                  if (!settled && --remaining === 0) resolve(null);
+                });
+            }
+          });
+        } else {
+          // Priority: try one at a time, the first that connects wins.
+          for (const ep of endpoints) {
+            const res = await attempt(ep);
+            if (res) {
+              win = res;
+              break;
+            }
+          }
+        }
+
+        const activeReader = win?.reader ?? null;
+        const firstChunk = win?.firstChunk;
+        if (win && verbose) {
+          const winLine = `answering via ${win.ep.provider.toUpperCase()} → model "${win.ep.model}" (${win.ep.url})${raceModels ? " [race]" : " [priority]"}`;
+          console.log(`[chat] ✅ ${winLine}`);
+          emit(controller, { t: "d", v: winLine });
         }
 
         if (!activeReader) {

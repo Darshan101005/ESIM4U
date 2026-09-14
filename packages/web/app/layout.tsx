@@ -73,6 +73,11 @@ export const metadata: Metadata = {
     title: "ESIM4U",
     statusBarStyle: "default",
   },
+  // Standards-based counterpart to apple-mobile-web-app-capable (which browsers
+  // now flag as deprecated). Emits <meta name="mobile-web-app-capable" ...>.
+  other: {
+    "mobile-web-app-capable": "yes",
+  },
   icons: {
     icon: [
       { url: "/favicon.ico", sizes: "any" },

@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { usePathname } from "next/navigation";
 import { X, Send, Loader2, RotateCcw, Brain, ChevronDown } from "lucide-react";
+import { useSiteSettings } from "@/lib/use-site-settings";
 
 interface Msg {
   role: "user" | "assistant";
@@ -125,6 +126,8 @@ export default function AiChatWidget() {
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [thinking, setThinking] = useState(false); // user-controlled reasoning mode
+  const settings = useSiteSettings();
+  const thinkingMode = settings.chatbot?.thinkingMode ?? "default"; // admin policy
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   // Hidden while the PWA install banner is on screen so they don't overlap at
@@ -140,6 +143,12 @@ export default function AiChatWidget() {
   useEffect(() => {
     if (open) scrollToBottom();
   }, [messages, open, scrollToBottom]);
+
+  // Admin can force thinking on/off; "default" leaves it to the visitor.
+  useEffect(() => {
+    if (thinkingMode === "on") setThinking(true);
+    else if (thinkingMode === "off") setThinking(false);
+  }, [thinkingMode]);
 
   useEffect(() => {
     const flag = (window as unknown as { __ESIM4U_INSTALL_OPEN__?: boolean }).__ESIM4U_INSTALL_OPEN__;
@@ -205,6 +214,9 @@ export default function AiChatWidget() {
             } else if (o.t === "c") {
               accC += o.v;
               patchLast({ content: accC, thinkingOpen: false });
+            } else if (o.t === "d") {
+              // Debug frame (only sent when admin verbose mode is on).
+              console.log("%c[eSIM4U chat]", "color:#FF561E;font-weight:bold", o.v);
             }
             // any other type (e.g. status) is ignored
             return;
@@ -402,18 +414,20 @@ export default function AiChatWidget() {
           {/* Input */}
           <div className="border-t border-gray-100 p-2.5 bg-white shrink-0">
             <div className="flex items-end gap-2">
-              <button
-                onClick={() => setThinking((v) => !v)}
-                aria-pressed={thinking}
-                title={thinking ? "Thinking mode ON (slower, shows reasoning)" : "Thinking mode OFF (faster)"}
-                className={`w-10 h-10 shrink-0 rounded-xl flex items-center justify-center border transition-colors ${
-                  thinking
-                    ? "bg-[#FFF4F0] border-[#FF561E] text-[#FF561E]"
-                    : "bg-white border-gray-200 text-[#9CA3AF] hover:text-[#6B7280]"
-                }`}
-              >
-                <Brain className="w-4.5 h-4.5" />
-              </button>
+              {thinkingMode === "default" && (
+                <button
+                  onClick={() => setThinking((v) => !v)}
+                  aria-pressed={thinking}
+                  title={thinking ? "Thinking mode ON (slower, shows reasoning)" : "Thinking mode OFF (faster)"}
+                  className={`w-10 h-10 shrink-0 rounded-xl flex items-center justify-center border transition-colors ${
+                    thinking
+                      ? "bg-[#FFF4F0] border-[#FF561E] text-[#FF561E]"
+                      : "bg-white border-gray-200 text-[#9CA3AF] hover:text-[#6B7280]"
+                  }`}
+                >
+                  <Brain className="w-4.5 h-4.5" />
+                </button>
+              )}
               <textarea
                 ref={inputRef}
                 value={input}

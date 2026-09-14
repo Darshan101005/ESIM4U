@@ -2,11 +2,17 @@
 
 import AdminTopbar from "@/components/admin/admin-topbar";
 import { useCallback, useEffect, useState } from "react";
-import { Loader2, Mail, Phone, Share2, ToggleRight, Save, Wrench, FileText, Eye, Pencil, Bot } from "lucide-react";
+import { Loader2, Mail, Phone, Share2, ToggleRight, Save, Wrench, FileText, Eye, Pencil, Bot, ChevronDown } from "lucide-react";
 import toast from "react-hot-toast";
-import { DEFAULT_SETTINGS, type SiteSettings, type ChatbotProvider } from "@/lib/site-settings-types";
+import {
+  DEFAULT_SETTINGS,
+  type SiteSettings,
+  type ChatbotProvider,
+  type ThinkingMode,
+} from "@/lib/site-settings-types";
 import MarkdownContent from "@/components/markdown-content";
 import SelectMenu from "@/components/admin/select-menu";
+import ModelPriorityList from "@/components/admin/model-priority-list";
 
 const inputCls =
   "w-full px-3.5 py-2.5 rounded-xl bg-[#F9FAFB] border border-gray-200 text-[13.5px] text-[#1A1D20] outline-none focus:border-[#FF561E] focus:ring-2 focus:ring-[#FF561E]/10 transition-all";
@@ -45,6 +51,8 @@ export default function ManageWebsitePage() {
   const [legalOpen, setLegalOpen] = useState(false);
   const [savingLegal, setSavingLegal] = useState(false);
   const [savingChatbot, setSavingChatbot] = useState(false);
+  const [savingDev, setSavingDev] = useState(false);
+  const [devOpen, setDevOpen] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -62,7 +70,7 @@ export default function ManageWebsitePage() {
     load();
   }, [load]);
 
-  const put = useCallback(async (partial: Partial<SiteSettings>) => {
+  const put = useCallback(async (partial: Partial<Omit<SiteSettings, "chatbot">> & { chatbot?: Partial<SiteSettings["chatbot"]> }) => {
     const res = await fetch("/api/admin/settings/site", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -145,6 +153,30 @@ export default function ManageWebsitePage() {
       toast.error(e instanceof Error ? e.message : "Save failed");
     } finally {
       setSavingLegal(false);
+    }
+  };
+
+  const saveDevSettings = async () => {
+    if (settings.chatbot.fastModels.length === 0 || settings.chatbot.thinkingModels.length === 0) {
+      toast.error("Pick at least one model for each mode");
+      return;
+    }
+    setSavingDev(true);
+    try {
+      await put({
+        chatbot: {
+          thinkingMode: settings.chatbot.thinkingMode,
+          fastModels: settings.chatbot.fastModels,
+          thinkingModels: settings.chatbot.thinkingModels,
+          raceModels: settings.chatbot.raceModels,
+          verbose: settings.chatbot.verbose,
+        },
+      });
+      toast.success("Developer settings saved");
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Save failed");
+    } finally {
+      setSavingDev(false);
     }
   };
 
@@ -295,6 +327,83 @@ export default function ManageWebsitePage() {
               <p className="text-[12px] text-[#6B7280] mt-2">
                 Currently using: <span className="font-semibold text-[#1A1D20]">{settings.chatbot.provider === "nim" ? "NVIDIA NIM" : "OpenRouter"}</span>.
               </p>
+
+              {/* Developer settings (collapsed by default to keep the page short) */}
+              <div className="mt-6 pt-5 border-t border-gray-100">
+                <button
+                  type="button"
+                  onClick={() => setDevOpen((v) => !v)}
+                  className="w-full flex items-center justify-between gap-3 text-left"
+                  aria-expanded={devOpen}
+                >
+                  <span>
+                    <span className="block text-[13.5px] font-bold text-[#1A1D20]">Developer settings</span>
+                    <span className="block text-[12px] text-[#6B7280]">Thinking mode, candidate models and debugging.</span>
+                  </span>
+                  <ChevronDown className={`w-5 h-5 text-[#6B7280] shrink-0 transition-transform ${devOpen ? "rotate-180" : ""}`} />
+                </button>
+
+                {devOpen && (
+                <div className="mt-5">
+                {/* Thinking mode policy */}
+                <label className={labelCls}>Thinking mode (for visitors)</label>
+                <SelectMenu
+                  value={settings.chatbot.thinkingMode}
+                  onChange={(v) => setSettings((s) => ({ ...s, chatbot: { ...s.chatbot, thinkingMode: v as ThinkingMode } }))}
+                  options={[
+                    { value: "default", label: "Default — user can switch it on/off" },
+                    { value: "on", label: "Always on — user can't turn it off" },
+                    { value: "off", label: "Always off — thinking disabled" },
+                  ]}
+                />
+
+                {/* Candidate models — non-thinking */}
+                <div className="mt-5">
+                  <label className={labelCls}>Models for normal (non-thinking) replies</label>
+                  <p className="text-[11.5px] text-[#6B7280] mb-2">Drag to set priority (top = tried first). Add or remove models below.</p>
+                  <ModelPriorityList
+                    value={settings.chatbot.fastModels}
+                    onChange={(next) => setSettings((s) => ({ ...s, chatbot: { ...s.chatbot, fastModels: next } }))}
+                  />
+                </div>
+
+                {/* Candidate models — thinking */}
+                <div className="mt-5">
+                  <label className={labelCls}>Models for thinking replies</label>
+                  <p className="text-[11.5px] text-[#6B7280] mb-2">Used when thinking mode is on. Drag to set priority.</p>
+                  <ModelPriorityList
+                    value={settings.chatbot.thinkingModels}
+                    onChange={(next) => setSettings((s) => ({ ...s, chatbot: { ...s.chatbot, thinkingModels: next } }))}
+                  />
+                </div>
+
+                {/* Race vs priority */}
+                <div className="mt-5 flex items-center justify-between gap-4">
+                  <div className="min-w-0">
+                    <p className="text-[13.5px] font-semibold text-[#1A1D20]">Query all selected models at once</p>
+                  </div>
+                  <Toggle on={settings.chatbot.raceModels} onChange={(v) => setSettings((s) => ({ ...s, chatbot: { ...s.chatbot, raceModels: v } }))} />
+                </div>
+
+                {/* Verbosity */}
+                <div className="mt-5 flex items-center justify-between gap-4">
+                  <div className="min-w-0">
+                    <p className="text-[13.5px] font-semibold text-[#1A1D20]">Verbose console logging</p>
+                    <p className="text-[12px] text-[#6B7280]">When on, the chat prints the provider and model it used to the visitor&apos;s browser console. Keep off for a silent, clean experience.</p>
+                  </div>
+                  <Toggle on={settings.chatbot.verbose} onChange={(v) => setSettings((s) => ({ ...s, chatbot: { ...s.chatbot, verbose: v } }))} />
+                </div>
+
+                <button
+                  onClick={saveDevSettings}
+                  disabled={savingDev}
+                  className="mt-5 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#FF561E] text-white text-[13px] font-bold hover:bg-[#E04B18] transition-colors disabled:opacity-70"
+                >
+                  {savingDev ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} Save developer settings
+                </button>
+                </div>
+                )}
+              </div>
             </section>
 
             {/* Maintenance mode */}
