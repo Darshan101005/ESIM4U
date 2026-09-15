@@ -3,6 +3,7 @@ import {
   getOTPEmailTemplate,
   getVerificationSuccessTemplate,
   getOrderReadyTemplate,
+  getWalletTopupTemplate,
 } from "@/lib/email-templates";
 import { CURRENCY_SYMBOLS } from "@/lib/fx";
 
@@ -90,6 +91,43 @@ function formatMoney(amountUsd: number, currency?: string | null, rate?: string 
  * details, invoice, activation info, and the QR attached as a PNG. This is the
  * only order email the customer receives — MontyeSIM's is suppressed.
  */
+export interface WalletTopupEmailParams {
+  email: string;
+  name: string;
+  /** Amount added, in the currency the customer was charged. */
+  displayAmount: number;
+  displayCurrency?: string | null;
+  /** New balance in canonical USD; converted to the display currency for the email. */
+  newBalanceUsd: number;
+  displayRate?: string | number | null;
+  method: "stripe" | "paypal";
+}
+
+/** Confirmation email after a wallet top-up completes. */
+export async function sendWalletTopupEmail(params: WalletTopupEmailParams) {
+  const cur = (params.displayCurrency || "USD").toUpperCase();
+  const symbol = CURRENCY_SYMBOLS[cur as keyof typeof CURRENCY_SYMBOLS] ?? "";
+  const rate = params.displayRate != null ? Number(params.displayRate) : 1;
+  const r = Number.isFinite(rate) && rate > 0 ? rate : 1;
+  const addedText = `${symbol}${params.displayAmount.toFixed(2)}`;
+  const balanceText = `${symbol}${(params.newBalanceUsd * r).toFixed(2)}`;
+
+  const html = getWalletTopupTemplate({
+    name: params.name,
+    addedText,
+    balanceText,
+    method: params.method === "paypal" ? "PayPal" : "Card",
+  });
+
+  await resend.emails.send({
+    from: EMAIL_FROM,
+    replyTo: EMAIL_REPLY_TO,
+    to: [params.email],
+    subject: "Wallet topped up - eSIM4U",
+    html,
+  });
+}
+
 export async function sendOrderReadyEmail(params: OrderReadyEmailParams) {
   const isTopup = Boolean(params.isTopup);
   const attachment = isTopup ? null : qrAttachment(params.qrDataUrl);

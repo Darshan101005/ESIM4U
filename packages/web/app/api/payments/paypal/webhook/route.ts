@@ -6,6 +6,7 @@ import {
   capturePaypalOrder,
 } from "@/lib/paypal";
 import { fulfillPaypalSession, cancelPaypalSession } from "@/lib/fulfillment";
+import { paypalTopupExists, completePaypalTopup, cancelPaypalTopup } from "@/lib/wallet-topup";
 
 /**
  * PayPal webhook — a safety net behind the confirm-on-return flow.
@@ -55,6 +56,43 @@ export async function POST(request: NextRequest) {
   try {
     const type = event.event_type || "";
     const resource = event.resource || {};
+
+    // Wallet top-ups share PayPal's order/capture events but must credit the
+    // wallet (not fulfil an eSIM order). Route them here first.
+    const maybeTopupId = extractOrderId(resource);
+    if (maybeTopupId && (await paypalTopupExists(maybeTopupId))) {
+      if (type === "CHECKOUT.ORDER.APPROVED" || type === "PAYMENT.CAPTURE.COMPLETED") {
+        const info = await getPaypalOrder(maybeTopupId);
+        if (info.status === "APPROVED") {
+          try {
+            const { status, details } = await capturePaypalOrder(maybeTopupId);
+            if (status === "COMPLETED") await completePaypalTopup(maybeTopupId, details);
+          } catch {
+            const after = await getPaypalOrder(maybeTopupId);
+            if (after.status === "COMPLETED") {
+              await completePaypalTopup(maybeTopupId, {
+                orderId: maybeTopupId,
+                captureId: null,
+                payerEmail: after.payerEmail,
+                capturedValue: after.amount,
+                capturedCurrency: after.currency,
+              });
+            }
+          }
+        } else if (info.status === "COMPLETED") {
+          await completePaypalTopup(maybeTopupId, {
+            orderId: maybeTopupId,
+            captureId: (resource.id as string) || null,
+            payerEmail: info.payerEmail,
+            capturedValue: info.amount,
+            capturedCurrency: info.currency,
+          });
+        }
+      } else if (type === "PAYMENT.CAPTURE.DENIED" || type === "PAYMENT.CAPTURE.DECLINED") {
+        await cancelPaypalTopup(maybeTopupId);
+      }
+      return NextResponse.json({ received: true });
+    }
 
     switch (type) {
       case "CHECKOUT.ORDER.APPROVED": {

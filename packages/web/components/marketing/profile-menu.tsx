@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { LogOut, LayoutDashboard, Loader2 } from "lucide-react";
 import { signOutAndClear } from "@/lib/auth-client";
@@ -17,7 +16,6 @@ interface ProfileMenuProps {
  * UPPERCASE name, email, an edit-profile link and a logout action.
  */
 export default function ProfileMenu({ name, email }: ProfileMenuProps) {
-  const router = useRouter();
   const [loggingOut, setLoggingOut] = useState(false);
 
   const displayName = (name || "Account").toUpperCase();
@@ -27,11 +25,13 @@ export default function ProfileMenu({ name, email }: ProfileMenuProps) {
     setLoggingOut(true);
     try {
       await signOutAndClear();
-      router.push("/");
-      router.refresh();
     } catch {
-      setLoggingOut(false);
+      // ignore — we redirect regardless so the user always ends up logged out
     }
+    // Hard reload: router.push("/") was a no-op when already on "/", leaving the
+    // spinner stuck and the header showing the logged-in state. A full navigation
+    // guarantees the server re-renders logged-out (login/sign-up shown).
+    window.location.href = "/";
   };
 
   return (

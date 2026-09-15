@@ -3,15 +3,17 @@
 import DashboardTopbar from "@/components/dashboard/topbar";
 import { useEffect, useState, useCallback, useMemo } from "react";
 import Link from "next/link";
-import { Loader2, ArrowLeftRight, ArrowUpRight, CreditCard, Hash, Receipt, ExternalLink, RotateCcw, Info } from "lucide-react";
+import { Loader2, ArrowLeftRight, ArrowUpRight, CreditCard, Hash, Receipt, ExternalLink, RotateCcw, Info, Wallet } from "lucide-react";
 import { CURRENCY_SYMBOLS, SupportedCurrency } from "@/lib/fx";
-import { buildPaymentRows, type PaymentRow } from "@/lib/payment-details";
+import { buildPaymentRows, buildTopupPaymentRows, type PaymentRow } from "@/lib/payment-details";
 
 interface Transaction {
   id: number;
+  kind?: "order" | "topup";
+  provider?: string;
   bundle_name?: string;
   country?: string;
-  order_reference: string;
+  order_reference?: string;
   stripe_session_id?: string;
   stripe_payment_intent?: string;
   display_currency?: string;
@@ -64,7 +66,7 @@ function pillMeta(status: string): { label: string; cls: string } {
     case "rejected":
       return { label: "Rejected", cls: "bg-red-50 text-red-500" };
     case "refunded":
-      return { label: "Refunded", cls: "bg-blue-50 text-blue-600" };
+      return { label: "Refunded", cls: "bg-gray-100 text-[#6B7280]" };
     case "refund_failed":
       return { label: "Refund Failed", cls: "bg-red-50 text-red-500" };
     case "cancelled":
@@ -132,10 +134,25 @@ export default function TransactionsPage() {
 
   const load = useCallback(async () => {
     try {
-      const res = await fetch("/api/orders");
-      if (!res.ok) throw new Error();
-      const data = await res.json();
-      setTxns(data.orders || []);
+      // Orders + wallet top-ups are both transactions — merge them into one feed.
+      const [ordersRes, topupsRes] = await Promise.all([
+        fetch("/api/orders"),
+        fetch("/api/wallet/topups").catch(() => null),
+      ]);
+      if (!ordersRes.ok) throw new Error();
+      const ordersData = await ordersRes.json();
+      const orders: Transaction[] = (ordersData.orders || []).map((o: Transaction) => ({ ...o, kind: "order" as const }));
+
+      let topups: Transaction[] = [];
+      if (topupsRes && topupsRes.ok) {
+        const t = await topupsRes.json();
+        topups = t.topups || [];
+      }
+
+      const merged = [...orders, ...topups].sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+      setTxns(merged);
     } catch {
       setTxns([]);
     } finally {
@@ -196,21 +213,35 @@ export default function TransactionsPage() {
               <div className="space-y-3">
                 {filtered.map((t) => {
                   const pill = pillMeta(t.status);
-                  const rows = buildPaymentRows(t, "customer");
+                  const isTopup = t.kind === "topup";
+                  const rows = isTopup
+                    ? buildTopupPaymentRows({
+                        provider: t.provider,
+                        status: t.status,
+                        stripe_payment_intent: t.stripe_payment_intent,
+                        paypal_capture_id: t.paypal_capture_id,
+                        receipt_url: t.receipt_url,
+                      })
+                    : buildPaymentRows(t, "customer");
+                  const Icon = isTopup ? Wallet : ArrowUpRight;
                   return (
-                    <div key={t.id} className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-5">
+                    <div key={`${t.kind ?? "order"}-${t.id}`} className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-5">
                       <div className="flex items-center justify-between gap-3">
                         <div className="flex items-center gap-3 min-w-0">
                           <div className="w-10 h-10 rounded-xl bg-[#FFF4F0] flex items-center justify-center shrink-0">
-                            <ArrowUpRight className="w-5 h-5 text-[#FF561E]" strokeWidth={2.2} />
+                            <Icon className="w-5 h-5 text-[#FF561E]" strokeWidth={2.2} />
                           </div>
                           <div className="min-w-0">
                             <p className="text-[14px] font-semibold text-[#1A1D20] truncate">{t.bundle_name || t.country || "eSIM purchase"}</p>
-                            <p className="text-[11.5px] text-[#6B7280]">{new Date(t.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</p>
+                            <p className="text-[11.5px] text-[#6B7280]">
+                              {new Date(t.created_at).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit", hour12: true })}
+                            </p>
                           </div>
                         </div>
                         <div className="flex flex-col items-end gap-1.5 shrink-0">
-                          <p className="text-[15px] font-bold text-[#1A1D20]">{lockedAmount(t)}</p>
+                          <p className={`text-[15px] font-bold ${isTopup ? "text-emerald-600" : "text-[#1A1D20]"}`}>
+                            {isTopup ? "+" : ""}{lockedAmount(t)}
+                          </p>
                           <span className={`inline-flex px-2.5 py-1 rounded-full text-[11px] font-semibold ${pill.cls}`}>{pill.label}</span>
                         </div>
                       </div>

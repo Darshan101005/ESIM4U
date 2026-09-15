@@ -69,6 +69,36 @@ export function paymentMethodLabel(o: PaymentOrderLike): string {
   return method || gateway || "—";
 }
 
+export interface TopupLike {
+  provider?: string | null;
+  status: string;
+  stripe_payment_intent?: string | null;
+  paypal_capture_id?: string | null;
+  receipt_url?: string | null;
+}
+
+/**
+ * Payment rows for a wallet TOP-UP (money entering the wallet from Stripe or
+ * PayPal). Unlike a wallet-*paid* order, a top-up has a real external gateway
+ * transaction id + receipt, so we surface them here.
+ */
+export function buildTopupPaymentRows(t: TopupLike): PaymentRow[] {
+  const rows: PaymentRow[] = [];
+  const paid = t.status === "completed";
+  const isPp = t.provider === "paypal";
+
+  rows.push({ label: "Payment Method", value: isPp ? "PayPal" : "Card · Stripe" });
+  if (paid) {
+    if (isPp) {
+      if (t.paypal_capture_id) rows.push({ label: "PayPal Transaction ID", value: t.paypal_capture_id, mono: true });
+    } else if (t.stripe_payment_intent) {
+      rows.push({ label: "Stripe Transaction ID", value: t.stripe_payment_intent, mono: true });
+    }
+  }
+  if (t.receipt_url) rows.push({ label: "Receipt", value: "View receipt", href: t.receipt_url });
+  return rows;
+}
+
 export function buildPaymentRows(o: PaymentOrderLike, audience: "customer" | "admin"): PaymentRow[] {
   const rows: PaymentRow[] = [];
   const paid = isPaidStatus(o.status);

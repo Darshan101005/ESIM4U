@@ -6,6 +6,7 @@ import { validateAffiliateCode, recordAffiliateSale } from "@/lib/affiliate";
 import { stripe, StripePaymentDetails } from "@/lib/stripe";
 import { refundPaypalCapture, PaypalPaymentDetails } from "@/lib/paypal";
 import { ensureOrderPaymentColumns } from "@/lib/orders-schema";
+import { PENDING_EXPIRED_REASON } from "@/lib/order-lifecycle";
 import { creditWallet } from "@/lib/wallet";
 import { sendOrderReadyEmail } from "@/lib/email";
 import { qualifyReferralIfEligible, refundReferralForOrders } from "@/lib/referral";
@@ -230,9 +231,15 @@ export async function fulfillSession(stripeSessionId: string, payment?: StripePa
 
   // Atomically claim the pending rows so a concurrent caller (e.g. webhook +
   // confirm-on-return firing together) can't process the same eSIM twice.
+  // Claim pending rows, plus any the 30-min sweep flagged as expired ('failed'
+  // with the expiry reason) — a real payment can land after expiry, and it must
+  // still be fulfilled. Orders 'failed' for other reasons (provisioning failed,
+  // already refunded) are deliberately excluded so they're never re-provisioned.
   const claim = await pool.query(
-    `UPDATE orders SET status = 'processing' WHERE stripe_session_id = $1 AND status = 'pending' RETURNING *`,
-    [stripeSessionId]
+    `UPDATE orders SET status = 'processing'
+     WHERE stripe_session_id = $1 AND (status = 'pending' OR (status = 'failed' AND status_reason = $2))
+     RETURNING *`,
+    [stripeSessionId, PENDING_EXPIRED_REASON]
   );
   const pending = claim.rows as OrderRow[];
 
@@ -536,9 +543,14 @@ export async function fulfillPaypalSession(paypalOrderId: string, payment: Paypa
   const rows = res.rows as OrderRow[];
   if (rows.length === 0) return [];
 
+  // Same as fulfillSession: also reclaim orders the sweep expired, since a real
+  // PayPal capture can complete after the 30-min window. Provisioning-failed /
+  // refunded orders (different status_reason) are never re-provisioned.
   const claim = await pool.query(
-    `UPDATE orders SET status = 'processing' WHERE paypal_order_id = $1 AND status = 'pending' RETURNING *`,
-    [paypalOrderId]
+    `UPDATE orders SET status = 'processing'
+     WHERE paypal_order_id = $1 AND (status = 'pending' OR (status = 'failed' AND status_reason = $2))
+     RETURNING *`,
+    [paypalOrderId, PENDING_EXPIRED_REASON]
   );
   const pending = claim.rows as OrderRow[];
 

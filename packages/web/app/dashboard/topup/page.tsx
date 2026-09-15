@@ -39,6 +39,10 @@ interface WalletTx {
 const PRESETS = [10, 25, 50, 100];
 const DEFAULT_AMOUNT = 10;
 
+// Public flags (inlined at build) decide which pay methods to offer.
+const STRIPE_ON = Boolean(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
+const PAYPAL_ON = Boolean(process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID);
+
 type HistFilter = "current_month" | "previous_month" | "last_6_months" | "all";
 
 const HIST_FILTERS: { key: HistFilter; label: string }[] = [
@@ -102,6 +106,7 @@ export default function TopUpPage() {
   const [amount, setAmount] = useState<string>(String(DEFAULT_AMOUNT));
   const [starting, setStarting] = useState(false);
   const [histFilter, setHistFilter] = useState<HistFilter>("all");
+  const [method, setMethod] = useState<"stripe" | "paypal">(STRIPE_ON ? "stripe" : "paypal");
 
   const filteredHistory = useMemo(
     () => history.filter((tx) => inPeriod(tx.created_at, histFilter)),
@@ -154,7 +159,7 @@ export default function TopUpPage() {
       const res = await fetch("/api/wallet/topup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount: numericAmount, display_currency: currency }),
+        body: JSON.stringify({ amount: numericAmount, display_currency: currency, method }),
       });
       const data = await res.json();
       if (!res.ok || !data.url) throw new Error(data.error || "Could not start top-up");
@@ -267,9 +272,37 @@ export default function TopUpPage() {
                 className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-[#FF561E] text-white text-[14px] font-bold hover:bg-[#E04B18] transition-colors shadow-sm shadow-orange-500/20 disabled:opacity-70 shrink-0"
               >
                 {starting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-                {starting ? "Starting..." : "Add money"}
+                {starting ? "Starting..." : method === "paypal" ? "Pay with PayPal" : "Add money"}
               </button>
             </div>
+
+            {/* Payment method — only shown when both gateways are available */}
+            {STRIPE_ON && PAYPAL_ON && (
+              <div className="mt-4">
+                <label className="block text-[13px] font-semibold text-[#6B7280] mb-2">Payment method</label>
+                <div className="grid grid-cols-2 gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => setMethod("stripe")}
+                    className={`flex items-center justify-center gap-2 py-2.5 rounded-xl border text-[13.5px] font-bold transition-all ${
+                      method === "stripe" ? "border-[#FF561E] bg-[#FFF4F0] text-[#FF561E]" : "border-gray-200 text-[#1A1D20] hover:border-orange-200"
+                    }`}
+                  >
+                    <CreditCard className="w-4 h-4" /> Card
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMethod("paypal")}
+                    className={`flex items-center justify-center gap-2 py-2.5 rounded-xl border text-[13.5px] font-bold transition-all ${
+                      method === "paypal" ? "border-[#FF561E] bg-[#FFF4F0] text-[#FF561E]" : "border-gray-200 text-[#1A1D20] hover:border-orange-200"
+                    }`}
+                  >
+                    PayPal
+                  </button>
+                </div>
+              </div>
+            )}
+
               <p className="text-[12px] text-[#6B7280] mt-3">
                 Charged in {currency} through our secure payment gateway. Balance can be used at checkout to buy any eSIM.
               </p>

@@ -4,12 +4,13 @@ import DashboardTopbar from "@/components/dashboard/topbar";
 import { useEffect, useState, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Loader2, Smartphone, ChevronRight, RefreshCw, X, Database, Clock, Plus } from "lucide-react";
+import { Loader2, Smartphone, ChevronRight, RefreshCw, X, Database, Clock, Plus, Ban, AlertTriangle } from "lucide-react";
 import toast from "react-hot-toast";
 import Flag from "@/components/dashboard/flag";
 import { Skeleton } from "@/components/dashboard/skeleton";
 import { useCart } from "@/lib/cart-context";
 import { useCurrency } from "@/lib/currency-context";
+import { esimStatusTone } from "@/lib/esim-status";
 
 interface EsimOrder {
   id: number;
@@ -41,11 +42,48 @@ interface TopupBundle {
 
 type EsimStatus = "active" | "not_started" | "expired" | "unknown";
 
-const FILTERS: { key: "all" | EsimStatus; label: string }[] = [
-  { key: "all", label: "All" },
-  { key: "active", label: "Active" },
-  { key: "not_started", label: "Plan Not Started" },
-  { key: "expired", label: "Expired" },
+/** A deleted/released eSIM profile can't be reused — no recharge possible. */
+function isDeletedProfile(profileStatus?: string): boolean {
+  if (!profileStatus) return false;
+  const s = profileStatus.toLowerCase();
+  return s.includes("delete") || s.includes("release");
+}
+
+// Each eSIM is tagged by BOTH its plan lifecycle and its eSIM (profile)
+// lifecycle, and appears under every filter it matches — so a plan-not-started
+// eSIM that was deleted shows under both "Plan Not Started" and "Deleted".
+const PLAN_TAG: Record<EsimStatus, { key: string; label: string }> = {
+  active: { key: "plan:active", label: "Active" },
+  not_started: { key: "plan:not_started", label: "Plan Not Started" },
+  expired: { key: "plan:expired", label: "Expired" },
+  unknown: { key: "plan:active", label: "Active" },
+};
+
+/** Maps a MontyeSIM profile_status to an eSIM-lifecycle filter tag. */
+function stateTag(profileStatus?: string): { key: string; label: string } | null {
+  if (!profileStatus) return null;
+  const s = profileStatus.toLowerCase();
+  if (s.includes("delete") || s.includes("terminat")) return { key: "state:deleted", label: "Deleted" };
+  if (s.includes("release")) return { key: "state:released", label: "Released" };
+  if (s.includes("disable")) return { key: "state:disabled", label: "Disabled" };
+  if (s.includes("download") || s.includes("install")) return { key: "state:installed", label: "Installed" };
+  if (s.includes("enable") || s.includes("active")) return { key: "state:enabled", label: "Enabled" };
+  return { key: `state:${s}`, label: profileStatus }; // surface any other live state verbatim
+}
+
+// Filter set. `always: true` chips are shown for every user (0 when none apply).
+// `always: false` chips (Installed / Released) only appear when an eSIM actually
+// has that state, so they don't clutter the bar when not applicable.
+const FILTER_DEFS: { key: string; label: string; always: boolean }[] = [
+  { key: "all", label: "All", always: true },
+  { key: "plan:active", label: "Active", always: true },
+  { key: "plan:not_started", label: "Plan Not Started", always: true },
+  { key: "plan:expired", label: "Expired", always: true },
+  { key: "state:enabled", label: "Enabled", always: true },
+  { key: "state:installed", label: "Installed", always: false },
+  { key: "state:disabled", label: "Disabled", always: true },
+  { key: "state:released", label: "Released", always: false },
+  { key: "state:deleted", label: "Deleted", always: true },
 ];
 
 function formatValidUntil(raw?: string): string {
@@ -77,15 +115,22 @@ const STATUS_META: Record<EsimStatus, { label: string; className: string }> = {
   unknown: { label: "Active", className: "bg-emerald-50 text-emerald-600" },
 };
 
+interface EsimLive {
+  plan: EsimStatus; // plan lifecycle for the pill
+  profileStatus?: string; // raw MontyeSIM eSIM lifecycle (Enabled/Deleted/Released…)
+  tags: { key: string; label: string }[]; // every filter this eSIM matches
+}
+
 export default function EsimsPage() {
   const router = useRouter();
   const { addToCart } = useCart();
   const { format } = useCurrency();
   const [orders, setOrders] = useState<EsimOrder[]>([]);
   const [loading, setLoading] = useState(true);
-  const [statusMap, setStatusMap] = useState<Record<number, EsimStatus>>({});
+  const [statusMap, setStatusMap] = useState<Record<number, EsimLive>>({});
   const [statusesLoaded, setStatusesLoaded] = useState(false);
-  const [filter, setFilter] = useState<"all" | EsimStatus>("all");
+  const [filter, setFilter] = useState<string>("all");
+  const [deletedWarnOpen, setDeletedWarnOpen] = useState(false);
 
   // Recharge / renew modal state.
   const [rechargeOrder, setRechargeOrder] = useState<EsimOrder | null>(null);
@@ -156,17 +201,23 @@ export default function EsimsPage() {
       setOrders(completed);
       setLoading(false);
 
-      // Live eSIM status per card
+      // Live eSIM status per card (plan lifecycle + eSIM profile lifecycle)
       const entries = await Promise.all(
         completed.map(async (o) => {
           try {
             const r = await fetch(`/api/orders/${o.id}`, { cache: "no-store" });
             const d = await r.json();
             const planStatus: string | undefined = d.consumption?.plan_status;
-            const status = planStatus ? fromPlanStatus(planStatus) : fromExpiry(o.bundle_expiry_date);
-            return [o.id, status === "unknown" ? fromExpiry(o.bundle_expiry_date) : status] as const;
+            const profileStatus: string | undefined = d.consumption?.profile_status;
+            let plan = planStatus ? fromPlanStatus(planStatus) : fromExpiry(o.bundle_expiry_date);
+            if (plan === "unknown") plan = fromExpiry(o.bundle_expiry_date);
+            const tags = [PLAN_TAG[plan]];
+            const st = stateTag(profileStatus);
+            if (st) tags.push(st);
+            return [o.id, { plan, profileStatus, tags }] as const;
           } catch {
-            return [o.id, fromExpiry(o.bundle_expiry_date)] as const;
+            const plan = fromExpiry(o.bundle_expiry_date);
+            return [o.id, { plan, tags: [PLAN_TAG[plan]] }] as const;
           }
         })
       );
@@ -183,23 +234,33 @@ export default function EsimsPage() {
     load();
   }, [load]);
 
-  const counts = useMemo(() => {
-    const c: Record<"all" | EsimStatus, number> = { all: orders.length, active: 0, not_started: 0, expired: 0, unknown: 0 };
+  // Build the chip list from whatever plan/eSIM states are actually present,
+  // plus per-tag counts. An eSIM counts under every tag it carries.
+  const { availableFilters, counts } = useMemo(() => {
+    const counts: Record<string, number> = { all: orders.length };
+    const labelMap: Record<string, string> = {};
     for (const o of orders) {
-      const s = statusMap[o.id];
-      if (!s) continue; // only count once the live status is known
-      c[s === "unknown" ? "active" : s]++;
+      const live = statusMap[o.id];
+      if (!live) continue;
+      for (const t of live.tags) {
+        counts[t.key] = (counts[t.key] || 0) + 1;
+        labelMap[t.key] = t.label;
+      }
     }
-    return c;
+    // Always-on chips plus the conditional ones (Installed/Released) only when
+    // present, plus any extra live state we didn't predefine so nothing hides.
+    const known = FILTER_DEFS.filter((f) => f.always || (counts[f.key] ?? 0) > 0).map(({ key, label }) => ({ key, label }));
+    const extras = Object.keys(labelMap)
+      .filter((k) => !FILTER_DEFS.some((f) => f.key === k))
+      .sort()
+      .map((k) => ({ key: k, label: labelMap[k] }));
+    const availableFilters = [...known, ...extras];
+    return { availableFilters, counts };
   }, [orders, statusMap]);
 
   const filtered = useMemo(() => {
     if (filter === "all") return orders;
-    return orders.filter((o) => {
-      const s = statusMap[o.id];
-      if (!s) return false;
-      return (s === "unknown" ? "active" : s) === filter;
-    });
+    return orders.filter((o) => statusMap[o.id]?.tags.some((t) => t.key === filter));
   }, [orders, filter, statusMap]);
 
   return (
@@ -221,7 +282,7 @@ export default function EsimsPage() {
         ) : (
           <>
             <div className="flex flex-wrap items-center gap-2 mb-5">
-              {FILTERS.map((f) => {
+              {availableFilters.map((f) => {
                 const active = filter === f.key;
                 return (
                   <button
@@ -232,7 +293,7 @@ export default function EsimsPage() {
                     }`}
                   >
                     {f.label}
-                    <span className={`text-[11px] font-bold ${active ? "text-[#FF561E]/70" : "text-gray-400"}`}>{counts[f.key]}</span>
+                    <span className={`text-[11px] font-bold ${active ? "text-[#FF561E]/70" : "text-gray-400"}`}>{counts[f.key] ?? 0}</span>
                   </button>
                 );
               })}
@@ -246,7 +307,9 @@ export default function EsimsPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {filtered.map((order) => {
                   const s = statusMap[order.id];
-                  const meta = STATUS_META[s ?? "unknown"];
+                  const meta = STATUS_META[s?.plan ?? "unknown"];
+                  const est = esimStatusTone(s?.profileStatus);
+                  const isDeleted = isDeletedProfile(s?.profileStatus);
                   return (
                     <div
                       key={order.id}
@@ -265,27 +328,47 @@ export default function EsimsPage() {
                         </div>
                         <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-[#FF561E] transition-colors shrink-0" />
                       </div>
-                      <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+                      <div className="flex items-center justify-between pt-4 border-t border-gray-100 gap-2">
                         {!s && !statusesLoaded ? (
                           <Skeleton className="h-[26px] w-28 rounded-full" />
                         ) : (
-                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold ${meta.className}`}>
-                            {meta.label}
-                          </span>
+                          <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold ${meta.className}`}>
+                              {meta.label}
+                            </span>
+                            {est && (
+                              <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border ${est.className}`}>
+                                <span className={`w-1.5 h-1.5 rounded-full ${est.dot}`} /> eSIM {est.label}
+                              </span>
+                            )}
+                          </div>
                         )}
                         {order.bundle_expiry_date && (
-                          <span className="text-[11px] text-[#6B7280] font-medium">Valid until {formatValidUntil(order.bundle_expiry_date)}</span>
+                          <span className="text-[11px] text-[#6B7280] font-medium shrink-0">Valid until {formatValidUntil(order.bundle_expiry_date)}</span>
                         )}
                       </div>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          openRecharge(order);
-                        }}
-                        className="mt-3 w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#FFF4F0] text-[#FF561E] text-[13px] font-bold hover:bg-[#FFE7DC] transition-colors"
-                      >
-                        <RefreshCw className="w-4 h-4" /> Recharge
-                      </button>
+                      {isDeleted ? (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeletedWarnOpen(true);
+                          }}
+                          className="mt-3 w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gray-100 text-[#9CA3AF] text-[13px] font-bold cursor-not-allowed"
+                          title="This eSIM is deleted and can't be recharged"
+                        >
+                          <Ban className="w-4 h-4" /> Recharge unavailable
+                        </button>
+                      ) : (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openRecharge(order);
+                          }}
+                          className="mt-3 w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#FFF4F0] text-[#FF561E] text-[13px] font-bold hover:bg-[#FFE7DC] transition-colors"
+                        >
+                          <RefreshCw className="w-4 h-4" /> Recharge
+                        </button>
+                      )}
                     </div>
                   );
                 })}
@@ -357,6 +440,40 @@ export default function EsimsPage() {
                   ))}
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Deleted eSIM — recharge not possible */}
+      {deletedWarnOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setDeletedWarnOpen(false)} />
+          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center">
+            <div className="w-14 h-14 rounded-2xl bg-red-50 flex items-center justify-center mx-auto mb-4">
+              <AlertTriangle className="w-7 h-7 text-red-500" strokeWidth={2} />
+            </div>
+            <h3 className="text-[17px] font-bold text-[#1A1D20]">This eSIM has been deleted</h3>
+            <p className="text-[13.5px] text-[#6B7280] leading-relaxed mt-2">
+              A deleted eSIM is permanently removed and can&apos;t be recharged, reinstalled, or used again. To reconnect,
+              please purchase a new eSIM.
+            </p>
+            <div className="mt-5 flex items-center gap-2">
+              <button
+                onClick={() => {
+                  setDeletedWarnOpen(false);
+                  router.push("/dashboard/browse");
+                }}
+                className="flex-1 px-4 py-2.5 rounded-xl bg-[#FF561E] text-white text-[13px] font-bold hover:bg-[#E04B18] transition-colors"
+              >
+                Browse eSIM plans
+              </button>
+              <button
+                onClick={() => setDeletedWarnOpen(false)}
+                className="px-4 py-2.5 rounded-xl border border-gray-200 text-[13px] font-semibold text-[#6B7280] hover:bg-gray-50 transition-colors"
+              >
+                Close
+              </button>
             </div>
           </div>
         </div>

@@ -10,6 +10,14 @@ import { refundReferralForOrders } from "@/lib/referral";
 export const PENDING_TTL_MINUTES = 30;
 
 /**
+ * The exact status_reason stamped on orders the expiry sweep abandons. Kept as a
+ * constant so fulfilment can tell "swept as expired" apart from "provisioning
+ * failed" — a late-landing payment on an expired order must still be fulfilled,
+ * but a genuinely failed+refunded order must never be re-provisioned.
+ */
+export const PENDING_EXPIRED_REASON = "Payment was not completed in time";
+
+/**
  * Marks abandoned card/PayPal `pending` orders as `failed` once they pass the
  * TTL. "Sweep on read" pattern — cheap, indexed UPDATE we run before listing
  * orders or starting a new checkout, so no background cron is required.
@@ -21,12 +29,12 @@ export async function expireStalePendingOrders(): Promise<number> {
   const res = await pool.query(
     `UPDATE orders
        SET status = 'failed',
-           status_reason = 'Payment was not completed in time'
+           status_reason = $2
      WHERE status = 'pending'
        AND COALESCE(payment_source, 'stripe') IN ('stripe', 'paypal')
        AND created_at < now() - ($1 || ' minutes')::interval
      RETURNING id, stripe_session_id, paypal_order_id`,
-    [String(PENDING_TTL_MINUTES)]
+    [String(PENDING_TTL_MINUTES), PENDING_EXPIRED_REASON]
   );
 
   // Return any referral credit that was redeemed on the sessions we just expired.

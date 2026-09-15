@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ChevronDown, RefreshCw, Loader2, CalendarClock, Database, ArrowRight, Smartphone } from "lucide-react";
+import { ChevronDown, RefreshCw, Loader2, CalendarClock, Database, ArrowRight, Smartphone, Check } from "lucide-react";
 import UsageDonut from "@/components/dashboard/usage-donut";
 import DataUnitToggle from "@/components/dashboard/data-unit-toggle";
 import { formatData, toMb, type DataUnit } from "@/lib/data-units";
@@ -48,6 +48,8 @@ export default function UsageOverview({ orders }: { orders: UsageOrder[] }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
   const [unit, setUnit] = useState<DataUnit>("MB");
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const pickerRef = useRef<HTMLDivElement>(null);
   const cache = useRef<Map<number, Consumption | null>>(new Map());
 
   const load = useCallback(async (id: number, force = false) => {
@@ -74,6 +76,14 @@ export default function UsageOverview({ orders }: { orders: UsageOrder[] }) {
   useEffect(() => {
     if (selectedId != null) load(selectedId);
   }, [selectedId, load]);
+
+  useEffect(() => {
+    const h = (e: MouseEvent) => {
+      if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) setPickerOpen(false);
+    };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, []);
 
   const selected = orders.find((o) => o.id === selectedId);
   // Normalise MontyeSIM values to MB (its unit is usually "MB") so display is exact.
@@ -107,19 +117,41 @@ export default function UsageOverview({ orders }: { orders: UsageOrder[] }) {
         <h3 className="text-[16px] font-bold text-[#1A1D20]">Data Usage Overview</h3>
         <div className="flex items-center gap-2">
           <DataUnitToggle unit={unit} onChange={setUnit} />
-          <div className="relative">
-            <select
-              value={selectedId ?? ""}
-              onChange={(e) => setSelectedId(Number(e.target.value))}
-              className="appearance-none pl-3.5 pr-9 py-2 rounded-xl border border-gray-200 bg-white text-[13px] font-semibold text-[#1A1D20] outline-none focus:border-[#FF561E] focus:ring-2 focus:ring-[#FF561E]/10 transition-all cursor-pointer max-w-[220px] truncate"
+          <div className="relative" ref={pickerRef}>
+            <button
+              type="button"
+              onClick={() => setPickerOpen((o) => !o)}
+              className="flex items-center gap-2 pl-3.5 pr-3 py-2 rounded-xl border border-gray-200 bg-white text-[13px] font-semibold text-[#1A1D20] hover:border-orange-200 hover:bg-[#FFF4F0] transition-colors max-w-[220px]"
             >
-              {orders.map((o) => (
-                <option key={o.id} value={o.id}>
-                  {(o.bundle_name || o.country || "eSIM")}{o.data_amount ? ` · ${o.data_amount}` : ""}
-                </option>
-              ))}
-            </select>
-            <ChevronDown className="w-4 h-4 text-[#6B7280] absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <span className="truncate">
+                {selected
+                  ? `${selected.bundle_name || selected.country || "eSIM"}${selected.data_amount ? ` · ${selected.data_amount}` : ""}`
+                  : "Select eSIM"}
+              </span>
+              <ChevronDown className={`w-4 h-4 text-[#6B7280] shrink-0 transition-transform ${pickerOpen ? "rotate-180" : ""}`} />
+            </button>
+            {pickerOpen && (
+              <div className="absolute right-0 mt-2 w-56 max-h-64 overflow-auto bg-white rounded-xl border border-gray-100 shadow-[0_8px_30px_rgba(0,0,0,0.12)] py-1.5 z-50">
+                {orders.map((o) => {
+                  const active = o.id === selectedId;
+                  return (
+                    <button
+                      key={o.id}
+                      onClick={() => {
+                        setSelectedId(o.id);
+                        setPickerOpen(false);
+                      }}
+                      className={`w-full flex items-center justify-between gap-2 px-4 py-2.5 text-left hover:bg-[#FFF4F0] transition-colors ${active ? "text-[#FF561E] bg-[#FFF9F6]" : "text-[#1A1D20]"}`}
+                    >
+                      <span className="text-[13px] font-medium truncate">
+                        {(o.bundle_name || o.country || "eSIM")}{o.data_amount ? ` · ${o.data_amount}` : ""}
+                      </span>
+                      {active && <Check className="w-4 h-4 text-[#FF561E] shrink-0" />}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
           <button
             onClick={() => selectedId != null && load(selectedId, true)}

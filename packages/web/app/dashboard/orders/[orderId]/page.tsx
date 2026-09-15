@@ -10,6 +10,7 @@ import QrDisplay from "@/components/dashboard/qr-display";
 import UsageDonut from "@/components/dashboard/usage-donut";
 import DataUnitToggle from "@/components/dashboard/data-unit-toggle";
 import { formatData, toMb, type DataUnit } from "@/lib/data-units";
+import { esimStatusTone } from "@/lib/esim-status";
 import Flag from "@/components/dashboard/flag";
 import { CURRENCY_SYMBOLS } from "@/lib/fx";
 import { isPaidStatus, isRetryable, amountLabel, statusLabel, statusPillClass } from "@/lib/order-status";
@@ -48,6 +49,7 @@ interface Consumption {
   data_unit?: string;
   unlimited?: boolean;
   plan_status?: string;
+  profile_status?: string;
   bundle_expiry_date?: string;
 }
 
@@ -299,6 +301,14 @@ export default function OrderDetailPage() {
                     {consumption.plan_status}
                   </span>
                 )}
+                {(() => {
+                  const est = esimStatusTone(consumption.profile_status);
+                  return est ? (
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border ${est.className}`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${est.dot}`} /> eSIM {est.label}
+                    </span>
+                  ) : null;
+                })()}
               </div>
             </div>
             <div className="flex flex-col sm:flex-row items-center gap-6 sm:gap-8">

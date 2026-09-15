@@ -66,7 +66,7 @@ export function statusPillClass(status: string): string {
     case "pending_verification":
       return "bg-amber-50 text-amber-600";
     case "refunded":
-      return "bg-blue-50 text-blue-600";
+      return "bg-gray-100 text-[#6B7280]";
     case "on_hold":
     case "cancelled":
       return "bg-gray-100 text-[#6B7280]";

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import Image from "next/image";
 import {
   LayoutDashboard,
@@ -40,7 +40,6 @@ interface DashboardSidebarProps {
 
 export default function DashboardSidebar({ collapsed = false, onToggle }: DashboardSidebarProps) {
   const pathname = usePathname();
-  const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
   const { data: session, isPending } = useCachedSession();
   const settings = useSiteSettings();
@@ -49,8 +48,10 @@ export default function DashboardSidebar({ collapsed = false, onToggle }: Dashbo
   const initial = (user?.name || user?.email || "U").charAt(0).toUpperCase();
 
   const handleSignOut = async () => {
-    await signOutAndClear();
-    router.push("/login");
+    try {
+      await signOutAndClear();
+    } catch {}
+    window.location.href = "/login";
   };
 
   const isActive = (href: string) => {

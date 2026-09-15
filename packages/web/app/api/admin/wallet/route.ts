@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import pool from "@/lib/db";
 import { verifyAdminToken, getAdminCookieName } from "@/lib/admin-auth";
 import { getFxRates, SupportedCurrency, SUPPORTED_CURRENCIES } from "@/lib/fx";
-import { getWalletBalanceUsd, getWalletHistory, creditWallet, debitWallet, WalletError, WalletReason } from "@/lib/wallet";
+import { getWalletBalanceUsd, creditWallet, debitWallet, WalletError, WalletReason } from "@/lib/wallet";
+import { expireStalePendingTopups, purgeExpiredTopupTrash } from "@/lib/wallet-topup";
 
 function requireAdmin(request: NextRequest) {
   const token = request.cookies.get(getAdminCookieName())?.value;
@@ -20,10 +22,28 @@ export async function GET(request: NextRequest) {
 
   const userId = request.nextUrl.searchParams.get("userId");
   if (!userId) return NextResponse.json({ error: "Missing userId" }, { status: 400 });
+  const trash = request.nextUrl.searchParams.get("trash") === "1";
 
   try {
-    const [balanceUsd, history] = await Promise.all([getWalletBalanceUsd(userId), getWalletHistory(userId, 100)]);
-    return NextResponse.json({ balanceUsd, history });
+    // Keep top-ups honest: expire abandoned pending, purge trash past its TTL.
+    await expireStalePendingTopups().catch(() => {});
+    await purgeExpiredTopupTrash().catch(() => {});
+
+    const deletedClause = trash ? "deleted_scope IS NOT NULL" : "deleted_scope IS NULL";
+    const [balanceUsd, topupsRes] = await Promise.all([
+      getWalletBalanceUsd(userId),
+      pool
+        .query(
+          `SELECT id, provider, amount_usd, display_currency, display_amount, display_rate, status,
+                  stripe_session_id, stripe_payment_intent, paypal_order_id, paypal_capture_id, receipt_url,
+                  created_at, completed_at, deleted_scope, deleted_at, deleted_by
+           FROM wallet_topups WHERE user_id = $1 AND ${deletedClause} ORDER BY created_at DESC`,
+          [userId]
+        )
+        .catch(() => ({ rows: [] })),
+    ]);
+
+    return NextResponse.json({ balanceUsd, topups: topupsRes.rows });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Failed to load wallet";
     return NextResponse.json({ error: message }, { status: 500 });

@@ -90,7 +90,7 @@ export default function AdminOrderDetailPage() {
     load();
   }, [load]);
 
-  const setStatus = async (status: "completed" | "failed" | "cancelled") => {
+  const setStatus = async (status: "completed" | "failed" | "cancelled" | "refunded") => {
     setBusy(true);
     try {
       const res = await fetch(`/api/admin/orders/${orderId}`, {
@@ -166,7 +166,7 @@ export default function AdminOrderDetailPage() {
   const paidText = `${sym}${(priceUsd * rate).toFixed(2)}`;
 
   const paymentRows = buildPaymentRows(order, "admin");
-  const canRetryProvision = !["pending", "cancelled", "rejected"].includes(order.status);
+  const canRetryProvision = !["pending", "cancelled", "rejected", "refunded"].includes(order.status);
 
   return (
     <>
@@ -225,32 +225,45 @@ export default function AdminOrderDetailPage() {
             className="w-full px-3 py-2.5 rounded-xl bg-white border border-gray-200 outline-none focus:border-[#FF561E] focus:ring-2 focus:ring-[#FF561E]/10 text-[13px] transition-all resize-none mb-3"
           />
           <div className="flex flex-wrap gap-2">
-            {order.status !== "completed" && (
+            {order.status === "completed" ? (
+              /* Paid + delivered — the only money-state change is a refund. */
               <button
-                onClick={() => setStatus("completed")}
+                onClick={() => setStatus("refunded")}
                 disabled={busy}
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-500 text-white text-[13px] font-bold hover:bg-emerald-600 transition-colors disabled:opacity-60"
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-blue-200 text-blue-600 text-[13px] font-bold hover:bg-blue-50 transition-colors disabled:opacity-60"
               >
-                <CheckCircle2 className="w-4 h-4" /> Mark Completed
+                <RotateCcw className="w-4 h-4" /> Mark Refunded
               </button>
-            )}
-            {order.status !== "failed" && (
-              <button
-                onClick={() => setStatus("failed")}
-                disabled={busy}
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-red-200 text-red-500 text-[13px] font-bold hover:bg-red-50 transition-colors disabled:opacity-60"
-              >
-                <XCircle className="w-4 h-4" /> Mark Failed
-              </button>
-            )}
-            {order.status !== "cancelled" && (
-              <button
-                onClick={() => setStatus("cancelled")}
-                disabled={busy}
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-gray-200 text-[#6B7280] text-[13px] font-bold hover:text-[#1A1D20] hover:border-gray-300 transition-colors disabled:opacity-60"
-              >
-                <Ban className="w-4 h-4" /> Mark Cancelled
-              </button>
+            ) : order.status === "refunded" ? (
+              <p className="text-[12.5px] text-[#6B7280]">This order is refunded — no further status changes.</p>
+            ) : (
+              <>
+                <button
+                  onClick={() => setStatus("completed")}
+                  disabled={busy}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-500 text-white text-[13px] font-bold hover:bg-emerald-600 transition-colors disabled:opacity-60"
+                >
+                  <CheckCircle2 className="w-4 h-4" /> Mark Completed
+                </button>
+                {order.status !== "failed" && (
+                  <button
+                    onClick={() => setStatus("failed")}
+                    disabled={busy}
+                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-red-200 text-red-500 text-[13px] font-bold hover:bg-red-50 transition-colors disabled:opacity-60"
+                  >
+                    <XCircle className="w-4 h-4" /> Mark Failed
+                  </button>
+                )}
+                {order.status !== "cancelled" && (
+                  <button
+                    onClick={() => setStatus("cancelled")}
+                    disabled={busy}
+                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-gray-200 text-[#6B7280] text-[13px] font-bold hover:text-[#1A1D20] hover:border-gray-300 transition-colors disabled:opacity-60"
+                  >
+                    <Ban className="w-4 h-4" /> Mark Cancelled
+                  </button>
+                )}
+              </>
             )}
             {canRetryProvision && (
               <button

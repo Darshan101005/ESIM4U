@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { recordActivity, pruneActivityLogIfDue } from "@/lib/activity";
 
-const VALID_EVENTS = ["signup", "login", "login_failed", "logout", "password_change"];
+const VALID_EVENTS = ["signup", "login", "login_failed", "logout", "password_change", "session"];
 
 export async function POST(request: NextRequest) {
   try {

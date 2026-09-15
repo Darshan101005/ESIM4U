@@ -88,6 +88,20 @@ export async function ensureWalletSchema(): Promise<void> {
     );
     CREATE INDEX IF NOT EXISTS idx_wallet_topups_user ON wallet_topups (user_id, created_at DESC);
   `);
+
+  // Make wallet_topups provider-agnostic (originally Stripe-only). Idempotent.
+  await pool.query(`
+    ALTER TABLE wallet_topups ALTER COLUMN stripe_session_id DROP NOT NULL;
+    ALTER TABLE wallet_topups ADD COLUMN IF NOT EXISTS provider VARCHAR(20) NOT NULL DEFAULT 'stripe';
+    ALTER TABLE wallet_topups ADD COLUMN IF NOT EXISTS paypal_order_id TEXT;
+    ALTER TABLE wallet_topups ADD COLUMN IF NOT EXISTS paypal_capture_id TEXT;
+    ALTER TABLE wallet_topups ADD COLUMN IF NOT EXISTS receipt_url TEXT;
+    ALTER TABLE wallet_topups ADD COLUMN IF NOT EXISTS payer_email TEXT;
+    ALTER TABLE wallet_topups ADD COLUMN IF NOT EXISTS deleted_scope VARCHAR(10);
+    ALTER TABLE wallet_topups ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
+    ALTER TABLE wallet_topups ADD COLUMN IF NOT EXISTS deleted_by TEXT;
+    CREATE INDEX IF NOT EXISTS idx_wallet_topups_paypal ON wallet_topups (paypal_order_id);
+  `);
   schemaReady = true;
 }
 

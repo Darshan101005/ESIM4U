@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import Image from "next/image";
 import { LayoutDashboard, Users, ShoppingBag, Tag, Package, LogOut, Menu, X, ShieldCheck, Ticket, Megaphone, Settings, UserCog, Landmark, Headset, Globe } from "lucide-react";
 import { useState, useEffect } from "react";
@@ -27,7 +27,6 @@ interface AdminSidebarProps {
 
 export default function AdminSidebar({ collapsed = false, onToggle }: AdminSidebarProps) {
   const pathname = usePathname();
-  const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [admin, setAdmin] = useState<{ name: string; email: string; role: string }>({
     name: "",
@@ -58,7 +57,8 @@ export default function AdminSidebar({ collapsed = false, onToggle }: AdminSideb
     } catch {
       toast.error("Sign out failed");
     }
-    router.push("/admin");
+    // Full reload so the server re-renders the admin login (no stale RSC/session).
+    window.location.href = "/admin";
   };
 
   const isActive = (href: string) => {

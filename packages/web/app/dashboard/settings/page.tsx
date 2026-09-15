@@ -2,7 +2,6 @@
 
 import DashboardTopbar from "@/components/dashboard/topbar";
 import { useEffect, useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Loader2, DollarSign, LogOut, ShieldCheck, LifeBuoy, Mail, UserRound, Copy, Check } from "lucide-react";
 import toast from "react-hot-toast";
@@ -26,7 +25,6 @@ function TelegramLogo({ size = 22 }: { size?: number }) {
 }
 
 export default function SettingsPage() {
-  const router = useRouter();
   const { currency, setCurrency } = useCurrency();
   const [loading, setLoading] = useState(true);
   const [signingOut, setSigningOut] = useState(false);
@@ -151,8 +149,10 @@ export default function SettingsPage() {
 
   const signOut = async () => {
     setSigningOut(true);
-    await signOutAndClear();
-    router.push("/login");
+    try {
+      await signOutAndClear();
+    } catch {}
+    window.location.href = "/login";
   };
 
   const labelCls = "block text-[13px] font-medium text-[#6B7280] mb-2";

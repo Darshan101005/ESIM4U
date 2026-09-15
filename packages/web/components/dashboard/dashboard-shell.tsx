@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import DashboardSidebar from "@/components/dashboard/sidebar";
 import ThemeInitScript from "@/components/theme-init-script";
+import ActivityLogger from "@/components/dashboard/activity-logger";
 import { ThemeContext, readStoredTheme, type Theme } from "@/lib/theme-context";
 
 const STORAGE_KEY = "esim4u:dashboard-sidebar-collapsed";
@@ -40,6 +41,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
     <ThemeContext.Provider value={{ theme, toggleTheme }}>
       <div className={`min-h-screen bg-[#F8F9FB] font-sans ${theme === "dark" ? "theme-dark" : ""}`} suppressHydrationWarning>
         <ThemeInitScript storageKey={THEME_KEY} />
+        <ActivityLogger />
         <DashboardSidebar collapsed={collapsed} onToggle={toggle} />
         <div className={`min-h-screen flex flex-col transition-all duration-300 ${collapsed ? "lg:ml-[76px]" : "lg:ml-[260px]"}`}>
           {children}

@@ -16,8 +16,10 @@ export default function TopUpSuccessPage() {
     if (ran.current) return;
     ran.current = true;
 
-    const sessionId = new URLSearchParams(window.location.search).get("session_id");
-    if (!sessionId) {
+    const params = new URLSearchParams(window.location.search);
+    const sessionId = params.get("session_id"); // Stripe
+    const paypalToken = params.get("token"); // PayPal order id
+    if (!sessionId && !paypalToken) {
       router.replace("/dashboard/topup");
       return;
     }
@@ -27,7 +29,7 @@ export default function TopUpSuccessPage() {
         const res = await fetch("/api/wallet/topup/confirm", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ session_id: sessionId }),
+          body: JSON.stringify(paypalToken ? { order_id: paypalToken } : { session_id: sessionId }),
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || "Could not confirm your top-up");

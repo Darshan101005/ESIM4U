@@ -329,7 +329,7 @@ export default function LandingMobile() {
                 <Link href="/dashboard/profile" className="w-full py-3 rounded-full border border-[#FF561E] text-[#FF561E] font-semibold text-[14px] text-center">My Profile</Link>
                 <button
                   type="button"
-                  onClick={async () => { await signOutAndClear(); router.push('/'); router.refresh(); }}
+                  onClick={async () => { try { await signOutAndClear(); } catch {} window.location.href = '/'; }}
                   className="w-full py-3 rounded-full border border-red-200 text-red-500 font-semibold text-[14px] text-center"
                 >
                   Logout

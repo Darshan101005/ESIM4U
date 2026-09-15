@@ -40,7 +40,7 @@ export async function GET(request: NextRequest, { params }: { params: { orderId:
   }
 }
 
-const MANUAL_STATUSES = new Set(["completed", "failed", "cancelled"]);
+const MANUAL_STATUSES = new Set(["completed", "failed", "cancelled", "refunded"]);
 
 /**
  * Admin order controls:
@@ -57,7 +57,7 @@ export async function POST(request: NextRequest, { params }: { params: { orderId
     const action = String(body.action || "");
     const reviewedBy = admin.email || String(admin.id);
 
-    const existing = await pool.query(`SELECT id FROM orders WHERE id = $1`, [params.orderId]);
+    const existing = await pool.query(`SELECT id, status FROM orders WHERE id = $1`, [params.orderId]);
     if (existing.rows.length === 0) {
       return NextResponse.json({ error: "Order not found" }, { status: 404 });
     }
@@ -66,8 +66,24 @@ export async function POST(request: NextRequest, { params }: { params: { orderId
       const status = String(body.status || "");
       const note = (body.note || "").trim() || null;
       if (!MANUAL_STATUSES.has(status)) {
-        return NextResponse.json({ error: "Status must be completed, failed or cancelled" }, { status: 400 });
+        return NextResponse.json({ error: "Invalid status" }, { status: 400 });
       }
+
+      // Valid transitions only. A completed (paid + delivered) order can only be
+      // refunded — never "failed"/"cancelled", which imply no charge was taken.
+      // A refunded order is terminal. Everything else (unpaid/in-progress) can
+      // be manually resolved to completed / failed / cancelled.
+      const from = String(existing.rows[0].status || "");
+      const allowed =
+        from === "completed"
+          ? status === "refunded"
+          : from === "refunded"
+            ? false
+            : status === "completed" || status === "failed" || status === "cancelled";
+      if (!allowed) {
+        return NextResponse.json({ error: `A ${from} order can't be marked ${status}.` }, { status: 400 });
+      }
+
       await pool.query(
         `UPDATE orders SET status = $1, status_reason = $2, admin_updated_by = $3, admin_updated_at = now() WHERE id = $4`,
         [status, note, reviewedBy, params.orderId]

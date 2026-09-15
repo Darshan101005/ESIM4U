@@ -421,3 +421,94 @@ ${orderRows}
 </body>
 </html>`;
 }
+
+
+export interface WalletTopupTemplateData {
+  name: string;
+  addedText: string;
+  balanceText: string;
+  method: string; // "Card" | "PayPal"
+}
+
+/** Branded "funds added to your wallet" confirmation email. */
+export function getWalletTopupTemplate(d: WalletTopupTemplateData): string {
+  const rows = [
+    detailRow("Amount added", d.addedText),
+    detailRow("Payment method", d.method),
+    detailRow("New wallet balance", d.balanceText),
+  ].join("");
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wallet topped up - eSIM4U</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f5f5f5;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color:#f5f5f5;">
+<tr>
+<td align="center" style="padding:40px 20px;">
+<table role="presentation" cellpadding="0" cellspacing="0" width="600" style="max-width:600px;background-color:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,0.06);">
+
+<tr>
+<td align="center" style="padding:40px 40px 24px 40px;">
+<img src="${LOGO_URL}" alt="eSIM4U" width="220" style="display:block;max-width:220px;height:auto;" />
+</td>
+</tr>
+
+<tr>
+<td align="center" style="padding:0 40px 6px 40px;">
+<h1 style="margin:0;font-size:26px;font-weight:700;color:#1a1a1a;">Funds added to your wallet</h1>
+</td>
+</tr>
+
+<tr>
+<td align="center" style="padding:8px 40px 28px 40px;">
+<p style="margin:0 0 6px 0;font-size:16px;color:#4a4a4a;line-height:1.6;">Hi <span style="color:${BRAND_ORANGE};font-weight:600;">${d.name}</span>,</p>
+<p style="margin:0;font-size:15px;color:#4a4a4a;line-height:1.6;">Your wallet top-up was successful. Your balance is ready to use at checkout for any eSIM.</p>
+</td>
+</tr>
+
+<tr>
+<td align="center" style="padding:0 40px 24px 40px;">
+<div style="font-size:34px;font-weight:800;color:${BRAND_ORANGE};">+${d.addedText}</div>
+</td>
+</tr>
+
+<tr>
+<td style="padding:0 40px 8px 40px;">
+<div style="font-size:13px;font-weight:700;color:${BRAND_ORANGE};letter-spacing:1.5px;text-transform:uppercase;margin-bottom:14px;">Top-up summary</div>
+</td>
+</tr>
+<tr>
+<td style="padding:0 40px 28px 40px;">
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color:#fafafa;border-radius:12px;border:1px solid #eeeeee;">
+<tr><td style="padding:20px 24px;">
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+${rows}
+</table>
+</td></tr>
+</table>
+</td>
+</tr>
+
+<tr>
+<td align="center" style="padding:0 40px 36px 40px;">
+<a href="${DASHBOARD_URL}/topup" style="display:inline-block;background-color:${BRAND_ORANGE};color:#ffffff;text-decoration:none;font-size:15px;font-weight:700;padding:14px 32px;border-radius:12px;">Go to my wallet</a>
+</td>
+</tr>
+
+<tr>
+<td align="center" style="padding:24px 40px 36px 40px;border-top:1px solid #eeeeee;">
+<p style="margin:0;font-size:12px;color:#999999;line-height:1.6;">If you didn't make this top-up, contact us right away at support@esim4u.uk.</p>
+</td>
+</tr>
+
+</table>
+</td>
+</tr>
+</table>
+</body>
+</html>`;
+}
