@@ -3,30 +3,34 @@
 import { useEffect } from "react";
 import { authClient } from "@/lib/auth-client";
 
-// Logs one "session" activity row per browser session when a signed-in user
-// opens the dashboard — regardless of how they logged in (email OR Google).
-// This is what captures device / IP / geo for EVERY customer, not just those
-// who used the email/password form. Deduped per tab session so it doesn't spam.
-const FLAG = "esim4u:session-logged";
+// Logs one "session" activity row per (browser tab-session × user) when a
+// signed-in user opens the dashboard — regardless of how they logged in
+// (email OR Google). This is what captures device / IP / geo for EVERY
+// customer, not just those who used the email/password form.
+//
+// The dedupe key stores the *user id*, not just a boolean. That matters because
+// sessionStorage survives a log out → log in of a DIFFERENT account in the same
+// tab; a plain boolean flag would then skip the second user and never record
+// their device/session. Keying by user id logs each account once per tab.
+const FLAG = "esim4u:session-logged-for";
 
 export default function ActivityLogger() {
   useEffect(() => {
-    try {
-      if (sessionStorage.getItem(FLAG)) return;
-    } catch {
-      return;
-    }
-
     (async () => {
       try {
         const res = await authClient.getSession();
         const user = (res as { data?: { user?: { id?: string; email?: string } } } | null)?.data?.user;
-        if (!user?.id && !user?.email) return; // not signed in yet — log on a later mount
-        // Mark seen only once we have a real user, so a login later in the same
-        // tab still gets logged (don't burn the flag on a signed-out mount).
+        const key = user?.id || user?.email;
+        if (!key) return; // not signed in yet — a later mount will log it
+
+        // Skip only if THIS user was already logged in this tab-session.
         try {
-          sessionStorage.setItem(FLAG, "1");
-        } catch {}
+          if (sessionStorage.getItem(FLAG) === key) return;
+          sessionStorage.setItem(FLAG, key);
+        } catch {
+          // sessionStorage unavailable — fall through and log (best-effort).
+        }
+
         await fetch("/api/auth/activity", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
