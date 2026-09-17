@@ -7,6 +7,7 @@ import { Info } from "lucide-react";
 export const metadata: Metadata = {
   title: "eSIM Installation Guide | eSIM4U",
   description: "How to install and activate your eSIM4U plan on iPhone (iOS) and Android devices.",
+  alternates: { canonical: "/installation" },
 };
 
 const h2 = "text-[20px] sm:text-[22px] font-bold text-[#1A1D20] tracking-tight mb-4";

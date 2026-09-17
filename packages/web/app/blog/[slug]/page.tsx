@@ -16,7 +16,11 @@ export function generateStaticParams() {
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
   const post = getPost(params.slug);
   if (!post) return { title: "Article | eSIM4U" };
-  return { title: `${post.title} | eSIM4U`, description: post.excerpt };
+  return {
+    title: `${post.title} | eSIM4U`,
+    description: post.excerpt,
+    alternates: { canonical: `/blog/${post.slug}` },
+  };
 }
 
 export default async function BlogArticlePage({ params }: { params: { slug: string } }) {

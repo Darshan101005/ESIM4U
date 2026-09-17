@@ -9,6 +9,7 @@ import { toWaLink } from "@/lib/site-settings-types";
 export const metadata: Metadata = {
   title: "Help Center | eSIM4U",
   description: "Find answers, installation guides, and ways to reach the eSIM4U support team.",
+  alternates: { canonical: "/help-center" },
 };
 
 const cards = [

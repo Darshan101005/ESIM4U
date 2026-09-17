@@ -5,6 +5,7 @@ export const metadata: Metadata = {
   title: "Refund Policy | eSIM4U",
   description:
     "eSIM4U's refund policy, including our money-back guarantee, eligibility, non-refundable cases, and how to request a refund.",
+  alternates: { canonical: "/refund-policy" },
 };
 
 const h2 = "text-[20px] sm:text-[22px] font-bold text-[#1A1D20] tracking-tight mb-3";

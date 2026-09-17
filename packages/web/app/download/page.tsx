@@ -8,6 +8,7 @@ const TELEGRAM_BOT_URL = "https://t.me/esim4u_uk_bot";
 export const metadata: Metadata = {
   title: "Download the ESIM4U App",
   description: "Install the ESIM4U app on Android (APK), or add it to your home screen on Android Chrome and iPhone Safari.",
+  alternates: { canonical: "/download" },
 };
 
 const ANDROID_APK = "/api/download/android";

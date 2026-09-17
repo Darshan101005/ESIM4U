@@ -12,6 +12,7 @@ export const metadata: Metadata = {
   title: "Affiliate Program | eSIM4U",
   description:
     "Partner with eSIM4U and earn commission by promoting affordable global eSIM data plans to your audience.",
+  alternates: { canonical: "/affiliate" },
 };
 
 const perks = [

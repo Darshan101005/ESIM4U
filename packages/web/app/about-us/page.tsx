@@ -18,6 +18,7 @@ export const metadata: Metadata = {
   title: "About Us | eSIM4U",
   description:
     "Redefining global connectivity with cutting-edge eSIM technology. Learn about our mission, money-back guarantee, and best-in-class pricing.",
+  alternates: { canonical: "/about-us" },
 };
 
 const guaranteeFeatures = [

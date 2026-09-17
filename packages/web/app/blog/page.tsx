@@ -11,6 +11,7 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "Blog | eSIM4U",
   description: "Tips, guides, and insights on eSIMs, travel connectivity, and staying online abroad.",
+  alternates: { canonical: "/blog" },
 };
 
 export default async function BlogPage() {

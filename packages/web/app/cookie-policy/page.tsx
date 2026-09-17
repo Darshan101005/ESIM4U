@@ -4,6 +4,7 @@ import LegalLayout from "@/components/marketing/legal-layout";
 export const metadata: Metadata = {
   title: "Cookie Policy | eSIM4U",
   description: "How eSIM4U uses cookies and similar technologies, and how you can control them.",
+  alternates: { canonical: "/cookie-policy" },
 };
 
 const h2 = "text-[20px] sm:text-[22px] font-bold text-[#1A1D20] tracking-tight mb-3";
